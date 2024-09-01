@@ -6,16 +6,16 @@ import (
 )
 
 func TestLogger(t *testing.T) {
-	log, _ := CreateLogger("test", LevelDebug)
+	ConfigureLogger("test.log", LevelDebug)
 
-	log.Debug("This is debug, myVar = %v", 23)
-	log.Info("This is some useful info :p")
+	Debug("This is debug, myVar = %v", 23)
+	Info("This is some useful info :p")
 
-	log.Warn("This is a warning! File '%v' could not be found.", "falopa.file")
+	Warn("This is a warning! File '%v' could not be found.", "falopa.file")
 
 	_, err := os.Open("sas")
-	log.Error("This is an error with file '%s' - %v", "sas", err)
+	Error("This is an error with file '%s' - %v", "sas", err)
 
-	log.Fatal("This is a fatal error, execution will continue no longer !")
+	Fatal("This is a fatal error, execution will continue no longer !")
 
 }

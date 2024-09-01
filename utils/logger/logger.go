@@ -7,13 +7,10 @@ import (
 	"time"
 )
 
-type Logger struct {
+var (
 	Level  int
-	writer io.Writer
-	file   *os.File
-}
-
-var logger Logger
+	Writer io.Writer
+)
 
 const (
 	LevelFatal = iota
@@ -31,46 +28,43 @@ var levelStrings = map[int]string{
 	LevelDebug: "D",
 }
 
-// Configura el logger
+// Configura el logger, cuidado porque esto leakea 1 file handle...
 func ConfigureLogger(filepath string, level int) error {
 	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}
 
-	logger = Logger{
-		Level:  level,
-		writer: io.MultiWriter(file, os.Stdout),
-		file:   file,
-	}
+	Level = level
+	Writer = io.MultiWriter(file, os.Stdout)
 
 	return nil
 }
 
 func Fatal(format string, args ...interface{}) {
-	log(logger, LevelFatal, format, args...)
+	log(LevelFatal, format, args...)
 	os.Exit(1)
 }
 
 func Error(format string, args ...interface{}) {
-	log(logger, LevelError, format, args...)
+	log(LevelError, format, args...)
 }
 
 func Warn(format string, args ...interface{}) {
-	log(logger, LevelWarn, format, args...)
+	log(LevelWarn, format, args...)
 }
 
 func Info(format string, args ...interface{}) {
-	log(logger, LevelInfo, format, args...)
+	log(LevelInfo, format, args...)
 }
 
 func Debug(format string, args ...interface{}) {
-	log(logger, LevelDebug, format, args...)
+	log(LevelDebug, format, args...)
 }
 
 // Función privada, no se usa
-func log(logger Logger, level int, format string, args ...interface{}) {
-	if logger.Level < level {
+func log(level int, format string, args ...interface{}) {
+	if Level < level {
 		return
 	}
 
@@ -80,7 +74,7 @@ func log(logger Logger, level int, format string, args ...interface{}) {
 
 	stringToPrint := fmt.Sprintf("%s [ %s ] %s\n", formattedTime, levelString, formattedMessage)
 
-	_, err := logger.writer.Write([]byte(stringToPrint))
+	_, err := Writer.Write([]byte(stringToPrint))
 	if err != nil {
 		fmt.Printf("Could not write to logger, this should not be happening!: %v", err)
 		os.Exit(1)
