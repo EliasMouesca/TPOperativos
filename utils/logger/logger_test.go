@@ -6,8 +6,9 @@ import (
 )
 
 func TestLogger(t *testing.T) {
-	ConfigureLogger("test.log", LevelDebug)
+	ConfigureLogger("test.log", "TRACE")
 
+	Trace("This is trace level")
 	Debug("This is debug, myVar = %v", 23)
 	Info("This is some useful info :p")
 

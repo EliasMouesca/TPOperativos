@@ -19,6 +19,7 @@ const (
 	LevelWarn
 	LevelInfo
 	LevelDebug
+	LevelTrace
 )
 
 var levelStrings = map[string]int{
@@ -27,14 +28,16 @@ var levelStrings = map[string]int{
 	"WARN":  LevelWarn,
 	"INFO":  LevelInfo,
 	"DEBUG": LevelDebug,
+	"TRACE": LevelTrace,
 }
 
 var levelTags = map[int]string{
 	LevelFatal: "FATAL",
 	LevelError: "E",
-	LevelWarn:  "W",
-	LevelInfo:  "I",
-	LevelDebug: "D",
+	LevelWarn:  "!",
+	LevelInfo:  "i",
+	LevelDebug: "-",
+	LevelTrace: ".",
 }
 
 // ConfigureLogger configura el logger, cuidado porque esto leakea 1 file handle...
@@ -73,6 +76,10 @@ func Info(format string, args ...interface{}) {
 
 func Debug(format string, args ...interface{}) {
 	log(LevelDebug, format, args...)
+}
+
+func Trace(format string, args ...interface{}) {
+	log(LevelTrace, format, args...)
 }
 
 // Función privada, no se usa
