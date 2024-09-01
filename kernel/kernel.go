@@ -67,6 +67,17 @@ func main() {
 		}
 	}
 
+	// Memoria
+	{
+		url := fmt.Sprintf("http://%s:%d/memoria/accion", config.MemoryAddress, config.MemoryPort)
+		logger.Debug("Enviando request a %v", url)
+		resp, err := http.Get(url)
+		if err != nil {
+			logger.Error("No se obtuvo respuesta de la memoria! - %v", err.Error())
+		} else {
+			logger.Info("Hola memoria! status code: %v", resp.StatusCode)
+		}
+	}
 	// Listen and serve
 	http.HandleFunc("POST /kernel/accion", ActionDemo)
 	http.HandleFunc("/", NotFound)
