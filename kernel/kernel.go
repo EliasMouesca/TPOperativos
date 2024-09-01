@@ -6,14 +6,35 @@ import (
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
+	"os"
 )
 
+var config KernelConfig
+
 func init() {
-	loggerLevel := logger.LevelInfo
-	err := logger.ConfigureLogger("kernel.log", loggerLevel)
+	// Load config
+	configData, err := os.ReadFile("config.json")
 	if err != nil {
-		fmt.Println("No se pudo crear el logger - ", err)
+		logger.Fatal("No se pudo leer el archivo de configuración - %v", err.Error())
 	}
+
+	err = json.Unmarshal(configData, &config)
+	if err != nil {
+		logger.Fatal("No se pudo parsear el archivo de configuración - %v", err.Error())
+	}
+
+	if err = config.validate(); err != nil {
+		logger.Fatal("La configuración no es válida - %v", err.Error())
+	}
+
+	// Init logger
+	err = logger.ConfigureLogger("kernel.log", config.LogLevel)
+	if err != nil {
+		fmt.Println("No se pudo crear el logger -", err.Error())
+		os.Exit(1)
+	}
+	logger.Debug("Configuración cargada exitosamente")
+	logger.Debug("Logger creado")
 }
 
 func main() {
@@ -22,7 +43,6 @@ func main() {
 	// Probar conexiones con otros módulos
 	// cpu
 	{
-		cpuPort := "8080"
 		data := struct {
 			Message string `json:"message"`
 			Origin  string `json:"origin"`
@@ -36,24 +56,24 @@ func main() {
 			logger.Error("Error al serializar json - ", err)
 		}
 
-		cpuResponse, err := http.Post("http://localhost:"+cpuPort+"/cpu/accion", "application/json",
+		cpuUrl := fmt.Sprintf("http://%s:%d", config.CpuAddress, config.CpuPort)
+		logger.Debug("Enviando request a %v", cpuUrl)
+		cpuResponse, err := http.Post(cpuUrl+"/cpu/accion", "application/json",
 			bytes.NewBuffer(jsonData))
 		if err != nil {
-			logger.Error("No se obtuvo respuesta de la cpu! - %v", err)
+			logger.Error("No se obtuvo respuesta de la cpu! - %v", err.Error())
 		} else {
 			logger.Info("Hola cpu! status code: %v", cpuResponse.StatusCode)
 		}
 	}
 
 	// Listen and serve
-	hostname := "localhost"
-	port := "8081"
-
 	http.HandleFunc("POST /kernel/accion", ActionDemo)
 	http.HandleFunc("/", NotFound)
 
-	logger.Info("Server activo en %v:%v", hostname, port)
-	err := http.ListenAndServe(hostname+":"+port, nil)
+	url := fmt.Sprintf("%s:%d", config.SelfAddress, config.SelfPort)
+	logger.Info("Server activo en %s", url)
+	err := http.ListenAndServe(url, nil)
 	if err != nil {
 		logger.Fatal("ListenAndServe retornó error - %v", err)
 	}

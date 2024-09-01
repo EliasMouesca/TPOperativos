@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -20,7 +21,15 @@ const (
 	LevelDebug
 )
 
-var levelStrings = map[int]string{
+var levelStrings = map[string]int{
+	"FATAL": LevelFatal,
+	"ERROR": LevelError,
+	"WARN":  LevelWarn,
+	"INFO":  LevelInfo,
+	"DEBUG": LevelDebug,
+}
+
+var levelTags = map[int]string{
 	LevelFatal: "FATAL",
 	LevelError: "E",
 	LevelWarn:  "W",
@@ -28,14 +37,18 @@ var levelStrings = map[int]string{
 	LevelDebug: "D",
 }
 
-// Configura el logger, cuidado porque esto leakea 1 file handle...
-func ConfigureLogger(filepath string, level int) error {
+// ConfigureLogger configura el logger, cuidado porque esto leakea 1 file handle...
+func ConfigureLogger(filepath string, level string) error {
 	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}
 
-	Level = level
+	var exists bool
+	Level, exists = levelStrings[level]
+	if !exists {
+		return errors.New("'" + level + "' no es un nivel válido de loggeo")
+	}
 	Writer = io.MultiWriter(file, os.Stdout)
 
 	return nil
@@ -69,7 +82,7 @@ func log(level int, format string, args ...interface{}) {
 	}
 
 	formattedTime := time.Now().Format("02/01/2006 15:04:05")
-	levelString := levelStrings[level]
+	levelString := levelTags[level]
 	formattedMessage := fmt.Sprintf(format, args...)
 
 	stringToPrint := fmt.Sprintf("%s [ %s ] %s\n", formattedTime, levelString, formattedMessage)

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	loggerLevel := logger.LevelInfo
+	loggerLevel := "INFO"
 	err := logger.ConfigureLogger("memoria.log", loggerLevel)
 	if err != nil {
 		fmt.Println("No se pudo crear el logger - ", err)

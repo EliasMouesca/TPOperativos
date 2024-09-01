@@ -15,7 +15,7 @@ type BodyRequest struct {
 }
 
 func init() {
-	loggerLevel := logger.LevelInfo
+	loggerLevel := "INFO"
 	err := logger.ConfigureLogger("filesystem.log", loggerLevel)
 	if err != nil {
 		fmt.Println("No se pudo crear el logger - ", err)
