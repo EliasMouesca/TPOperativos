@@ -36,7 +36,7 @@ func main() {
 			logger.Error("Error al serializar json - ", err)
 		}
 
-		cpuResponse, err := http.Post("http://localhost:"+cpuPort+"/cpu", "application/json",
+		cpuResponse, err := http.Post("http://localhost:"+cpuPort+"/cpu/accion", "application/json",
 			bytes.NewBuffer(jsonData))
 		if err != nil {
 			logger.Error("No se obtuvo respuesta de la cpu! - %v", err)

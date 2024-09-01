@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"io"
 	"net/http"
 )
@@ -17,12 +18,22 @@ type BodyRequest struct {
 	Origin  string `json:"origin"`
 }
 
+func init() {
+	loggerLevel := logger.LevelInfo
+	err := logger.ConfigureLogger("cpu.log", loggerLevel)
+	if err != nil {
+		fmt.Println("No se pudo crear el logger - ", err)
+	}
+}
+
 func main() {
-	http.HandleFunc("POST /cpu", GenerateSendResponse)
+	logger.Info("--- Comienzo ejecución CPU ---")
+
+	http.HandleFunc("POST /cpu/accion", GenerateSendResponse)
 	http.HandleFunc("/", BadRequest)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		logger.Fatal("No se puede escuchar el puerto 8080: " + err.Error())
 	}
 
 	GenerateRequest("kernel")
@@ -31,58 +42,53 @@ func main() {
 
 func BadRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
-	jsonError, err := json.MarshalIndent("Ruta invalida", "", "  ")
+	jsonError, err := json.MarshalIndent("Bad Request", "", "  ")
+	_, err = w.Write(jsonError)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Error al escribir la respuesta a BadRequest")
 	}
-	w.Write(jsonError)
 }
 
 func GenerateSendResponse(w http.ResponseWriter, r *http.Request) {
 	var request BodyRequest
-	requestBody, err := io.ReadAll(r.Body)
-	err = json.Unmarshal(requestBody, &request)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if r.Body != nil {
+		requestBody, err := io.ReadAll(r.Body)
+		err = json.Unmarshal(requestBody, &request)
+		if err != nil {
+			logger.Error("Error al leer la request")
+		}
 	}
-
 	response := Response{
 		Request:  request,
 		Response: "Solicitud recibida de " + request.Origin,
 	}
 	jsonResponse, err := json.MarshalIndent(response, "", "  ")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Error al craftear la respuesta")
 	}
 
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Error al responder a la request")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
+
 }
 
 func GenerateRequest(receiver string) {
-	client := &http.Client{}
 	body := BodyRequest{
 		Message: "Hola " + receiver,
 		Origin:  "Cpu",
 	}
 	bodyJson, err := json.MarshalIndent(body, "", "  ")
-	request, err := http.NewRequest("POST", "http://localhost:8080/"+receiver, bytes.NewBuffer(bodyJson))
+	response, err := http.Post("POST", "http://localhost:8080/"+receiver+"/accion", bytes.NewBuffer(bodyJson))
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-	}
-	request.Header.Set("Content-Type", "application/json")
-
-	response, err := client.Do(request)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		logger.Error("Error al hacer la request")
 	}
 	if response.StatusCode != http.StatusOK {
-		return
+		logger.Error("Respuesta recibida: " + response.Status)
 	}
 
-	responseBody, err := io.ReadAll(response.Body)
-	fmt.Println(string(responseBody))
+	fmt.Print(response)
 }
