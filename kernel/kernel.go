@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
-	"log"
 	"net/http"
 )
 
@@ -56,7 +55,7 @@ func main() {
 	logger.Info("Server activo en %v:%v", hostname, port)
 	err := http.ListenAndServe(hostname+":"+port, nil)
 	if err != nil {
-		log.Fatal("ListenAndServe retornó error - %v", err)
+		logger.Fatal("ListenAndServe retornó error - %v", err)
 	}
 
 }
@@ -64,6 +63,10 @@ func main() {
 func NotFound(w http.ResponseWriter, r *http.Request) {
 	logger.Info("Request inválida: %v", r.RequestURI)
 	w.WriteHeader(http.StatusBadRequest)
+	_, err := w.Write([]byte("Bad request!"))
+	if err != nil {
+		logger.Error("Error escribiendo response - %v", err)
+	}
 }
 
 func ActionDemo(w http.ResponseWriter, r *http.Request) {
