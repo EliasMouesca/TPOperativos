@@ -13,6 +13,8 @@ type Logger struct {
 	file   *os.File
 }
 
+var logger Logger
+
 const (
 	LevelFatal = iota
 	LevelError
@@ -29,45 +31,40 @@ var levelStrings = map[int]string{
 	LevelDebug: "D",
 }
 
-// Crea un logger, que después habría que cerrar...
-func CreateLogger(filepath string, level int) (Logger, error) {
+// Configura el logger
+func ConfigureLogger(filepath string, level int) error {
 	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		return Logger{}, err
+		return err
 	}
 
-	logger := Logger{
+	logger = Logger{
 		Level:  level,
 		writer: io.MultiWriter(file, os.Stdout),
 		file:   file,
 	}
 
-	return logger, nil
+	return nil
 }
 
-// Cierra el archivo que abrió para el logger
-func (logger Logger) Close() error {
-	return logger.file.Close()
-}
-
-func (logger Logger) Fatal(format string, args ...interface{}) {
+func Fatal(format string, args ...interface{}) {
 	log(logger, LevelFatal, format, args...)
 	os.Exit(1)
 }
 
-func (logger Logger) Error(format string, args ...interface{}) {
+func Error(format string, args ...interface{}) {
 	log(logger, LevelError, format, args...)
 }
 
-func (logger Logger) Warn(format string, args ...interface{}) {
+func Warn(format string, args ...interface{}) {
 	log(logger, LevelWarn, format, args...)
 }
 
-func (logger Logger) Info(format string, args ...interface{}) {
+func Info(format string, args ...interface{}) {
 	log(logger, LevelInfo, format, args...)
 }
 
-func (logger Logger) Debug(format string, args ...interface{}) {
+func Debug(format string, args ...interface{}) {
 	log(logger, LevelDebug, format, args...)
 }
 
