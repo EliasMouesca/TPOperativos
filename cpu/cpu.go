@@ -29,15 +29,16 @@ func init() {
 func main() {
 	logger.Info("--- Comienzo ejecución CPU ---")
 
+	GenerateRequest("kernel", "8081")
+	GenerateRequest("memoria", "8082")
+
 	http.HandleFunc("POST /cpu/accion", GenerateSendResponse)
 	http.HandleFunc("/", BadRequest)
+	logger.Info("CPU escuchando en puerto 8080")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		logger.Fatal("No se puede escuchar el puerto 8080: " + err.Error())
 	}
-
-	GenerateRequest("kernel")
-	GenerateRequest("memoria")
 }
 
 func BadRequest(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +59,8 @@ func GenerateSendResponse(w http.ResponseWriter, r *http.Request) {
 			logger.Error("Error al leer la request")
 		}
 	}
+	logger.Info("Request recibida de: " + request.Origin)
+
 	response := Response{
 		Request:  request,
 		Response: "Solicitud recibida de " + request.Origin,
@@ -72,23 +75,28 @@ func GenerateSendResponse(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Error("Error al responder a la request")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	} else {
+		logger.Info("Request respondida exitosamente")
 	}
 
 }
 
-func GenerateRequest(receiver string) {
+func GenerateRequest(receiver string, port string) {
 	body := BodyRequest{
 		Message: "Hola " + receiver,
 		Origin:  "Cpu",
 	}
 	bodyJson, err := json.MarshalIndent(body, "", "  ")
-	response, err := http.Post("POST", "http://localhost:8080/"+receiver+"/accion", bytes.NewBuffer(bodyJson))
+	response, err := http.Post("http://localhost:"+port+"/"+receiver+"/accion", "application/json", bytes.NewBuffer(bodyJson))
 	if err != nil {
 		logger.Error("Error al hacer la request")
-	}
-	if response.StatusCode != http.StatusOK {
-		logger.Error("Respuesta recibida: " + response.Status)
+	} else {
+		logger.Info("Request realizada correctamente")
 	}
 
-	fmt.Print(response)
+	if response.StatusCode != http.StatusOK {
+		logger.Error("Respuesta recibida: " + response.Status)
+	} else {
+		logger.Info("Conexion establecida con: "+receiver+" , status code: %v", response.StatusCode)
+	}
 }
