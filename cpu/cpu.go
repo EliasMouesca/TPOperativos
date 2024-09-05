@@ -42,6 +42,7 @@ func main() {
 }
 
 func BadRequest(w http.ResponseWriter, r *http.Request) {
+	logger.Info("Request malformada")
 	w.WriteHeader(http.StatusBadRequest)
 	jsonError, err := json.MarshalIndent("Bad Request", "", "  ")
 	_, err = w.Write(jsonError)
@@ -90,8 +91,9 @@ func GenerateRequest(receiver string, port string) {
 	response, err := http.Post("http://localhost:"+port+"/"+receiver+"/accion", "application/json", bytes.NewBuffer(bodyJson))
 	if err != nil {
 		logger.Error("Error al hacer la request")
+		return
 	} else {
-		logger.Info("Request realizada correctamente")
+		logger.Info("Request realizada correctamente a:" + receiver)
 	}
 
 	if response.StatusCode != http.StatusOK {
