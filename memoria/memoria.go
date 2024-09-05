@@ -23,7 +23,7 @@ func main() {
 	// --- COMUNICACIONES ---
 	GenerateRequest("cpu", "8080")
 	GenerateRequest("kernel", "8081")
-
+	GenerateRequest("filesystem", "8083")
 	// --- INICIALIZAR EL SERVER ---
 
 	hostname := "localhost"

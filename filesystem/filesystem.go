@@ -28,7 +28,7 @@ func main() {
 	generateRequest("memoria", "8082")
 
 	filesystemPort := "8083"
-	http.HandleFunc("/filesystem/doSomething", doSomething)
+	http.HandleFunc("/filesystem/accion", doSomething)
 	http.HandleFunc("/", notFound)
 
 	logger.Info("Corriendo filesystem en el puerto %v", filesystemPort)
