@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	Level  int
-	Writer io.Writer
+	LogLevel  int
+	LogWriter io.Writer
 )
 
 const (
@@ -47,12 +47,25 @@ func ConfigureLogger(filepath string, level string) error {
 		return err
 	}
 
+	err = SetLevel(level)
+	if err != nil {
+		return err
+	}
+
+	LogWriter = io.MultiWriter(file, os.Stdout)
+
+	return nil
+}
+
+func SetLevel(level string) error {
+	oldLevel := LogLevel
 	var exists bool
-	Level, exists = levelStrings[level]
+
+	LogLevel, exists = levelStrings[level]
 	if !exists {
+		LogLevel = oldLevel
 		return errors.New("'" + level + "' no es un nivel válido de loggeo")
 	}
-	Writer = io.MultiWriter(file, os.Stdout)
 
 	return nil
 }
@@ -84,7 +97,7 @@ func Trace(format string, args ...interface{}) {
 
 // Función privada, no se usa
 func log(level int, format string, args ...interface{}) {
-	if Level < level {
+	if LogLevel < level {
 		return
 	}
 
@@ -94,7 +107,7 @@ func log(level int, format string, args ...interface{}) {
 
 	stringToPrint := fmt.Sprintf("%s [ %s ] %s\n", formattedTime, levelString, formattedMessage)
 
-	_, err := Writer.Write([]byte(stringToPrint))
+	_, err := LogWriter.Write([]byte(stringToPrint))
 	if err != nil {
 		fmt.Printf("Could not write to logger, this should not be happening!: %v", err)
 		os.Exit(1)

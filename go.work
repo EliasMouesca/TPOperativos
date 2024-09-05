@@ -6,4 +6,5 @@ use (
 	./kernel
 	./memoria
 	./utils
+	./types
 )

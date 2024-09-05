@@ -12,6 +12,14 @@ import (
 var config KernelConfig
 
 func init() {
+	// Init logger
+	err := logger.ConfigureLogger("kernel.log", "INFO")
+	if err != nil {
+		fmt.Println("No se pudo crear el logger -", err.Error())
+		os.Exit(1)
+	}
+	logger.Debug("Logger creado")
+
 	// Load config
 	configData, err := os.ReadFile("config.json")
 	if err != nil {
@@ -26,15 +34,13 @@ func init() {
 	if err = config.validate(); err != nil {
 		logger.Fatal("La configuración no es válida - %v", err.Error())
 	}
-
-	// Init logger
-	err = logger.ConfigureLogger("kernel.log", config.LogLevel)
-	if err != nil {
-		fmt.Println("No se pudo crear el logger -", err.Error())
-		os.Exit(1)
-	}
 	logger.Debug("Configuración cargada exitosamente")
-	logger.Debug("Logger creado")
+
+	err = logger.SetLevel(config.LogLevel)
+	if err != nil {
+		logger.Fatal("No se pudo leer el log-level - %v", err.Error())
+	}
+
 }
 
 func main() {
