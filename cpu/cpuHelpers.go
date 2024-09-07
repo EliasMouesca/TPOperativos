@@ -72,8 +72,9 @@ func memoryWrite(thread types.Thread, physicalDirection byte, data [4]byte) erro
 	return nil
 }
 
-func kernelYourProcessFinished(thread types.Thread, outcome int) (err error) {
+func kernelYourProcessFinished(thread types.Thread, interruptReceived int) (err error) {
 	logger.Debug("Kernel, tu proceso terminó! TID: %v, PID: %v", thread.Tid, thread.Pid)
+	logger.Debug("Int. received %v", interruptReceived)
 
 	return nil
 }
