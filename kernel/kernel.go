@@ -46,7 +46,9 @@ func main() {
 	logger.Info("-- Comenzó la ejecución del kernel --")
 
 	// Listen and serve
-	http.HandleFunc("POST /kernel/syscall", ActionDemo)
+	http.HandleFunc("POST /kernel/syscall", syscallRecieve)
+	// En syscallRecieve, quiza podria ir el planificador a largo plazo como funciom
+	// y otro para corto en otro handle
 	http.HandleFunc("/", NotFound)
 
 	url := fmt.Sprintf("%s:%d", config.SelfAddress, config.SelfPort)
@@ -56,8 +58,12 @@ func main() {
 		logger.Fatal("ListenAndServe retornó error - %v", err)
 	}
 
-	// CPU me envia los datos para la syscall PROCESS_CREATE
-	//PROCESS_CREATE()
+	// Argumentos que me tiene que pasar CPU
+	// var fileName string
+	// var processSize int
+	// var TID int
+
+	// PROCESS_CREATE(// fileName, processSize, TID)
 
 }
 
@@ -70,7 +76,7 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func ActionDemo(w http.ResponseWriter, r *http.Request) {
-	logger.Info("Request 'accion': %v", r.RequestURI)
+func syscallRecieve(w http.ResponseWriter, r *http.Request) {
+	logger.Info("## (<PID>:<TID>) - Solicitó syscall: <NOMBRE_SYSCALL>")
 	w.WriteHeader(http.StatusOK)
 }

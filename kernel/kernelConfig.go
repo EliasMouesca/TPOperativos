@@ -1,6 +1,9 @@
 package main
 
-import "errors"
+import (
+	"errors"
+	"github.com/sisoputnfrba/tp-golang/types"
+)
 
 type KernelConfig struct {
 	SelfAddress        string `json:"ip_self"`
@@ -13,6 +16,9 @@ type KernelConfig struct {
 	Quantum            int    `json:"quantum"`
 	LogLevel           string `json:"log_level"`
 }
+
+var NEW []types.PCB
+var Ready []types.PCB
 
 func (cfg KernelConfig) validate() error {
 	if cfg.SelfAddress == "" {
