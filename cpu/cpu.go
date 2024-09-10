@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 )
 
 // TODO: Testear _algo_ lel
@@ -35,8 +36,7 @@ var syscallBuffer *syscalls.Syscall
 // Un mutex para la CPU porque se hay partes del código que asumen que la CPU es única por eso tenemos que excluir mutuamente
 // las distintas requests que llegen (aunque el kernel en realidad nunca debería mandar a ejecutar un segundo hilo si
 // el primero no terminó, pero bueno, por las dudas.
-// TODO: Está bien usar un canal como mutex?
-var cpuMutex = make(chan bool)
+var cpuMutex = sync.Mutex{}
 
 func init() {
 	// Configure logger
@@ -70,10 +70,6 @@ func init() {
 
 func main() {
 	logger.Info("--- Comienzo ejecución CPU ---")
-
-	go func() {
-		cpuMutex <- true
-	}()
 
 	http.HandleFunc("POST /cpu/interrupt", interruptFromKernel)
 	http.HandleFunc("POST /cpu/execute", executeThread)
@@ -123,18 +119,6 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 
 }
 
-/*func BadRequest(w http.ResponseWriter, r *http.Request) {
-	logger.Info("Request malformada")
-	w.WriteHeader(http.StatusBadRequest)
-	//jsonError, err := json.MarshalIndent("Bad Request", "", "  ")
-	_, err := w.Write([]byte("elicapo"))
-	if err != nil {
-		logger.Error("Error al escribir la respuesta a BadRequest")
-	}
-}
-
-*/
-
 func executeThread(w http.ResponseWriter, r *http.Request) {
 	// Log request
 	logger.Debug("Request recibida de: %v", r.RemoteAddr)
@@ -155,7 +139,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Esperá a que la CPU esté libre, no pinta andar cambiándole el contexto y el currentThread al proceso que se está ejecutando
-	<-cpuMutex
+	cpuMutex.Lock()
 
 	// Obtenemos el contexto de ejecución
 	logger.Debug("Proceso P%v T%v admitido en la CPU", execMsg.Pid, execMsg.Tid)
@@ -166,6 +150,9 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 			execMsg.Tid, execMsg.Pid, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("No se pudo obtener el contexto de ejecución - " + err.Error()))
+
+		cpuMutex.Unlock()
+
 		return
 	}
 
@@ -224,9 +211,7 @@ func loopInstructionCycle() {
 	currentThread = nil
 
 	// Libera la CPU
-	go func() {
-		cpuMutex <- true
-	}()
+	cpuMutex.Unlock()
 
 	// Kernel tu proceso terminó
 	err := kernelYourProcessFinished(finishedThread, receivedInterrupt)
