@@ -10,6 +10,6 @@ const (
 )
 
 type Interruption struct {
-	Type        int
-	Description string
+	Type        int    `json:"type"`
+	Description string `json:"description"`
 }

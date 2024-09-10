@@ -52,7 +52,6 @@ func memoryIsThisAddressOk(tid types.Thread, physicalAdrress uint32) (bool, erro
 	// TODO: Llamar a memoria
 
 	return true, nil
-	nil
 }
 
 func memoryGiveMeInstruction(thread types.Thread, pc uint32) (string, error) {
@@ -86,7 +85,7 @@ func kernelYourProcessFinished(thread types.Thread, interruptReceived types.Inte
 	logger.Debug("Kernel, tu proceso terminó! TID: %v, PID: %v", thread.Tid, thread.Pid)
 	logger.Debug("Int. received - %v", interruptReceived.Description)
 
-	url := fmt.Sprintf("http://%v:%v/kernel/process_finished", config.KernelAddress, config.KernelPort)
+	//url := fmt.Sprintf("http://%v:%v/kernel/process_finished", config.KernelAddress, config.KernelPort)
 
 	return nil
 }

@@ -24,7 +24,7 @@ var config CpuConfig
 var currentExecutionContext types.ExecutionContext
 
 // El hilo (PID + TID) que se está ejecutando en este momento
-var currentThread types.Thread
+var currentThread *types.Thread = nil
 
 // Si a este canal se le pasa una interrupción, la CPU se detiene y llama al kernel pasándole la interrupción que se haya cargado
 var interruptionChannel = make(chan types.Interruption, 1)
@@ -40,7 +40,7 @@ var cpuMutex = make(chan bool)
 
 func init() {
 	// Configure logger
-	err := logger.ConfigureLogger("cpu.log", config.LogLevel)
+	err := logger.ConfigureLogger("cpu.log", "DEBUG")
 	if err != nil {
 		fmt.Printf("No se pudo crear el logger - %v\n", err)
 		os.Exit(1)
@@ -71,13 +71,16 @@ func init() {
 func main() {
 	logger.Info("--- Comienzo ejecución CPU ---")
 
-	cpuMutex <- true
+	go func() {
+		cpuMutex <- true
+	}()
 
 	http.HandleFunc("POST /cpu/interrupt", interruptFromKernel)
 	http.HandleFunc("POST /cpu/execute", executeThread)
-	http.HandleFunc("/", BadRequest)
-	logger.Info("CPU escuchando en puerto 8080")
-	err := http.ListenAndServe(":8080", nil)
+	http.HandleFunc("/", badRequest)
+	self := fmt.Sprintf("%v:%v", config.SelfAddress, config.SelfPort)
+	logger.Info("CPU Sirviendo en %v", self)
+	err := http.ListenAndServe(self, nil)
 	if err != nil {
 		logger.Fatal("Listen and serve retornó error - " + err.Error())
 	}
@@ -102,8 +105,14 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if currentThread == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Kernel, mi amor, todavía no me mandaste a ejecutar nada, qué querés que interrumpa???"))
+		return
+	}
+
 	logger.Debug("Interrupción externa recibida %v", interruption.Description)
-	if len(interruption.Description) == 0 {
+	if len(interruptionChannel) == 0 {
 		interruptionChannel <- interruption
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("La CPU recibió la interrupción"))
@@ -114,15 +123,17 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func BadRequest(w http.ResponseWriter, r *http.Request) {
+/*func BadRequest(w http.ResponseWriter, r *http.Request) {
 	logger.Info("Request malformada")
 	w.WriteHeader(http.StatusBadRequest)
-	jsonError, err := json.MarshalIndent("Bad Request", "", "  ")
-	_, err = w.Write(jsonError)
+	//jsonError, err := json.MarshalIndent("Bad Request", "", "  ")
+	_, err := w.Write([]byte("elicapo"))
 	if err != nil {
 		logger.Error("Error al escribir la respuesta a BadRequest")
 	}
 }
+
+*/
 
 func executeThread(w http.ResponseWriter, r *http.Request) {
 	// Log request
@@ -160,7 +171,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 
 	// Si hasta acá las cosas salieron bien, poné a ejecutar el proceso
 	logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", execMsg.Tid, execMsg.Pid)
-	currentThread = execMsg
+	currentThread = &execMsg
 	go loopInstructionCycle()
 
 	// Repondemos al kernel: "Tu proceso se está ejecutando, sé feliz"
@@ -187,7 +198,7 @@ func loopInstructionCycle() {
 		}
 
 		// Execute
-		logger.Info("T%v P%v - Ejecutando: '%v'",
+		logger.Info("T%v P%v - Ejecutando: '%v' %v",
 			currentThread.Tid, currentThread.Pid, instructionToParse, arguments)
 
 		err = instruction(&currentExecutionContext, arguments)
@@ -208,11 +219,14 @@ func loopInstructionCycle() {
 
 	}
 
-	finishedThread := currentThread
+	finishedThread := *currentThread
 	receivedInterrupt := <-interruptionChannel
+	currentThread = nil
 
 	// Libera la CPU
-	cpuMutex <- true
+	go func() {
+		cpuMutex <- true
+	}()
 
 	// Kernel tu proceso terminó
 	err := kernelYourProcessFinished(finishedThread, receivedInterrupt)
@@ -223,7 +237,7 @@ func loopInstructionCycle() {
 }
 
 func fetch() (instructionToParse string, err error) {
-	instructionToParse, err = memoryGiveMeInstruction(currentThread, currentExecutionContext.Pc)
+	instructionToParse, err = memoryGiveMeInstruction(*currentThread, currentExecutionContext.Pc)
 	if err != nil {
 		return "", err
 	}

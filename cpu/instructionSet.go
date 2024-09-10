@@ -47,7 +47,7 @@ func writeMemInstruction(context *types.ExecutionContext, arguments []string) er
 
 	physicalAddress := context.MemoryBase + *virtualAddressRegister
 
-	validAddress, err := memoryIsThisAddressOk(currentThread, physicalAddress)
+	validAddress, err := memoryIsThisAddressOk(*currentThread, physicalAddress)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func writeMemInstruction(context *types.ExecutionContext, arguments []string) er
 		return nil
 	}
 
-	data, err := memoryRead(currentThread, physicalAddress)
+	data, err := memoryRead(*currentThread, physicalAddress)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func readMemInstruction(context *types.ExecutionContext, arguments []string) err
 
 	physicalAddress := context.MemoryBase + *virtualAddressRegister
 
-	validAddress, err := memoryIsThisAddressOk(currentThread, physicalAddress)
+	validAddress, err := memoryIsThisAddressOk(*currentThread, physicalAddress)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func readMemInstruction(context *types.ExecutionContext, arguments []string) err
 		return nil
 	}
 
-	err = memoryWrite(currentThread, physicalAddress, *dataRegister)
+	*dataRegister, err = memoryRead(*currentThread, physicalAddress)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func jnzInstruction(context *types.ExecutionContext, arguments []string) error {
 		return err
 	}
 
-	if *register == 0 {
+	if *register != 0 {
 		context.Pc = uint32(jump)
 	}
 
@@ -212,7 +212,7 @@ func checkArguments(args []string, correctNumberOfArgs int) error {
 
 // A partir de acá las syscalls
 func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
-	err := memoryUpdateExecutionContext(currentThread, ctx)
+	err := memoryUpdateExecutionContext(*currentThread, ctx)
 	if err != nil {
 		return err
 	}

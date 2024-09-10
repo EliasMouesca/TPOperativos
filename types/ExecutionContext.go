@@ -21,7 +21,7 @@ type ExecutionContext struct {
 }
 
 // GetRegister is NOT a getter, this takes a string and returns a reference to the register (if it exists)
-func (ectx ExecutionContext) GetRegister(str string) (*uint32, error) {
+func (ectx *ExecutionContext) GetRegister(str string) (*uint32, error) {
 	str = strings.ToLower(str)
 	switch str {
 	case "pc":
