@@ -6,8 +6,8 @@ import (
 )
 
 type ExecutionContext struct {
-	MemoryBase int `json:"memory_base"`
-	MemorySize int `json:"memory_size"`
+	MemoryBase uint32 `json:"memory_base"`
+	MemorySize uint32 `json:"memory_size"`
 
 	Pc uint32 `json:"pc"`
 	Ax uint32 `json:"ax"`

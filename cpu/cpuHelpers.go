@@ -39,6 +39,22 @@ func memoryGiveMeExecutionContext(tid types.Thread) (ectx types.ExecutionContext
 	return ectx, nil
 }
 
+func memoryUpdateExecutionContext(tid types.Thread, ectx types.ExecutionContext) error {
+	logger.Info("T%v P%v - Actualizo contexto de ejecución", tid.Tid, tid.Pid)
+
+	// TODO: Hablar con memoria
+
+	return nil
+}
+
+// TODO: Qué onda las memory address? Qué son? uint32?
+func memoryIsThisAddressOk(tid types.Thread, physicalAdrress uint32) (bool, error) {
+	// TODO: Llamar a memoria
+
+	return true, nil
+	nil
+}
+
 func memoryGiveMeInstruction(thread types.Thread, pc uint32) (string, error) {
 	logger.Info("T%v P%v - FETCH PC=%v", thread.Tid, thread.Pid, pc)
 
@@ -48,23 +64,16 @@ func memoryGiveMeInstruction(thread types.Thread, pc uint32) (string, error) {
 
 }
 
-func memoryUpdateExecutionContext(tid types.Thread, ectx types.ExecutionContext) error {
-	logger.Info("T%v P%v - Actualizo contexto de ejecución", tid.Tid, tid.Pid)
-
-	// TODO: Hablar con memoria
-
-	return nil
-}
-
-func memoryRead(thread types.Thread, physicalDirection byte) ([4]byte, error) {
+// La consigna dice "4 bytes" creo, pero vamos a usar uint32 para ahorrarnos la endianess
+func memoryRead(thread types.Thread, physicalDirection uint32) (uint32, error) {
 	logger.Info("T%v P%v - LEER -> %v", thread.Tid, thread.Pid, physicalDirection)
 
 	// TODO: Charlar con memoria
 
-	return [4]byte{0xde, 0xad, 0xbe, 0xef}, nil
+	return 0xdeadbeef, nil
 }
 
-func memoryWrite(thread types.Thread, physicalDirection byte, data [4]byte) error {
+func memoryWrite(thread types.Thread, physicalDirection uint32, data uint32) error {
 	logger.Info("T%v P%v - ESCRIBIR -> %v", thread.Tid, thread.Pid, physicalDirection)
 
 	// TODO: Chamuyarse a la memoria

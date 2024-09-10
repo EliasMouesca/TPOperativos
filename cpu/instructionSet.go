@@ -3,48 +3,100 @@ package main
 import (
 	"errors"
 	"github.com/sisoputnfrba/tp-golang/types"
+	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"strconv"
 )
 
 // An Instruction is basically a function that takes an ectx and a slice of parameters (strings)
 // and returns the modified ectx and any errors encountered.
-type Instruction func(*types.ExecutionContext, []string) error
+type Instruction func(context *types.ExecutionContext, arguments []string) error
 
 var instructionSet = map[string]Instruction{
-	"SET": setInstruction,
-	"SUM": sumInstruction,
-	"SUB": subInstruction,
-	//"READ_MEM": readMemInstruction,
-	//"WRITE_MEM": writeMemInstruction,
-	"JNZ":          jnzInstruction,
-	"LOG":          logInstruction,
-	"MUTEX_CREATE": mutexCreateInstruction,
+	"SET":       setInstruction,
+	"READ_MEM":  readMemInstruction,
+	"WRITE_MEM": writeMemInstruction,
+	"SUM":       sumInstruction,
+	"SUB":       subInstruction,
+	"JNZ":       jnzInstruction,
+	"LOG":       logInstruction,
+	// De acá en adelante son syscalls y las soluciona querido kernel
+	"DUMP_MEMORY":    dumpMemoryInstruction,
+	"IO":             ioInstruction,
+	"PROCESS_CREATE": processCreateInstruction,
+	"THREAD_CREATE":  threadCreateInstruction,
+	"THREAD_JOIN":    threadJoinInstruction,
+	"THREAD_CANCEL":  threadCancelInstruction,
+	"MUTEX_CREATE":   mutexCreateInstruction,
+	"MUTEX_LOCK":     mutexLockInstruction,
+	"MUTEX_UNLOCK":   mutexUnlockInstruction,
+	"THREAD_EXIT":    threadExitInstruction,
+	"PROCESS_EXIT":   processExitInstruction,
 }
 
-func doSyscall(ctx types.ExecutionContext, syscall types.Syscall) {
-	err := memoryUpdateExecutionContext(currentThread, ctx)
+func writeMemInstruction(context *types.ExecutionContext, arguments []string) error {
+	dataRegister, err := context.GetRegister(arguments[0])
 	if err != nil {
-		logger.Error("Failed to update execution context - %v", err.Error())
+		return err
 	}
 
-	interruptionChannel <- types.Interruption{
-		Type:        types.InterruptionSyscall,
-		Description: "Interrupción por syscall",
+	virtualAddressRegister, err := context.GetRegister(arguments[1])
+	if err != nil {
+		return err
 	}
 
-	syscallBuffer = &syscall
+	physicalAddress := context.MemoryBase + *virtualAddressRegister
 
+	validAddress, err := memoryIsThisAddressOk(currentThread, physicalAddress)
+	if err != nil {
+		return err
+	}
+	if !validAddress {
+		interruptionChannel <- types.Interruption{
+			Type:        types.InterruptionSegFault,
+			Description: "La dirección no forma parte del espacio del memoria del proceso"}
+		return nil
+	}
+
+	data, err := memoryRead(currentThread, physicalAddress)
+	if err != nil {
+		return err
+	}
+
+	*dataRegister = data
+	return nil
 }
 
-func mutexCreateInstruction(context *types.ExecutionContext, arguments []string) error {
-	doSyscall(*context,
-		types.Syscall{
-			types.MutexCreate,
-			"Crear mutex syscall",
-			arguments,
-		})
+func readMemInstruction(context *types.ExecutionContext, arguments []string) error {
+	dataRegister, err := context.GetRegister(arguments[0])
+	if err != nil {
+		return err
+	}
 
+	virtualAddressRegister, err := context.GetRegister(arguments[1])
+	if err != nil {
+		return err
+	}
+
+	physicalAddress := context.MemoryBase + *virtualAddressRegister
+
+	validAddress, err := memoryIsThisAddressOk(currentThread, physicalAddress)
+	if err != nil {
+		return err
+	}
+	if !validAddress {
+		interruptionChannel <- types.Interruption{
+			Type:        types.InterruptionSegFault,
+			Description: "La dirección no forma parte del espacio del memoria del proceso"}
+		return nil
+	}
+
+	err = memoryWrite(currentThread, physicalAddress, *dataRegister)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func jnzInstruction(context *types.ExecutionContext, arguments []string) error {
@@ -156,4 +208,149 @@ func checkArguments(args []string, correctNumberOfArgs int) error {
 		return errors.New("se recibió una cantidad de argumentos no válida")
 	}
 	return nil
+}
+
+// A partir de acá las syscalls
+func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
+	err := memoryUpdateExecutionContext(currentThread, ctx)
+	if err != nil {
+		return err
+	}
+
+	interruptionChannel <- types.Interruption{
+		Type:        types.InterruptionSyscall,
+		Description: "Interrupción por syscall",
+	}
+
+	syscallBuffer = &syscall
+
+	return nil
+
+}
+
+func mutexCreateInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.MutexCreate, "Syscall: crear mutex", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func processExitInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.ProcessExit, "Syscall: detener proceso", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func threadExitInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.ThreadExit, "Syscall: thread exit", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func mutexLockInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.MutexLock, "Syscall: lockear mutex", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func mutexUnlockInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.MutexUnlock, "Syscall: desbloquear mutex", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func threadCancelInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.ThreadCancel, "Syscall: cancelar hilo", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func threadCreateInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.ThreadCreate, "Syscall: crear hilo", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func threadJoinInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.ThreadJoin, "Syscall: joinear thread", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func processCreateInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.ProcessCreate, "Syscall: crear proceso", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ioInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.IO, "Syscall: I/O", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func dumpMemoryInstruction(context *types.ExecutionContext, arguments []string) error {
+	if err := doSyscall(
+		*context,
+		syscalls.New(syscalls.DumpMemory, "Syscall: dump memory", arguments),
+	); err != nil {
+		return err
+	}
+
+	return nil
+
 }

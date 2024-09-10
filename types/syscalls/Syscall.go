@@ -1,4 +1,4 @@
-package types
+package syscalls
 
 // TODO: O este paquete se llama syscall o al enum le prefijamos "syscall", DumpMemory -> SyscallDumpMemory
 
@@ -21,4 +21,12 @@ type Syscall struct {
 	Type        int
 	Description string
 	Arguments   []string
+}
+
+func New(syscallType int, description string, arguments []string) Syscall {
+	return Syscall{
+		Type:        syscallType,
+		Description: description,
+		Arguments:   arguments,
+	}
 }

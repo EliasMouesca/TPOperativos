@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/types"
+	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"io"
 	"net/http"
@@ -12,8 +13,8 @@ import (
 	"strings"
 )
 
-// TODO: Codear las instrucciones que faltan
 // TODO: Testear _algo_ lel
+// TODO: Terminar los helpers
 
 // TODO: Qué tan mal está usar globales?
 // Configuración general de la CPU
@@ -29,7 +30,7 @@ var currentThread types.Thread
 var interruptionChannel = make(chan types.Interruption, 1)
 
 // El momento en que se detecta la syscall es distinto del momento en que se la manda al kernel, por eso tenemos un buffer
-var syscallBuffer *types.Syscall
+var syscallBuffer *syscalls.Syscall
 
 // Un mutex para la CPU porque se hay partes del código que asumen que la CPU es única por eso tenemos que excluir mutuamente
 // las distintas requests que llegen (aunque el kernel en realidad nunca debería mandar a ejecutar un segundo hilo si
@@ -192,9 +193,11 @@ func loopInstructionCycle() {
 		err = instruction(&currentExecutionContext, arguments)
 		if err != nil {
 			logger.Error("no se pudo ejecutar la instrucción - %v", err.Error())
-			interruptionChannel <- types.Interruption{
-				Type:        types.InterruptionBadInstruction,
-				Description: "La CPU recibió una instrucción no reconocida",
+			if len(interruptionChannel) != 0 {
+				interruptionChannel <- types.Interruption{
+					Type:        types.InterruptionBadInstruction,
+					Description: "La CPU recibió una instrucción no reconocida",
+				}
 			}
 		}
 
