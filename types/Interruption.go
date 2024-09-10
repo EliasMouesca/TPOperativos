@@ -1,10 +1,12 @@
 package types
 
+// TODO: Llamar este paquete interrupción en vez de types?
+
 const (
-	EndOfQuantum = iota
-	BadInstruction
-	Segfault
-	Syscall
+	InterruptionEndOfQuantum = iota
+	InterruptionBadInstruction
+	InterruptionSegFault
+	InterruptionSyscall
 )
 
 type Interruption struct {

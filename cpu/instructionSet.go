@@ -17,9 +17,34 @@ var instructionSet = map[string]Instruction{
 	"SUB": subInstruction,
 	//"READ_MEM": readMemInstruction,
 	//"WRITE_MEM": writeMemInstruction,
-	"JNZ": jnzInstruction,
-	"LOG": logInstruction,
-	"MUTEX_CREATE",
+	"JNZ":          jnzInstruction,
+	"LOG":          logInstruction,
+	"MUTEX_CREATE": mutexCreateInstruction,
+}
+
+func doSyscall(ctx types.ExecutionContext, syscall types.Syscall) {
+	err := memoryUpdateExecutionContext(currentThread, ctx)
+	if err != nil {
+		logger.Error("Failed to update execution context - %v", err.Error())
+	}
+
+	interruptionChannel <- types.Interruption{
+		Type:        types.InterruptionSyscall,
+		Description: "Interrupción por syscall",
+	}
+
+	syscallBuffer = &syscall
+
+}
+
+func mutexCreateInstruction(context *types.ExecutionContext, arguments []string) error {
+	doSyscall(*context,
+		types.Syscall{
+			types.MutexCreate,
+			"Crear mutex syscall",
+			arguments,
+		})
+
 }
 
 func jnzInstruction(context *types.ExecutionContext, arguments []string) error {

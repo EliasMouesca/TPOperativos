@@ -15,28 +15,27 @@ import (
 // TODO: Codear las instrucciones que faltan
 // TODO: Testear _algo_ lel
 
+// TODO: Qué tan mal está usar globales?
+// Configuración general de la CPU
 var config CpuConfig
-var executionContext types.ExecutionContext
+
+// Execution context actual, los registros que está fisicamente en la CPU
+var currentExecutionContext types.ExecutionContext
+
+// El hilo (PID + TID) que se está ejecutando en este momento
 var currentThread types.Thread
-var interruptionChannel = make(chan types.Interruption)
 
-// Está bien usar un canal como mutex?
+// Si a este canal se le pasa una interrupción, la CPU se detiene y llama al kernel pasándole la interrupción que se haya cargado
+var interruptionChannel = make(chan types.Interruption, 1)
+
+// El momento en que se detecta la syscall es distinto del momento en que se la manda al kernel, por eso tenemos un buffer
+var syscallBuffer *types.Syscall
+
+// Un mutex para la CPU porque se hay partes del código que asumen que la CPU es única por eso tenemos que excluir mutuamente
+// las distintas requests que llegen (aunque el kernel en realidad nunca debería mandar a ejecutar un segundo hilo si
+// el primero no terminó, pero bueno, por las dudas.
+// TODO: Está bien usar un canal como mutex?
 var cpuMutex = make(chan bool)
-
-// Syscalls
-const (
-	DumpMemory = iota
-	IO
-	ProcessCreate
-	ThreadCreate
-	ThreadJoin
-	ThreadCancel
-	MutexCreate
-	MutexLock
-	MutexUnlock
-	ThreadExit
-	ProcessExit
-)
 
 func init() {
 	// Configure logger
@@ -103,7 +102,14 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Debug("Interrupción externa recibida %v", interruption.Description)
-	interruptionChannel <- interruption
+	if len(interruption.Description) == 0 {
+		interruptionChannel <- interruption
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("La CPU recibió la interrupción"))
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("La CPU ya recibió otra interrupción y se va a detener al final del ciclo"))
+	}
 
 }
 
@@ -136,9 +142,13 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Esperá a que la CPU esté libre, no pinta andar cambiándole el contexto y el currentThread al proceso que se está ejecutando
+	<-cpuMutex
+
 	// Obtenemos el contexto de ejecución
+	logger.Debug("Proceso P%v T%v admitido en la CPU", execMsg.Pid, execMsg.Tid)
 	logger.Debug("Obteniendo contexto de ejecución")
-	executionContext, err = memoryGiveMeExecutionContext(execMsg)
+	currentExecutionContext, err = memoryGiveMeExecutionContext(execMsg)
 	if err != nil {
 		logger.Error("No se pudo obtener el contexto de ejecución del T%v P%v - %v",
 			execMsg.Tid, execMsg.Pid, err.Error())
@@ -161,10 +171,6 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 }
 
 func loopInstructionCycle() {
-
-	// Wait for cpu to be free
-	<-cpuMutex
-
 	for {
 		// Fetch
 		instructionToParse, err := fetch()
@@ -183,12 +189,11 @@ func loopInstructionCycle() {
 		logger.Info("T%v P%v - Ejecutando: '%v'",
 			currentThread.Tid, currentThread.Pid, instructionToParse, arguments)
 
-		// Tanto trabajo decodificando resulta en la siguiente línea, que viva el paradigma funcional
-		err = instruction(&executionContext, arguments)
+		err = instruction(&currentExecutionContext, arguments)
 		if err != nil {
 			logger.Error("no se pudo ejecutar la instrucción - %v", err.Error())
 			interruptionChannel <- types.Interruption{
-				Type:        types.BadInstruction,
+				Type:        types.InterruptionBadInstruction,
 				Description: "La CPU recibió una instrucción no reconocida",
 			}
 		}
@@ -200,11 +205,14 @@ func loopInstructionCycle() {
 
 	}
 
-	// Free up the cpu
+	finishedThread := currentThread
+	receivedInterrupt := <-interruptionChannel
+
+	// Libera la CPU
 	cpuMutex <- true
 
 	// Kernel tu proceso terminó
-	err := kernelYourProcessFinished(currentThread, <-interruptionChannel)
+	err := kernelYourProcessFinished(finishedThread, receivedInterrupt)
 	if err != nil {
 		// Yo creo que esto es suficientemente grave como para terminar la ejecución
 		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())
@@ -212,7 +220,7 @@ func loopInstructionCycle() {
 }
 
 func fetch() (instructionToParse string, err error) {
-	instructionToParse, err = memoryGiveMeInstruction(currentThread, executionContext.Pc)
+	instructionToParse, err = memoryGiveMeInstruction(currentThread, currentExecutionContext.Pc)
 	if err != nil {
 		return "", err
 	}
