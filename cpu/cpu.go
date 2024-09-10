@@ -12,24 +12,30 @@ import (
 	"strings"
 )
 
-// TODO: Codear hilo que loopee esperando interrupciones del kernel
 // TODO: Codear las instrucciones que faltan
 // TODO: Testear _algo_ lel
 
 var config CpuConfig
 var executionContext types.ExecutionContext
 var currentThread types.Thread
-var interruptChannel = make(chan int)
-var cpuIsFree = make(chan bool)
+var interruptionChannel = make(chan types.Interruption)
 
-// These are the interrupts the CPU understands
+// Está bien usar un canal como mutex?
+var cpuMutex = make(chan bool)
+
+// Syscalls
 const (
-	ProcessExit = iota
+	DumpMemory = iota
+	IO
+	ProcessCreate
+	ThreadCreate
+	ThreadJoin
+	ThreadCancel
+	MutexCreate
+	MutexLock
+	MutexUnlock
 	ThreadExit
-	Syscall
-	Preemption
-	BadInstruction
-	Segfault
+	ProcessExit
 )
 
 func init() {
@@ -65,8 +71,9 @@ func init() {
 func main() {
 	logger.Info("--- Comienzo ejecución CPU ---")
 
-	cpuIsFree <- true
+	cpuMutex <- true
 
+	http.HandleFunc("POST /cpu/interrupt", interruptFromKernel)
 	http.HandleFunc("POST /cpu/execute", executeThread)
 	http.HandleFunc("/", BadRequest)
 	logger.Info("CPU escuchando en puerto 8080")
@@ -74,6 +81,30 @@ func main() {
 	if err != nil {
 		logger.Fatal("Listen and serve retornó error - " + err.Error())
 	}
+}
+
+func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
+	// Log request
+	logger.Debug("Request recibida de: %v", r.RemoteAddr)
+
+	// Parse body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		badRequest(w, r)
+		return
+	}
+
+	// Parse interruption
+	var interruption = types.Interruption{}
+	err = json.Unmarshal(body, &interruption)
+	if err != nil {
+		badRequest(w, r)
+		return
+	}
+
+	logger.Debug("Interrupción externa recibida %v", interruption.Description)
+	interruptionChannel <- interruption
+
 }
 
 func BadRequest(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +163,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 func loopInstructionCycle() {
 
 	// Wait for cpu to be free
-	<-cpuIsFree
+	<-cpuMutex
 
 	for {
 		// Fetch
@@ -153,24 +184,27 @@ func loopInstructionCycle() {
 			currentThread.Tid, currentThread.Pid, instructionToParse, arguments)
 
 		// Tanto trabajo decodificando resulta en la siguiente línea, que viva el paradigma funcional
-		executionContext, err = instruction(executionContext, arguments)
+		err = instruction(&executionContext, arguments)
 		if err != nil {
 			logger.Error("no se pudo ejecutar la instrucción - %v", err.Error())
-			interruptChannel <- BadInstruction
+			interruptionChannel <- types.Interruption{
+				Type:        types.BadInstruction,
+				Description: "La CPU recibió una instrucción no reconocida",
+			}
 		}
 
 		// Checkinterrupt
-		if len(interruptChannel) > 0 {
+		if len(interruptionChannel) > 0 {
 			break
 		}
 
 	}
 
 	// Free up the cpu
-	cpuIsFree <- true
+	cpuMutex <- true
 
-	// Kernel tu proceso terminó, por qué? leer interruptChannel
-	err := kernelYourProcessFinished(currentThread, <-interruptChannel)
+	// Kernel tu proceso terminó
+	err := kernelYourProcessFinished(currentThread, <-interruptionChannel)
 	if err != nil {
 		// Yo creo que esto es suficientemente grave como para terminar la ejecución
 		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())

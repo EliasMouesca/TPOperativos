@@ -72,9 +72,12 @@ func memoryWrite(thread types.Thread, physicalDirection byte, data [4]byte) erro
 	return nil
 }
 
-func kernelYourProcessFinished(thread types.Thread, interruptReceived int) (err error) {
+// TODO: Qué le mando el body del post? La interrupción sí, pero cómo, el int?
+func kernelYourProcessFinished(thread types.Thread, interruptReceived types.Interruption) (err error) {
 	logger.Debug("Kernel, tu proceso terminó! TID: %v, PID: %v", thread.Tid, thread.Pid)
-	logger.Debug("Int. received %v", interruptReceived)
+	logger.Debug("Int. received - %v", interruptReceived.Description)
+
+	url := fmt.Sprintf("http://%v:%v/kernel/process_finished", config.KernelAddress, config.KernelPort)
 
 	return nil
 }
