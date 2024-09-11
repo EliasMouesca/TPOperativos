@@ -2,6 +2,6 @@ package types
 
 type PCB struct {
 	PID   int
-	TIDs  []*TCB
+	TIDs  []TCB
 	Mutex []int
 }

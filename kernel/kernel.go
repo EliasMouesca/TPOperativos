@@ -46,7 +46,9 @@ func main() {
 	logger.Info("-- Comenzó la ejecución del kernel --")
 
 	// Listen and serve
-	http.HandleFunc("POST /kernel/syscall", syscallRecieve)
+	http.HandleFunc("/kernel/createProcess", func(w http.ResponseWriter, r *http.Request) {
+		syscallRecieve(w, r, "CREATE_PROCESS")
+	})
 	// En syscallRecieve, quiza podria ir el planificador a largo plazo como funciom
 	// y otro para corto en otro handle
 	http.HandleFunc("/", NotFound)
@@ -76,7 +78,20 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func syscallRecieve(w http.ResponseWriter, r *http.Request) {
-	logger.Info("## (<PID>:<TID>) - Solicitó syscall: <NOMBRE_SYSCALL>")
+func syscallRecieve(w http.ResponseWriter, r *http.Request, nombreSyscall string) {
+	logger.Info("## (<PID>:<TID>) - Solicitó syscall: %s", nombreSyscall)
+
+	// Parsear la syscall request
+	var syscallData interface{} // Cambio al tipo que espero en planificador
+	err := json.NewDecoder(r.Body).Decode(&syscallData)
+	if err != nil {
+		logger.Error("Error al decodificar el cuerpo de la solicitud - %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Call the long-term scheduler with the syscall name and data
+	planificadorLargoPlazo(nombreSyscall, syscallData)
+
 	w.WriteHeader(http.StatusOK)
 }
