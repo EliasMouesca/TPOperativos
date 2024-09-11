@@ -19,11 +19,24 @@ func planificadorLargoPlazo(syscall syscalls.Syscall) {
 	logger.Info("## (<PID>:<TID>) - Solicitó syscall: <%v>", syscall.Description)
 	switch syscall.Type {
 
+	//DUMP MEMORY
+	case 0:
+
+	// IO
+	case 1:
+
 	//PROCESS_CREATE
 	case 2:
 		pseudocodigo := syscall.Arguments[0]
 		processSize, _ := strconv.Atoi(syscall.Arguments[1])
 		prioridad, _ := strconv.Atoi(syscall.Arguments[2])
+
+		if len(NEW) != 0 {
+			NEW = append(NEW, types.PCB{})
+			// Si NEW no esta vacio significa que hay un proceso esperando a ser mandado a Ready
+			// Habria que hacer una sincronizacion de los procesos que vayan llegando
+			// y que vayan preguntando a memoria a medida que pasan los procesos a Ready
+		}
 
 		PROCESS_CREATE(pseudocodigo, processSize, prioridad)
 		logger.Info("## (<PID>:0) Se crea el proceso - Estado: NEW")
@@ -33,21 +46,30 @@ func planificadorLargoPlazo(syscall syscalls.Syscall) {
 				// Aca habria que ver si usamos Thread_Create o harcodeado
 			}
 		}
-	case "PROCESS_EXIT":
 
-	//THREADS
-	case "CREATE_THREAD":
-	case "THREAD_JOIN":
-	case "THREAD_CANCEL":
-	case "THREAD_EXIT":
+	//CREATE_THREAD
+	case 3:
 
-	//MUTEX
-	case "MUTEX_CREATE":
-	case "MUTEX_LOCK":
-	case "MUTEX_UNLOCK":
+	//THREAD_JOIN
+	case 4:
 
-	//MEMORY
-	case "DUMP_MEMORY":
+	//THREAD_CANCEL
+	case 5:
+
+	//MUTEX_CREATE
+	case 6:
+
+	// MUTEX_LOCK
+	case 7:
+
+	//MUTEX_UNLOCK
+	case 8:
+
+		//THREAD_EXIT
+	case 9:
+
+		//PROCESS_EXIT
+	case 10:
 
 	}
 }

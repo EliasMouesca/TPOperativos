@@ -48,8 +48,6 @@ func main() {
 
 	// Listen and serve
 	http.HandleFunc("/kernel/syscall", syscallRecieve)
-	// En syscallRecieve, quiza podria ir el planificador a largo plazo como funciom
-	// y otro para corto en otro handle
 	http.HandleFunc("/", badRequest)
 
 	url := fmt.Sprintf("%s:%d", config.SelfAddress, config.SelfPort)

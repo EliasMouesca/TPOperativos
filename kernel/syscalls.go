@@ -22,6 +22,10 @@ func PROCESS_CREATE(fileName string, processSize int, prioridad int) {
 	NEW = append(NEW, procesoCreado)
 }
 
+func PROCESS_EXIT() {
+	logger.Info("## Finaliza el proceso <%d>", pid)
+}
+
 func THREAD_CREATE(pseudocodigo string, prioridad int) {
 	var hiloCreado types.TCB
 	hiloCreado.TID = len(Ready)
