@@ -30,3 +30,17 @@ func New(syscallType int, description string, arguments []string) Syscall {
 		Arguments:   arguments,
 	}
 }
+
+var SyscallNames = map[int]string{
+	DumpMemory:    "DumpMemory",
+	IO:            "IO",
+	ProcessCreate: "ProcessCreate",
+	ThreadCreate:  "ThreadCreate",
+	ThreadJoin:    "ThreadJoin",
+	ThreadCancel:  "ThreadCancel",
+	MutexCreate:   "MutexCreate",
+	MutexLock:     "MutexLock",
+	MutexUnlock:   "MutexUnlock",
+	ThreadExit:    "ThreadExit",
+	ProcessExit:   "ProcessExit",
+}

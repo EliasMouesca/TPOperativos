@@ -1,13 +1,9 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
-	"net/http"
 	"strconv"
 )
 
@@ -16,17 +12,13 @@ var NEW []types.PCB
 var Ready []types.TCB
 
 func planificadorLargoPlazo(syscall syscalls.Syscall) {
-	logger.Info("## (<PID>:<TID>) - Solicitó syscall: <%v>", syscall.Description)
+	syscallName := syscalls.SyscallNames[syscall.Type]
+	logger.Info("\n\n## (<PID>:<TID>) - Solicitó syscall: <%v>", syscallName)
+
 	switch syscall.Type {
 
-	//DUMP MEMORY
-	case 0:
-
-	// IO
-	case 1:
-
 	//PROCESS_CREATE
-	case 2:
+	case syscalls.ProcessCreate:
 		pseudocodigo := syscall.Arguments[0]
 		processSize, _ := strconv.Atoi(syscall.Arguments[1])
 		prioridad, _ := strconv.Atoi(syscall.Arguments[2])
@@ -39,72 +31,50 @@ func planificadorLargoPlazo(syscall syscalls.Syscall) {
 		}
 
 		PROCESS_CREATE(pseudocodigo, processSize, prioridad)
-		logger.Info("## (<PID>:0) Se crea el proceso - Estado: NEW")
-		for available == 0 {
-			go availableMemory(processSize)
-			if available == 1 {
-				// Aca habria que ver si usamos Thread_Create o harcodeado
+
+	//CREATE_THREAD
+	case syscalls.ThreadCreate:
+		pid, _ := strconv.Atoi(syscall.Arguments[0])
+		pseudocodigo := syscall.Arguments[1]
+		prioridad, _ := strconv.Atoi(syscall.Arguments[2])
+
+		// Encontrar el PCB correspondiente
+		var proceso *types.PCB
+		for i := range NEW {
+			if NEW[i].PID == pid {
+				proceso = &NEW[i]
+				break
 			}
 		}
 
-	//CREATE_THREAD
-	case 3:
+		if proceso != nil {
+			THREAD_CREATE(proceso, pseudocodigo, prioridad)
+			logger.Info("## (%d:<TID>) Se crea el hilo - Estado: READY", proceso.PID)
+		} else {
+			logger.Error("No se encontró el proceso con PID <%d> en la lista NEW", pid)
+		}
 
-	//THREAD_JOIN
-	case 4:
+	//THREAD_EXIT
+	case syscalls.ThreadExit:
 
-	//THREAD_CANCEL
-	case 5:
+	//PROCESS_EXIT
+	case syscalls.ProcessExit:
+		// Suponiendo que el PID se pasa como primer argumento
+		pid, _ := strconv.Atoi(syscall.Arguments[0])
 
-	//MUTEX_CREATE
-	case 6:
+		// Encontrar el PCB correspondiente
+		var procesoAEliminar *types.PCB
+		for i := range NEW {
+			if NEW[i].PID == pid {
+				procesoAEliminar = &NEW[i]
+				break
+			}
+		}
+		if procesoAEliminar != nil {
+			PROCESS_EXIT(*procesoAEliminar)
+		} else {
+			logger.Error("No se encontró el proceso con PID <%d> en la lista NEW", pid)
+		}
 
-	// MUTEX_LOCK
-	case 7:
-
-	//MUTEX_UNLOCK
-	case 8:
-
-		//THREAD_EXIT
-	case 9:
-
-		//PROCESS_EXIT
-	case 10:
-
-	}
-}
-
-func availableMemory(processSize int) {
-
-	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
-
-	// Serializar mensaje
-	processSize_json, err := json.Marshal(processSize)
-	if err != nil {
-		logger.Fatal("Error al serializar processSize - %v", err)
-		return
-	}
-
-	// Hacer request a memoria
-	memoria := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", config.MemoryAddress, config.MemoryPort)
-	logger.Debug("Enviando request a memoria")
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(processSize_json))
-	if err != nil {
-		logger.Fatal("Error al conectar con memoria - %v", err)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	// Recibo repuesta de memoria
-	resp, err := memoria.Do(req)
-	if err != nil {
-		logger.Fatal("Error al obtener mensaje de respuesta por parte de memoria - %v", err)
-		return
-	}
-	if resp.StatusCode != http.StatusOK {
-		available = 1
-	} else {
-		logger.Info("No hay espacio disponible en memoria")
 	}
 }

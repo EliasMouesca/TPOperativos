@@ -1,7 +1,7 @@
 package types
 
 type TCB struct {
-	PID       PCB
+	PID       int
 	TID       int
 	Prioridad int
 }
