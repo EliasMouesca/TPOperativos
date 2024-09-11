@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"os"
@@ -46,12 +47,10 @@ func main() {
 	logger.Info("-- Comenzó la ejecución del kernel --")
 
 	// Listen and serve
-	http.HandleFunc("/kernel/createProcess", func(w http.ResponseWriter, r *http.Request) {
-		syscallRecieve(w, r, "CREATE_PROCESS")
-	})
+	http.HandleFunc("/kernel/syscall", syscallRecieve)
 	// En syscallRecieve, quiza podria ir el planificador a largo plazo como funciom
 	// y otro para corto en otro handle
-	http.HandleFunc("/", NotFound)
+	http.HandleFunc("/", badRequest)
 
 	url := fmt.Sprintf("%s:%d", config.SelfAddress, config.SelfPort)
 	logger.Info("Server activo en %s", url)
@@ -69,7 +68,7 @@ func main() {
 
 }
 
-func NotFound(w http.ResponseWriter, r *http.Request) {
+func badRequest(w http.ResponseWriter, r *http.Request) {
 	logger.Info("Request inválida: %v", r.RequestURI)
 	w.WriteHeader(http.StatusBadRequest)
 	_, err := w.Write([]byte("Bad request!"))
@@ -78,12 +77,11 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func syscallRecieve(w http.ResponseWriter, r *http.Request, nombreSyscall string) {
-	logger.Info("## (<PID>:<TID>) - Solicitó syscall: %s", nombreSyscall)
+func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 
+	var request syscalls.Syscall
 	// Parsear la syscall request
-	var syscallData interface{} // Cambio al tipo que espero en planificador
-	err := json.NewDecoder(r.Body).Decode(&syscallData)
+	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		logger.Error("Error al decodificar el cuerpo de la solicitud - %v", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -91,7 +89,7 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request, nombreSyscall string
 	}
 
 	// Call the long-term scheduler with the syscall name and data
-	planificadorLargoPlazo(nombreSyscall, syscallData)
+	planificadorLargoPlazo(request)
 
 	w.WriteHeader(http.StatusOK)
 }

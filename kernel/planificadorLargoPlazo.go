@@ -5,29 +5,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/types"
+	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
+	"strconv"
 )
 
 var available int = 0
 var NEW []types.PCB
 var Ready []types.TCB
 
-func planificadorLargoPlazo(args ...interface{}) {
-	syscallName := args[0].(string)
+func planificadorLargoPlazo(syscall syscalls.Syscall) {
+	logger.Info("## (<PID>:<TID>) - Solicitó syscall: <%v>", syscall.Description)
+	switch syscall.Type {
 
-	switch syscallName {
+	//PROCESS_CREATE
+	case 2:
+		pseudocodigo := syscall.Arguments[0]
+		processSize, _ := strconv.Atoi(syscall.Arguments[1])
+		prioridad, _ := strconv.Atoi(syscall.Arguments[2])
 
-	//PROCESS
-	case "PROCESS_CREATE":
-		pseudocodigo := args[1].(string)
-		processSize := args[2].(int)
-		prioridad := args[3].(int)
-
+		PROCESS_CREATE(pseudocodigo, processSize, prioridad)
+		logger.Info("## (<PID>:0) Se crea el proceso - Estado: NEW")
 		for available == 0 {
 			go availableMemory(processSize)
 			if available == 1 {
-				PROCESS_CREATE(pseudocodigo, processSize, prioridad)
+				// Aca habria que ver si usamos Thread_Create o harcodeado
 			}
 		}
 	case "PROCESS_EXIT":
