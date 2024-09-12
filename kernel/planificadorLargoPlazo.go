@@ -8,8 +8,10 @@ import (
 )
 
 var available int = 0
-var NEW []types.PCB
-var Ready []types.TCB
+
+// Estan definidas dentro de global, para que las pueda usar dentro de cortoplazo
+// var NEW []types.PCB
+// var Ready []types.TCB
 
 func planificadorLargoPlazo(syscall syscalls.Syscall) {
 	syscallName := syscalls.SyscallNames[syscall.Type]
