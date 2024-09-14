@@ -46,6 +46,10 @@ func init() {
 func main() {
 	logger.Info("-- Comenzó la ejecución del kernel --")
 
+	// Implementacion GOD
+	// Inicializar un proceso sin que CPU mande nada
+	// PROCESS_CREATE(// fileName, processSize, TID)
+
 	// Listen and serve
 	http.HandleFunc("/kernel/syscall", syscallRecieve)
 	http.HandleFunc("/", badRequest)
@@ -57,12 +61,8 @@ func main() {
 		logger.Fatal("ListenAndServe retornó error - %v", err)
 	}
 
-	// Argumentos que me tiene que pasar CPU
-	// var fileName string
-	// var processSize int
-	// var TID int
-
-	// PROCESS_CREATE(// fileName, processSize, TID)
+	// que quede corriendo con un hilo
+	// planificadorLargoPlazo
 
 }
 
@@ -86,8 +86,9 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Call the long-term scheduler with the syscall name and data
-	planificadorLargoPlazo(request)
+	// map a la libreria de syscalls
+	ExecuteSyscall(request.Description, request.Arguments)
+	// planificadorLargoPlazo(request)
 
 	w.WriteHeader(http.StatusOK)
 }

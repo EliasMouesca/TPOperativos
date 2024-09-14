@@ -9,102 +9,85 @@ import (
 	"net/http"
 )
 
+type syscallFunc func(args ...interface{})
+
+var syscallSet = map[string]syscallFunc{
+	"PROCESS_CREATE": PROCESS_CREATE,
+	"PROCESS_EXIT":   PROCESS_EXIT,
+	"THREAD_CREATE":  THREAD_CREATE,
+	// "THREAD_JOIN": THREAD_JOIN,
+	// "THREAD_CANCEL": THREAD_CANCEL
+	// "THREAD_EXIT": THREAD_CREATE,
+	// "MUTEX_CREATE": MUTEX_CREATE,
+	// "MUTEX_LOCK": MUTEX_LOCK,
+	// "MUTEX_UNLOCK": MUTEX_UNLOCK,
+}
+
 var PIDcount int = 0
 
-func PROCESS_CREATE(fileName string, processSize int, prioridad int) {
+func PROCESS_CREATE(args ...interface{}) {
+	pseudoCodigo := args[0]
+	processSize := args[1].(int)
+	prioridad := args[2].(int)
+
 	// Se crea el PCB y el Hilo 0
+
 	var procesoCreado types.PCB
 	PIDcount++
 	procesoCreado.PID = PIDcount
-
-	hiloMain := types.TCB{PID: procesoCreado.PID,
-		TID:       0,
-		Prioridad: prioridad}
-
 	procesoCreado.TIDs = []types.TCB{hiloMain}
+	hiloMain := types.TCB{
+		TID:       0,
+		Prioridad: prioridad,
+	}
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", procesoCreado.PID)
 
 	// Se agrega el proceso a NEW
 	NEW = append(NEW, procesoCreado)
-
-	// Mover el proceso a la cola READY si hay memoria disponible
-	for available == 1 { // LUEGO DE ARREGLAR LO DE MEMORIA PONER EN  available = 0
-		//go availableMemory(processSize)	COMENTADO PARA HACER TEST
-		if available == 1 {
-			Ready = append(Ready, hiloMain)
-			logger.Info("## (%d:0) Proceso movido a READY", procesoCreado.PID)
-		}
-	}
 }
 
-func PROCESS_EXIT(pcb types.PCB) {
-	logger.Info("## Finaliza el proceso <%d>", pcb.PID)
-
-	// Liberar recursos de los TCBs del proceso
-	for i := len(Ready) - 1; i >= 0; i-- {
-		if Ready[i].PID == pcb.PID {
-			Ready = append(Ready[:i], Ready[i+1:]...)
-		}
-	}
-
-	//Deberia liberar memoria de este pcb
-	//liberarMemoria(pcb.PID)
-
-	// Remover el PCB de la cola NEW
-	for i := len(NEW) - 1; i >= 0; i-- {
-		if NEW[i].PID == pcb.PID {
-			NEW = append(NEW[:i], NEW[i+1:]...)
-			break
-		}
-	}
+func PROCESS_EXIT(args ...interface{}) {
+	fmt.Println("Proceso finalizado")
 }
 
-func THREAD_CREATE(pcb *types.PCB, pseudocodigo string, prioridad int) {
-	// Crear el TCB para el nuevo hilo
-	nuevoTID := len(pcb.TIDs)
-	hiloCreado := types.TCB{
-		PID:       pcb.PID,
-		TID:       nuevoTID,
-		Prioridad: prioridad,
-	}
-
-	// Agregar el nuevo TCB al PCB
-	pcb.TIDs = append(pcb.TIDs, hiloCreado)
-
-	// Mover el nuevo hilo a la cola READY
-	Ready = append(Ready, hiloCreado)
-
-	logger.Info("## (%d:%d) Se crea el hilo - Estado: READY", pcb.PID, hiloCreado.TID)
+func THREAD_CREATE(args ...interface{}) {
+	fmt.Println("Creando hilo...")
 }
 
-func THREAD_EXIT(tcb types.TCB) {
-	logger.Info("## (%d:%d) Finaliza el hilo", tcb.PID, tcb.TID)
+func THREAD_JOIN(args ...interface{}) {
+	fmt.Println("Esperando a que el hilo termine...")
+}
 
-	// Remover el TCB de la cola READY
-	for i := len(Ready) - 1; i >= 0; i-- {
-		if Ready[i].PID == tcb.PID && Ready[i].TID == tcb.TID {
-			Ready = append(Ready[:i], Ready[i+1:]...)
-			break
-		}
-	}
+func THREAD_CANCEL(args ...interface{}) {
+	fmt.Println("Cancelando hilo...")
+}
 
-	// Si era el último hilo, finalizar el proceso
-	if len(getPCBByPID(tcb.PID).TIDs) == 1 {
-		PROCESS_EXIT(getPCBByPID(tcb.PID))
+func THREAD_EXIT(args ...interface{}) {
+	fmt.Println("Saliendo del hilo...")
+}
+
+func MUTEX_CREATE(args ...interface{}) {
+	fmt.Println("Creando mutex...")
+}
+
+func MUTEX_LOCK(args ...interface{}) {
+	fmt.Println("Bloqueando mutex...")
+}
+
+func MUTEX_UNLOCK(args ...interface{}) {
+	fmt.Println("Desbloqueando mutex...")
+}
+
+func ExecuteSyscall(syscallName string, args ...interface{}) {
+	if syscallFunc, exists := syscallSet[syscallName]; exists {
+		syscallFunc(args...)
+	} else {
+		fmt.Println("Syscall no encontrada:", syscallName)
 	}
 }
 
 //ALGUNAS FUNCIONES AUXILIARES
-
-func getPCBByPID(pid int) types.PCB {
-	for _, pcb := range NEW {
-		if pcb.PID == pid {
-			return pcb
-		}
-	}
-	return types.PCB{}
-}
 
 func availableMemory(processSize int) {
 

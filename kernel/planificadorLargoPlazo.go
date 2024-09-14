@@ -25,14 +25,17 @@ func planificadorLargoPlazo(syscall syscalls.Syscall) {
 		processSize, _ := strconv.Atoi(syscall.Arguments[1])
 		prioridad, _ := strconv.Atoi(syscall.Arguments[2])
 
-		if len(NEW) != 0 {
-			NEW = append(NEW, types.PCB{})
-			// Si NEW no esta vacio significa que hay un proceso esperando a ser mandado a Ready
-			// Habria que hacer una sincronizacion de los procesos que vayan llegando
-			// y que vayan preguntando a memoria a medida que pasan los procesos a Ready
-		}
-
 		PROCESS_CREATE(pseudocodigo, processSize, prioridad)
+
+		// Mover el proceso a la cola READY si hay memoria disponible
+		for available == 0 {
+			go availableMemory(processSize)
+
+			if available == 1 {
+				Ready = append(Ready, hiloMain)
+				logger.Info("## (%d:0) Proceso movido a READY", procesoCreado.PID)
+			}
+		}
 
 	//CREATE_THREAD
 	case syscalls.ThreadCreate:
