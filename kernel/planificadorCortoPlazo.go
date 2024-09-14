@@ -10,7 +10,9 @@ func planificadorCortoPlazo() {
 	global.ShortTermScheduler = types.AlgorithmsMap[Config.SchedulerAlgorithm]
 	for {
 		global.MutexCPU.Lock() // Hace unlock en la API que expone kernel
+		// TODO: PENSAR
 		// El if tiene que ser otro sem wait Ready
+
 		tcbToExecute, err := global.ShortTermScheduler.Planificar()
 		if err != nil {
 			logger.Error(err.Error())

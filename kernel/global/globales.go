@@ -14,3 +14,5 @@ var Ready types.Queue[types.TCB]
 
 var ShortTermScheduler types.ShortTermScheduler
 var MutexCPU sync.Mutex
+
+var ChanReady = make(chan any, 1)

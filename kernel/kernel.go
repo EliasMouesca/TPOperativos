@@ -53,6 +53,7 @@ func main() {
 	// Listen and serve
 	http.HandleFunc("/kernel/syscall", syscallRecieve)
 	http.HandleFunc("/", badRequest)
+	http.HandleFunc("POST kernel/process/finished", processFinish)
 
 	url := fmt.Sprintf("%s:%d", Config.SelfAddress, Config.SelfPort)
 	logger.Info("Server activo en %s", url)
@@ -91,4 +92,9 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 	// planificadorLargoPlazo(request)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func processFinish(w http.ResponseWriter, r *http.Request) {
+	// Cosa de largo plazo :)
+	// TODO: Hacer lo que tenga que hacer cuando termine un proceso YYY Hacer el Unlock del mutex cpu dentro de largo plazo no aca
 }

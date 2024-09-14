@@ -10,7 +10,7 @@ type Fifo struct {
 	ready types.Queue[types.TCB]
 }
 
-func (f Fifo) Planificar() (types.TCB, error) {
+func (f *Fifo) Planificar() (types.TCB, error) {
 	logger.Debug("Llamada a planificacion fifo")
 	var nextTcb *types.TCB
 	var err error
@@ -23,9 +23,8 @@ func (f Fifo) Planificar() (types.TCB, error) {
 	return *nextTcb, nil
 }
 
-func (f Fifo) AddToReady(tcb *types.TCB) error {
-	// wait ready
+func (f *Fifo) AddToReady(tcb *types.TCB) error {
 	f.ready.Add(tcb)
-	// signal ready
+
 	return nil
 }
