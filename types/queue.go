@@ -1,9 +1,6 @@
 package types
 
-import (
-	"github.com/sisoputnfrba/tp-golang/utils/logger"
-	"os"
-)
+import "errors"
 
 type Queue[T any] struct {
 	elements []T
@@ -13,14 +10,14 @@ func (c *Queue[T]) Add(t *T) {
 	c.elements = append(c.elements, *t)
 }
 
-func (c *Queue[T]) GetAndRemoveNext() T {
+func (c *Queue[T]) GetAndRemoveNext() (*T, error) {
 	if len(c.elements) == 0 {
-		logger.Error("Se quizo quitar elementos de lista vacia")
-		os.Exit(1)
+		return nil, errors.New("No hay elementos para quitar de la cola")
 	}
-	nextTrhead := c.elements[0]
+	nextThread := &c.elements[0]
 	c.elements = c.elements[1:]
-	return nextTrhead
+
+	return nextThread, nil
 }
 
 func (c *Queue[T]) IsEmpty() bool {

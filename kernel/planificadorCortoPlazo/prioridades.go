@@ -2,10 +2,13 @@ package planificadorCortoPlazo
 
 import "github.com/sisoputnfrba/tp-golang/types"
 
-func Planificar() {
+type Prioridades struct {
+}
+
+func (p Prioridades) Planificar() {
 
 }
 
-func AddToReady(tcb types.TCB) {
+func (p Prioridades) AddToReady(tcb *types.TCB) {
 
 }
