@@ -1,12 +1,11 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
+	"github.com/sisoputnfrba/tp-golang/kernel/global"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
-	"net/http"
+	"sync"
 )
 
 type syscallFunc func(args ...interface{})
@@ -23,6 +22,7 @@ var syscallSet = map[string]syscallFunc{
 	// "MUTEX_UNLOCK": MUTEX_UNLOCK,
 }
 
+var mutex sync.Mutex
 var PIDcount int = 0
 
 func PROCESS_CREATE(args ...interface{}) {
@@ -35,16 +35,14 @@ func PROCESS_CREATE(args ...interface{}) {
 	var procesoCreado types.PCB
 	PIDcount++
 	procesoCreado.PID = PIDcount
-	procesoCreado.TIDs = []types.TCB{hiloMain}
-	hiloMain := types.TCB{
-		TID:       0,
-		Prioridad: prioridad,
-	}
+	procesoCreado.TIDs = []int{0}
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", procesoCreado.PID)
 
 	// Se agrega el proceso a NEW
-	NEW = append(NEW, procesoCreado)
+	global.NEW.Add(&procesoCreado)
+	// todavia nose donde poner los semaforos
+	processToReady(processSize, prioridad)
 }
 
 func PROCESS_EXIT(args ...interface{}) {
@@ -83,43 +81,8 @@ func ExecuteSyscall(syscallName string, args ...interface{}) {
 	if syscallFunc, exists := syscallSet[syscallName]; exists {
 		syscallFunc(args...)
 	} else {
-		fmt.Println("Syscall no encontrada:", syscallName)
+		fmt.Println("Syscall no encontrada: ", syscallName)
 	}
 }
 
 //ALGUNAS FUNCIONES AUXILIARES
-
-func availableMemory(processSize int) {
-
-	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
-
-	// Serializar mensaje
-	processSize_json, err := json.Marshal(processSize)
-	if err != nil {
-		logger.Fatal("Error al serializar processSize - %v", err)
-		return
-	}
-
-	// Hacer request a memoria
-	memoria := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", Config.MemoryAddress, Config.MemoryPort)
-	logger.Debug("Enviando request a memoria")
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(processSize_json))
-	if err != nil {
-		logger.Fatal("Error al conectar con memoria - %v", err)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	// Recibo repuesta de memoria
-	resp, err := memoria.Do(req)
-	if err != nil {
-		logger.Fatal("Error al obtener mensaje de respuesta por parte de memoria - %v", err)
-		return
-	}
-	if resp.StatusCode != http.StatusOK {
-		available = 1
-	} else {
-		logger.Info("No hay espacio disponible en memoria")
-	}
-}

@@ -86,9 +86,7 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// map a la libreria de syscalls
 	ExecuteSyscall(request.Description, request.Arguments)
-	// planificadorLargoPlazo(request)
 
 	w.WriteHeader(http.StatusOK)
 }
