@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-var config KernelConfig
+var Config KernelConfig
 
 func init() {
 	// Init logger
@@ -20,23 +20,23 @@ func init() {
 	}
 	logger.Debug("Logger creado")
 
-	// Load config
-	configData, err := os.ReadFile("config.json")
+	// Load Config
+	configData, err := os.ReadFile("Config.json")
 	if err != nil {
 		logger.Fatal("No se pudo leer el archivo de configuración - %v", err.Error())
 	}
 
-	err = json.Unmarshal(configData, &config)
+	err = json.Unmarshal(configData, &Config)
 	if err != nil {
 		logger.Fatal("No se pudo parsear el archivo de configuración - %v", err.Error())
 	}
 
-	if err = config.validate(); err != nil {
+	if err = Config.validate(); err != nil {
 		logger.Fatal("La configuración no es válida - %v", err.Error())
 	}
 	logger.Debug("Configuración cargada exitosamente")
 
-	err = logger.SetLevel(config.LogLevel)
+	err = logger.SetLevel(Config.LogLevel)
 	if err != nil {
 		logger.Fatal("No se pudo leer el log-level - %v", err.Error())
 	}
@@ -54,7 +54,7 @@ func main() {
 	http.HandleFunc("/kernel/syscall", syscallRecieve)
 	http.HandleFunc("/", badRequest)
 
-	url := fmt.Sprintf("%s:%d", config.SelfAddress, config.SelfPort)
+	url := fmt.Sprintf("%s:%d", Config.SelfAddress, Config.SelfPort)
 	logger.Info("Server activo en %s", url)
 	err := http.ListenAndServe(url, nil)
 	if err != nil {

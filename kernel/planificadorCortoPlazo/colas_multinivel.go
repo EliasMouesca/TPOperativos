@@ -1,1 +1,5 @@
 package planificadorCortoPlazo
+
+func ColasMultiNivel() {
+
+}

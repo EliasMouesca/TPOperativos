@@ -9,11 +9,11 @@ type Queue[T any] struct {
 	elements []T
 }
 
-func (c *Queue[T]) add(t *T) {
+func (c *Queue[T]) Add(t *T) {
 	c.elements = append(c.elements, *t)
 }
 
-func (c *Queue[T]) getAndRemoveNext() T {
+func (c *Queue[T]) GetAndRemoveNext() T {
 	if len(c.elements) == 0 {
 		logger.Error("Se quizo quitar elementos de lista vacia")
 		os.Exit(1)
@@ -23,6 +23,6 @@ func (c *Queue[T]) getAndRemoveNext() T {
 	return nextTrhead
 }
 
-func (c *Queue[T]) isEmpty() bool {
+func (c *Queue[T]) IsEmpty() bool {
 	return len(c.elements) == 0
 }

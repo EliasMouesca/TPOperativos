@@ -102,7 +102,7 @@ func availableMemory(processSize int) {
 
 	// Hacer request a memoria
 	memoria := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", config.MemoryAddress, config.MemoryPort)
+	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", Config.MemoryAddress, Config.MemoryPort)
 	logger.Debug("Enviando request a memoria")
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(processSize_json))
 	if err != nil {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/sisoputnfrba/tp-golang/kernel/global"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
@@ -32,7 +33,8 @@ func planificadorLargoPlazo(syscall syscalls.Syscall) {
 			go availableMemory(processSize)
 
 			if available == 1 {
-				Ready = append(Ready, hiloMain)
+				// Aca habra que llamar a corto plazo para agregar a ready
+				global.Ready.Add(hiloMain)
 				logger.Info("## (%d:0) Proceso movido a READY", procesoCreado.PID)
 			}
 		}

@@ -2,16 +2,24 @@ package planificadorCortoPlazo
 
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/global"
+	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
-func Fifo() {
-	logger.Debug("--- Comienzo ejecucion de FIFO ---")
+var Ready types.Queue[types.TCB]
 
-	if global.Ready.isEmpty {
-		logger.Debug("No hay hilos en Ready")
-	} else {
-		nextTcb := global.Ready.getAndRemoveNext()
-		logger.Debug("Hilo a ejecutar: %d", nextTcb.TID)
+func Planificar() {
+	logger.Debug("--- Comienzo ejecucion de FIFO ---")
+	for {
+		if global.Ready.IsEmpty() {
+			logger.Debug("No hay hilos en Ready")
+		} else {
+			nextTcb := global.Ready.GetAndRemoveNext()
+			logger.Debug("Hilo a ejecutar: %d", nextTcb.TID)
+		}
 	}
+}
+
+func AddToReady(tcb *types.TCB) {
+	Ready.Add(tcb)
 }
