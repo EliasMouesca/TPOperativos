@@ -8,6 +8,7 @@ import (
 type Queue[T any] struct {
 	elements []T
 	mutex    sync.Mutex
+	Priority int
 }
 
 func (c *Queue[T]) Add(t *T) {
