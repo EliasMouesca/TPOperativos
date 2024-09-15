@@ -7,6 +7,7 @@ const (
 	InterruptionBadInstruction
 	InterruptionSegFault
 	InterruptionSyscall
+	InterruptionEviction
 )
 
 type Interruption struct {

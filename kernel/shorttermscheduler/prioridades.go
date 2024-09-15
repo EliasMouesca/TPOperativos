@@ -1,8 +1,10 @@
 package shorttermscheduler
 
 import (
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
@@ -44,13 +46,23 @@ func (prioridades *Prioridades) AddToReady(threadToAdd kerneltypes.TCB) error {
 	}
 
 	if !inserted {
-		// If the thread wasn't inserted in the loop, append it at the end
 		prioridades.readyThreads = append(prioridades.readyThreads, threadToAdd)
 	}
 
 	go func() {
 		kernelsync.PendingThreadsChannel <- true
 	}()
+
+	// Si es necesario, desalojá la cpu
+	if threadToAdd.Prioridad < kernelglobals.ExecStateThread.Prioridad {
+		err := cpuInterrupt(
+			types.Interruption{
+				Type: types.InterruptionEviction,
+			})
+		if err != nil {
+			return err
+		}
+	}
 
 	logger.Trace("Slice left like this: %v", prioridades.readyThreads)
 

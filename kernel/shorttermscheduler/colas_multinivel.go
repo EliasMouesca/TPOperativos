@@ -7,6 +7,8 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types"
 )
 
+// TODO: Tests
+
 type ColasMultiNivel struct {
 	readyQueue []*types.Queue[kerneltypes.TCB]
 }
@@ -85,13 +87,22 @@ func (cmm *ColasMultiNivel) getNextTcb() (kerneltypes.TCB, error) {
 			if err != nil {
 				return kerneltypes.TCB{}, err
 			}
-			return nextTcb, nil
+			return *nextTcb, nil
 		}
 	}
 	return kerneltypes.TCB{}, errors.New("se quizo hacer un getNextTcb y no habia ningun tcb en ready")
 }
 
-func roundRobin(queue *types.Queue[kerneltypes.TCB]) (kerneltypes.TCB, error) {
-	// TODO: implementar
-	return kerneltypes.TCB{}, nil
+func roundRobin(queue *types.Queue[kerneltypes.TCB]) (*kerneltypes.TCB, error) {
+
+	go func() {
+		<-kernelsync.QuantumChannel
+		cpuInterrupt(
+			types.Interruption{
+				Type: types.InterruptionEndOfQuantum,
+			})
+	}()
+
+	selectedTCB, err := queue.GetAndRemoveNext()
+	return selectedTCB, err
 }

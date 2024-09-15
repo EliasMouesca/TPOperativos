@@ -7,6 +7,8 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types"
 )
 
+// TODO: Tests
+
 type Fifo struct {
 	ready types.Queue[kerneltypes.TCB]
 }

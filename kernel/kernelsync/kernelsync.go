@@ -1,6 +1,7 @@
 package kernelsync
 
 import (
+	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"sync"
 )
 
@@ -10,4 +11,7 @@ var MutexCPU sync.Mutex
 // PendingThreadsChannel un canal para que el corto sepa que hay procesos pendientes de planificar
 var PendingThreadsChannel = make(chan any, 1)
 
-var ChannelProcessArguments = make(chan []string)
+var ChannelProcessCreate = make(chan kerneltypes.PCB)
+
+// QuantumChannel se manda una señal por acá cuando se acabó el quantum
+var QuantumChannel = make(chan any)

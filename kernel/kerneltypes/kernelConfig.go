@@ -1,4 +1,4 @@
-package main
+package kerneltypes
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ type KernelConfig struct {
 	LogLevel           string `json:"log_level"`
 }
 
-func (cfg KernelConfig) validate() error {
+func (cfg KernelConfig) Validate() error {
 	if cfg.SelfAddress == "" {
 		return errors.New("falta el campo 'ip_self'")
 	}

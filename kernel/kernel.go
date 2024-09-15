@@ -3,13 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"os"
 )
-
-var Config KernelConfig
 
 func init() {
 	// Init logger
@@ -26,17 +26,17 @@ func init() {
 		logger.Fatal("No se pudo leer el archivo de configuración - %v", err.Error())
 	}
 
-	err = json.Unmarshal(configData, &Config)
+	err = json.Unmarshal(configData, &kernelglobals.Config)
 	if err != nil {
 		logger.Fatal("No se pudo parsear el archivo de configuración - %v", err.Error())
 	}
 
-	if err = Config.validate(); err != nil {
+	if err = kernelglobals.Config.Validate(); err != nil {
 		logger.Fatal("La configuración no es válida - %v", err.Error())
 	}
 	logger.Debug("Configuración cargada exitosamente")
 
-	err = logger.SetLevel(Config.LogLevel)
+	err = logger.SetLevel(kernelglobals.Config.LogLevel)
 	if err != nil {
 		logger.Fatal("No se pudo leer el log-level - %v", err.Error())
 	}
@@ -55,7 +55,7 @@ func main() {
 	http.HandleFunc("/", badRequest)
 	http.HandleFunc("POST kernel/process/finished", processFinish)
 
-	url := fmt.Sprintf("%s:%d", Config.SelfAddress, Config.SelfPort)
+	url := fmt.Sprintf("%s:%d", kernelglobals.Config.SelfAddress, kernelglobals.Config.SelfPort)
 	logger.Info("Server activo en %s", url)
 	err := http.ListenAndServe(url, nil)
 	if err != nil {
@@ -97,5 +97,8 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 
 func processFinish(w http.ResponseWriter, r *http.Request) {
 	// Cosa de largo plazo :)
-	// TODO: Hacer lo que tenga que hacer cuando termine un proceso YYY Hacer el Unlock del mutex cpu dentro de largo plazo no aca
+	// TODO: Volver a poner el hilo que vino de CPU en la cola ready
+
+	kernelsync.MutexCPU.Unlock()
+
 }

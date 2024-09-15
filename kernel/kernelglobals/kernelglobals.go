@@ -15,3 +15,5 @@ var ReadyStateQueue types.Queue[kerneltypes.TCB]
 var ShortTermScheduler kerneltypes.ShortTermSchedulerInterface
 
 var ExecStateThread kerneltypes.TCB
+
+var Config kerneltypes.KernelConfig
