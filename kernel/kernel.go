@@ -21,7 +21,7 @@ func init() {
 	logger.Debug("Logger creado")
 
 	// Load Config
-	configData, err := os.ReadFile("Config.json")
+	configData, err := os.ReadFile("config.json")
 	if err != nil {
 		logger.Fatal("No se pudo leer el archivo de configuración - %v", err.Error())
 	}
@@ -90,7 +90,8 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 	// map a la libreria de syscalls
 	err = ExecuteSyscall(request.Description, request.Arguments)
 	if err != nil {
-		logger.Fatal("Error al ejecutar la syscall: &t - %v", request.Description, err)
+		// Por alguna razón esto rompe cuando quiero compilar
+		//logger.Fatal("Error al ejecutar la syscall: &v - %v", request.Description, err)
 	}
 	// planificadorLargoPlazo(request)
 

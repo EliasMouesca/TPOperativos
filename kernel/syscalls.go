@@ -3,8 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/sisoputnfrba/tp-golang/kernel/global"
-	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
@@ -27,44 +25,50 @@ func ExecuteSyscall(syscallName string, args ...interface{}) error {
 		err := syscallFunc(args...)
 		return err
 	} else {
-		logger.Error("Syscall no encontrada:", syscallName)
+		logger.Error("Syscall no encontrada: %v", syscallName)
 	}
+
+	return nil
 }
 
 var PIDcount int = 0
 
 func PROCESS_CREATE(args ...interface{}) error {
 	// Agregar New.Errors
-	pseudoCodigo := args[0]
-	processSize := args[1].(int)
+	//pseudoCodigo := args[0]
+	//processSize := args[1].(int)
 	prioridad := args[2].(int)
 
 	// Se crea el PCB y el Hilo 0
 
-	var procesoCreado types.PCB
+	var procesoCreado PCB
 	PIDcount++
 	procesoCreado.PID = PIDcount
-	procesoCreado.TIDs = []types.TCB{hiloMain}
-	hiloMain := types.TCB{
+	_ = TCB{
 		TID:       0,
 		Prioridad: prioridad,
 	}
+	//procesoCreado.TIDs = []TCB{hiloMain}
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", procesoCreado.PID)
 
 	// Se agrega el proceso a NEW
-	global.NEW.Add(&procesoCreado)
+	NEW.Add(&procesoCreado)
+
+	return nil
 }
 
 func PROCESS_EXIT(args ...interface{}) error {
 	// nose si estara bien pero el valor TCB ya esta en el canal
-	tcb := <-global.EXIT // sino usar una lista de un elemento consultar con los pibes
-	if tcb.TID == 0 {    // tiene que ser el hiloMain
+	tcb := <-EXIT     // sino usar una lista de un elemento consultar con los pibes
+	if tcb.TID == 0 { // tiene que ser el hiloMain
 		conectedProcess := tcb.ConectPCB
 		processToExit(conectedProcess)
 	} else {
 		return errors.New("El hilo que quizo eliminar el proceso, no es el hilo main")
 	}
+
+	return nil
 }
 
 func THREAD_CREATE(args ...interface{}) error {
@@ -72,6 +76,8 @@ func THREAD_CREATE(args ...interface{}) error {
 	// TIDcount forma autoincremental crecientei ndeterminadamente
 	// nose que opcion es mejor
 	fmt.Println("Creando hilo...")
+
+	return nil
 }
 
 func THREAD_JOIN(args ...interface{}) {

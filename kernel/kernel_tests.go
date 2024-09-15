@@ -1,21 +1,14 @@
 package main
 
-import (
-	"bytes"
-	"encoding/json"
-	"github.com/sisoputnfrba/tp-golang/types/syscalls"
-	"github.com/sisoputnfrba/tp-golang/utils/logger"
-	"net/http"
-	"strconv"
-)
-
 type SyscallRequest struct {
 	Type        int      `json:"type"`
 	Arguments   []string `json:"arguments"`
 	Description string   `json:"description"`
 }
 
-func main() {
+// TODO: Esto no tiene que ser un main, porque sino se rompe el proceso de compilación, léase https://go.dev/doc/tutorial/add-a-test
+
+/*func main() {
 	logger.Info("--- Comienzo ejecución KERNEL-TEST ---")
 
 	// --- COMUNICACIONES ---
@@ -104,3 +97,6 @@ func threadExitSyscall(pid int, tid int) SyscallRequest {
 		Description: "Thread Exit",
 	}
 }
+
+
+*/

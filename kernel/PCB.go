@@ -1,4 +1,4 @@
-package types
+package main
 
 type PCB struct {
 	PID   int

@@ -1,4 +1,4 @@
-package types
+package main
 
 type TCB struct {
 	TID       int
