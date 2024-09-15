@@ -7,18 +7,26 @@ import (
 )
 
 func planificadorCortoPlazo() {
+	// Inicializamos el planificador de corto plazo (PCP)
 	global.ShortTermScheduler = types.AlgorithmsMap[Config.SchedulerAlgorithm]
-	for {
-		global.MutexCPU.Lock() // Hace unlock en la API que expone kernel
-		// TODO: PENSAR
-		// El if tiene que ser otro sem wait Ready
 
+	// Mientras vivas, corré lo siguiente
+	for {
+		// Esta función se bloquea si no hay nada que hacer o si la CPU está ocupada
 		tcbToExecute, err := global.ShortTermScheduler.Planificar()
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Error("No fue posible planificar cierto hilo - %v", err.Error())
 			continue
 		}
-		// TODO: convertir el tcb en Thread y mandar a cpu
+
+		// Esperá a que la CPU esté libre / bloqueásela al resto
+		global.MutexCPU.Lock()
+
+		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
 		logger.Debug("Hilo a ejecutar: %d", tcbToExecute.TID)
+
+		// TODO: convertir el tcb en Thread
+
+		// TODO: Mandarle el types.Thread a cpu
 	}
 }
