@@ -18,16 +18,14 @@ const (
 )
 
 type Syscall struct {
-	Type        int
-	Description string
-	Arguments   []string
+	Type      int
+	Arguments []string
 }
 
-func New(syscallType int, description string, arguments []string) Syscall {
+func New(syscallType int, arguments []string) Syscall {
 	return Syscall{
-		Type:        syscallType,
-		Description: description,
-		Arguments:   arguments,
+		Type:      syscallType,
+		Arguments: arguments,
 	}
 }
 

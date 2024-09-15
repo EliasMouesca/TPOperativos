@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -17,10 +18,15 @@ import (
 // o un map? no creo q sea buena opcion
 // depende de como hagamos la sincronizacion
 
-var available int = 0
+func planificadorLargoPlazo() {
+	go processToReady()
+}
 
-func processToReady(processSize int, prioridad int) {
-	for true {
+func processToReady() {
+	var available int = 0
+	var processCreate kerneltypes.PCB
+	for {
+		processCreate = <-kernelsync.ChannelProcessCreate
 		availableMemory(processSize) // seguro hay qui enviarle el psudoCodigo a memoria
 		if !kernelglobals.NewStateQueue.IsEmpty() && available == 1 {
 			pcb, err := kernelglobals.NewStateQueue.GetAndRemoveNext()

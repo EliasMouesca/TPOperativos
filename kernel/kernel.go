@@ -62,8 +62,7 @@ func main() {
 		logger.Fatal("ListenAndServe retornó error - %v", err)
 	}
 
-	// que quede corriendo con un hilo
-	// planificadorLargoPlazo
+	go planificadorLargoPlazo()
 	go planificadorCortoPlazo()
 }
 
@@ -78,9 +77,9 @@ func badRequest(w http.ResponseWriter, r *http.Request) {
 
 func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 
-	var request syscalls.Syscall
+	var syscall syscalls.Syscall
 	// Parsear la syscall request
-	err := json.NewDecoder(r.Body).Decode(&request)
+	err := json.NewDecoder(r.Body).Decode(&syscall)
 	if err != nil {
 		logger.Error("Error al decodificar el cuerpo de la solicitud - %v", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -88,13 +87,11 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// map a la libreria de syscalls
-	err = ExecuteSyscall(request.Description, request.Arguments)
+	err = ExecuteSyscall(syscall)
 	if err != nil {
 		// Por alguna razón esto rompe cuando quiero compilar
 		//logger.Fatal("Error al ejecutar la syscall: &v - %v", request.Description, err)
 	}
-	// planificadorLargoPlazo(request)
-
 	w.WriteHeader(http.StatusOK)
 }
 

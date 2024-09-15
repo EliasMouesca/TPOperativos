@@ -12,9 +12,6 @@ import (
 var NewStateQueue types.Queue[kerneltypes.PCB]
 var ReadyStateQueue types.Queue[kerneltypes.TCB]
 
-// TODO: Qué es esto? -eli
-var EXIT = make(chan kerneltypes.TCB, 1) // Canal con capacidad de 1
-
 var ShortTermScheduler kerneltypes.ShortTermSchedulerInterface
 
-var currentThread kerneltypes.TCB
+var ExecStateThread kerneltypes.TCB

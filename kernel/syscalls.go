@@ -4,18 +4,26 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
-type syscallFunc func(args ...interface{}) error
+type syscallFunction func(args []string) error
 
 // TODO: Dónde ponemos esto? en qué carpeta?
 
-var syscallSet = map[string]syscallFunc{
-	"PROCESS_CREATE": PROCESS_CREATE,
-	"PROCESS_EXIT":   PROCESS_EXIT,
-	"THREAD_CREATE":  THREAD_CREATE,
+var syscallDescriptions = map[int]string{
+	syscalls.ProcessCreate: "CREATE_PROCESS",
+	syscalls.ProcessExit:   "PROCESS_EXIT",
+	syscalls.ThreadCreate:  "THREAD_CREATE",
+}
+
+var syscallSet = map[int]syscallFunction{
+	syscalls.ProcessCreate: ProcessCreate,
+	syscalls.ProcessExit:   ProcessExit,
+	syscalls.ThreadCreate:  ThreadCreate,
 	// "THREAD_JOIN": THREAD_JOIN,
 	// "THREAD_CANCEL": THREAD_CANCEL
 	// "THREAD_EXIT": THREAD_CREATE,
@@ -24,12 +32,21 @@ var syscallSet = map[string]syscallFunc{
 	// "MUTEX_UNLOCK": MUTEX_UNLOCK,
 }
 
-func ExecuteSyscall(syscallName string, args ...interface{}) error {
-	if syscallFunc, exists := syscallSet[syscallName]; exists {
-		err := syscallFunc(args...)
+func ExecuteSyscall(syscall syscalls.Syscall) error {
+	syscallFunc, exists := syscallSet[syscall.Type]
+	if !exists {
+		return errors.New("la syscall pedida no es una syscall que el kernel entienda")
+	}
+
+	logger.Info("## (%v:%v) - Solicitó syscall: <%v>",
+		kernelglobals.ExecStateThread.ConectPCB.PID,
+		kernelglobals.ExecStateThread.TID,
+		syscallDescriptions[syscall.Type],
+	)
+
+	err := syscallFunc(syscall.Arguments)
+	if err != nil {
 		return err
-	} else {
-		logger.Error("Syscall no encontrada: %v", syscallName)
 	}
 
 	return nil
@@ -37,36 +54,28 @@ func ExecuteSyscall(syscallName string, args ...interface{}) error {
 
 var PIDcount int = 0
 
-func PROCESS_CREATE(args ...interface{}) error {
-	// Agregar New.Errors
-	//pseudoCodigo := args[0]
-	//processSize := args[1].(int)
-	prioridad := args[2].(int)
+func ProcessCreate(args []string) error {
 
 	// Se crea el PCB y el Hilo 0
 
-	var procesoCreado kerneltypes.PCB
+	var procesoCreate kerneltypes.PCB
 	PIDcount++
-	procesoCreado.PID = PIDcount
-	_ = kerneltypes.TCB{
-		TID:       0,
-		Prioridad: prioridad,
-	}
-	//procesoCreado.TIDs = []TCB{hiloMain}
+	procesoCreate.PID = PIDcount
+	procesoCreate.TIDs[0] = 0
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", procesoCreado.PID)
 
-	// TODO: El proceso no debería agregarse a new, debería ser el hilo ? -eli
 	// Se agrega el proceso a NEW
-	kernelglobals.NewStateQueue.Add(&procesoCreado)
+	kernelglobals.NewStateQueue.Add(&procesoCreate)
+	kernelsync.ChannelProcessCreate <- procesoCreate
 
 	return nil
 }
 
-func PROCESS_EXIT(args ...interface{}) error {
+func ProcessExit(args []string) error {
 	// nose si estara bien pero el valor TCB ya esta en el canal
-	tcb := <-kernelglobals.EXIT // sino usar una lista de un elemento consultar con los pibes
-	if tcb.TID == 0 {           // tiene que ser el hiloMain
+	kernelglobals.ExecStateThread // sino usar una lista de un elemento consultar con los pibes
+	if tcb.TID == 0 {             // tiene que ser el hiloMain
 		conectedProcess := tcb.ConectPCB
 		processToExit(conectedProcess)
 	} else {
@@ -76,7 +85,7 @@ func PROCESS_EXIT(args ...interface{}) error {
 	return nil
 }
 
-func THREAD_CREATE(args ...interface{}) error {
+func ThreadCreate(args []string) error {
 	// len(Ready) forma autoincremental ajustable
 	// TIDcount forma autoincremental crecientei ndeterminadamente
 	// nose que opcion es mejor
@@ -85,26 +94,26 @@ func THREAD_CREATE(args ...interface{}) error {
 	return nil
 }
 
-func THREAD_JOIN(args ...interface{}) {
+func THREAD_JOIN(args []string) {
 	fmt.Println("Esperando a que el hilo termine...")
 }
 
-func THREAD_CANCEL(args ...interface{}) {
+func THREAD_CANCEL(args []string) {
 	fmt.Println("Cancelando hilo...")
 }
 
-func THREAD_EXIT(args ...interface{}) {
+func THREAD_EXIT(args []string) {
 	fmt.Println("Saliendo del hilo...")
 }
 
-func MUTEX_CREATE(args ...interface{}) {
+func MUTEX_CREATE(args []string) {
 	fmt.Println("Creando mutex...")
 }
 
-func MUTEX_LOCK(args ...interface{}) {
+func MUTEX_LOCK(args []string) {
 	fmt.Println("Bloqueando mutex...")
 }
 
-func MUTEX_UNLOCK(args ...interface{}) {
+func MUTEX_UNLOCK(args []string) {
 	fmt.Println("Desbloqueando mutex...")
 }
