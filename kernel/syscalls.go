@@ -1,16 +1,14 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/global"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
-	"net/http"
 )
 
-type syscallFunc func(args ...interface{})
+type syscallFunc func(args ...interface{}) error
 
 var syscallSet = map[string]syscallFunc{
 	"PROCESS_CREATE": PROCESS_CREATE,
@@ -24,9 +22,19 @@ var syscallSet = map[string]syscallFunc{
 	// "MUTEX_UNLOCK": MUTEX_UNLOCK,
 }
 
+func ExecuteSyscall(syscallName string, args ...interface{}) error {
+	if syscallFunc, exists := syscallSet[syscallName]; exists {
+		err := syscallFunc(args...)
+		return err
+	} else {
+		logger.Error("Syscall no encontrada:", syscallName)
+	}
+}
+
 var PIDcount int = 0
 
-func PROCESS_CREATE(args ...interface{}) {
+func PROCESS_CREATE(args ...interface{}) error {
+	// Agregar New.Errors
 	pseudoCodigo := args[0]
 	processSize := args[1].(int)
 	prioridad := args[2].(int)
@@ -45,14 +53,24 @@ func PROCESS_CREATE(args ...interface{}) {
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", procesoCreado.PID)
 
 	// Se agrega el proceso a NEW
-	global.NEW = append(global.NEW, procesoCreado)
+	global.NEW.Add(&procesoCreado)
 }
 
-func PROCESS_EXIT(args ...interface{}) {
-	fmt.Println("Proceso finalizado")
+func PROCESS_EXIT(args ...interface{}) error {
+	// nose si estara bien pero el valor TCB ya esta en el canal
+	tcb := <-global.EXIT // sino usar una lista de un elemento consultar con los pibes
+	if tcb.TID == 0 {    // tiene que ser el hiloMain
+		conectedProcess := tcb.ConectPCB
+		processToExit(conectedProcess)
+	} else {
+		return errors.New("El hilo que quizo eliminar el proceso, no es el hilo main")
+	}
 }
 
-func THREAD_CREATE(args ...interface{}) {
+func THREAD_CREATE(args ...interface{}) error {
+	// len(Ready) forma autoincremental ajustable
+	// TIDcount forma autoincremental crecientei ndeterminadamente
+	// nose que opcion es mejor
 	fmt.Println("Creando hilo...")
 }
 
@@ -78,49 +96,4 @@ func MUTEX_LOCK(args ...interface{}) {
 
 func MUTEX_UNLOCK(args ...interface{}) {
 	fmt.Println("Desbloqueando mutex...")
-}
-
-func ExecuteSyscall(syscallName string, args ...interface{}) {
-	if syscallFunc, exists := syscallSet[syscallName]; exists {
-		syscallFunc(args...)
-	} else {
-		fmt.Println("Syscall no encontrada:", syscallName)
-	}
-}
-
-//ALGUNAS FUNCIONES AUXILIARES
-
-func availableMemory(processSize int) {
-
-	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
-
-	// Serializar mensaje
-	processSize_json, err := json.Marshal(processSize)
-	if err != nil {
-		logger.Fatal("Error al serializar processSize - %v", err)
-		return
-	}
-
-	// Hacer request a memoria
-	memoria := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", Config.MemoryAddress, Config.MemoryPort)
-	logger.Debug("Enviando request a memoria")
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(processSize_json))
-	if err != nil {
-		logger.Fatal("Error al conectar con memoria - %v", err)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	// Recibo repuesta de memoria
-	resp, err := memoria.Do(req)
-	if err != nil {
-		logger.Fatal("Error al obtener mensaje de respuesta por parte de memoria - %v", err)
-		return
-	}
-	if resp.StatusCode != http.StatusOK {
-		available = 1
-	} else {
-		logger.Info("No hay espacio disponible en memoria")
-	}
 }

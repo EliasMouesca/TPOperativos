@@ -88,7 +88,10 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// map a la libreria de syscalls
-	ExecuteSyscall(request.Description, request.Arguments)
+	err = ExecuteSyscall(request.Description, request.Arguments)
+	if err != nil {
+		logger.Fatal("Error al ejecutar la syscall: &t - %v", request.Description, err)
+	}
 	// planificadorLargoPlazo(request)
 
 	w.WriteHeader(http.StatusOK)
