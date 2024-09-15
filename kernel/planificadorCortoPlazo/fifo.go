@@ -13,11 +13,9 @@ type Fifo struct {
 // Planificar devuelve el próximo hilo a ejecutar o error en función del algoritmo FIFO
 // es una función que se bloquea si no hay procesos listos y se desbloquea sola si llegan a venir nuevos procesos listos
 func (f *Fifo) Planificar() (types.TCB, error) {
-	// Si nuestra cola de ready está vacía
-	if f.ready.IsEmpty() {
-		// Bloqueate hasta que la cola no esté vacía
-		global.ReadyQueueNotEmpty.Wait()
-	}
+	// Bloqueate hasta que alguien te mande algo por este channel -> quién manda por este channel? -> AddToReady()
+	// Entonces, bloqueate hasta que alguien agregue un hilo a ready.
+	<-global.PendingThreadsChannel
 
 	var nextTcb *types.TCB
 	var err error
@@ -37,7 +35,9 @@ func (f *Fifo) AddToReady(tcb *types.TCB) error {
 	// Agregá el proceso a la cola fifo
 	f.ready.Add(tcb)
 
-	// Avisá a la función Planificar() que se desbloquee, que hay nuevos procesos.
-	global.ReadyQueueNotEmpty.Signal()
+	// Mandá mensaje por el canal, o sea, permití que una vuelta más de Planificar() ejecute
+	go func() {
+		global.PendingThreadsChannel <- true
+	}()
 	return nil
 }

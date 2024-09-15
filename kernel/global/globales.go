@@ -19,8 +19,4 @@ var MutexCPU sync.Mutex
 // Este mutex solo se usa para inicializar el sync.Cond, no usar para otra cosa
 var readyQueueMutex sync.Mutex
 
-// ReadyQueueNotEmpty es un semáforo que avisa que la cola de procesos listos ya no está vacía
-// TODO quizás esto no es general y debería estar adentro de cada algo de planif. corto plazo ?
-var ReadyQueueNotEmpty *sync.Cond = sync.NewCond(&readyQueueMutex)
-
-var ChanReady = make(chan any, 1)
+var PendingThreadsChannel = make(chan any, 1)
