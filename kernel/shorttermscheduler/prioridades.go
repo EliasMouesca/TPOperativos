@@ -1,14 +1,17 @@
-package main
+package shorttermscheduler
 
 import (
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
+	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
 type Prioridades struct {
-	readyThreads []TCB
+	readyThreads []kerneltypes.TCB
 }
 
-func (prioridades *Prioridades) Planificar() (TCB, error) {
+func (prioridades *Prioridades) Planificar() (kerneltypes.TCB, error) {
+	<-kernelsync.PendingThreadsChannel
 
 	selectedProces := prioridades.readyThreads[0]
 	// El proceso se quita de la cola, si por alguna razón el proceso vuelve de CPU sin terminar, debería "creárselo"
@@ -18,13 +21,13 @@ func (prioridades *Prioridades) Planificar() (TCB, error) {
 	return selectedProces, nil
 }
 
-func (prioridades *Prioridades) AddToReady(threadToAdd TCB) error {
+func (prioridades *Prioridades) AddToReady(threadToAdd kerneltypes.TCB) error {
 	logger.Trace("Adding thread to ready (Prioridades): %v", threadToAdd)
 
 	// Si es la primera vez que se llama a la función (la lista es nula), creala
 	if prioridades.readyThreads == nil {
 		logger.Trace("Creating slice of ready threads")
-		prioridades.readyThreads = make([]TCB, 0)
+		prioridades.readyThreads = make([]kerneltypes.TCB, 0)
 	}
 
 	inserted := false
@@ -45,6 +48,11 @@ func (prioridades *Prioridades) AddToReady(threadToAdd TCB) error {
 		prioridades.readyThreads = append(prioridades.readyThreads, threadToAdd)
 	}
 
+	go func() {
+		kernelsync.PendingThreadsChannel <- true
+	}()
+
 	logger.Trace("Slice left like this: %v", prioridades.readyThreads)
+
 	return nil
 }

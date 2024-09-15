@@ -3,10 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
 type syscallFunc func(args ...interface{}) error
+
+// TODO: Dónde ponemos esto? en qué carpeta?
 
 var syscallSet = map[string]syscallFunc{
 	"PROCESS_CREATE": PROCESS_CREATE,
@@ -41,10 +45,10 @@ func PROCESS_CREATE(args ...interface{}) error {
 
 	// Se crea el PCB y el Hilo 0
 
-	var procesoCreado PCB
+	var procesoCreado kerneltypes.PCB
 	PIDcount++
 	procesoCreado.PID = PIDcount
-	_ = TCB{
+	_ = kerneltypes.TCB{
 		TID:       0,
 		Prioridad: prioridad,
 	}
@@ -52,16 +56,17 @@ func PROCESS_CREATE(args ...interface{}) error {
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", procesoCreado.PID)
 
+	// TODO: El proceso no debería agregarse a new, debería ser el hilo ? -eli
 	// Se agrega el proceso a NEW
-	NEW.Add(&procesoCreado)
+	kernelglobals.NewStateQueue.Add(&procesoCreado)
 
 	return nil
 }
 
 func PROCESS_EXIT(args ...interface{}) error {
 	// nose si estara bien pero el valor TCB ya esta en el canal
-	tcb := <-EXIT     // sino usar una lista de un elemento consultar con los pibes
-	if tcb.TID == 0 { // tiene que ser el hiloMain
+	tcb := <-kernelglobals.EXIT // sino usar una lista de un elemento consultar con los pibes
+	if tcb.TID == 0 {           // tiene que ser el hiloMain
 		conectedProcess := tcb.ConectPCB
 		processToExit(conectedProcess)
 	} else {

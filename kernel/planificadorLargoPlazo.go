@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 )
@@ -20,12 +22,12 @@ var available int = 0
 func processToReady(processSize int, prioridad int) {
 	for true {
 		availableMemory(processSize) // seguro hay qui enviarle el psudoCodigo a memoria
-		if !NEW.IsEmpty() && available == 1 {
-			pcb, err := NEW.GetAndRemoveNext()
+		if !kernelglobals.NewStateQueue.IsEmpty() && available == 1 {
+			pcb, err := kernelglobals.NewStateQueue.GetAndRemoveNext()
 			if err != nil {
 				logger.Error("Error en la cola NEW - %v", err)
 			}
-			_ = TCB{
+			_ = kerneltypes.TCB{
 				TID:       0,
 				Prioridad: prioridad,
 				ConectPCB: pcb,
@@ -36,7 +38,7 @@ func processToReady(processSize int, prioridad int) {
 	}
 }
 
-func processToExit(pcb *PCB) {
+func processToExit(pcb *kerneltypes.PCB) {
 	// aca hay que hacer sincronizacion
 	// por que hay q informar a memoria
 	// y despues volver al flujo de PROCESS_EXIT

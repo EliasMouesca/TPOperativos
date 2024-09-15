@@ -1,4 +1,4 @@
-package main
+package kerneltypes
 
 type TCB struct {
 	TID       int

@@ -1,4 +1,4 @@
-package main
+package kerneltypes
 
 type PCB struct {
 	PID   int
