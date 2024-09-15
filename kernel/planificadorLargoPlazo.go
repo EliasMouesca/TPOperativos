@@ -9,42 +9,41 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
+	"strconv"
 )
-
-// nose todavia bien como vamos a hacer el planificador
-// si poner estas funciones dentro de las syscalls
-// o crear un hilo en Kernel.go que quede corriendo
-// o varios hilos en kernel.go
-// o un map? no creo q sea buena opcion
-// depende de como hagamos la sincronizacion
 
 func planificadorLargoPlazo() {
 	go processToReady()
+	go processToExit()
 }
 
 func processToReady() {
 	var available int = 0
-	var processCreate kerneltypes.PCB
 	for {
-		processCreate = <-kernelsync.ChannelProcessCreate
-		availableMemory(processSize) // seguro hay qui enviarle el psudoCodigo a memoria
+		args := <-kernelsync.ChannelProcessArguments
+		fileName := args[0]
+		processSize, _ := strconv.Atoi(args[1])
+		prioridad, _ := strconv.Atoi(args[2])
+
+		availableMemory(processSize, fileName)
 		if !kernelglobals.NewStateQueue.IsEmpty() && available == 1 {
 			pcb, err := kernelglobals.NewStateQueue.GetAndRemoveNext()
 			if err != nil {
 				logger.Error("Error en la cola NEW - %v", err)
 			}
-			_ = kerneltypes.TCB{
+			mainThread := kerneltypes.TCB{
 				TID:       0,
 				Prioridad: prioridad,
 				ConectPCB: pcb,
 			}
+			kernelglobals.ReadyStateQueue.Add(&mainThread)
 			available = 0 // reiniciar available
-			// algorithm.AddToReady(hiloMain) preguntar a eli o juan como hicieron al final la cola Ready
 		}
 	}
 }
 
-func processToExit(pcb *kerneltypes.PCB) {
+func processToExit() {
+
 	// aca hay que hacer sincronizacion
 	// por que hay q informar a memoria
 	// y despues volver al flujo de PROCESS_EXIT
@@ -56,12 +55,19 @@ func processToExit(pcb *kerneltypes.PCB) {
 // esto hay que mejorarlo seguro quiza hacerlo de alguna manera
 // polimorfica, ya que lo unico que hace  basicamente
 // largo plazo es comunicarse con memoria
-func availableMemory(processSize int) {
+func availableMemory(processSize int, fileName string) {
 
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
+	request := struct {
+		ProcessSize int
+		FileName    string
+	}{
+		ProcessSize: processSize,
+		FileName:    fileName,
+	}
 
 	// Serializar mensaje
-	processSize_json, err := json.Marshal(processSize)
+	request_json, err := json.Marshal(request)
 	if err != nil {
 		logger.Fatal("Error al serializar processSize - %v", err)
 		return

@@ -56,26 +56,25 @@ var PIDcount int = 0
 
 func ProcessCreate(args []string) error {
 
-	// Se crea el PCB y el Hilo 0
-
-	var procesoCreate kerneltypes.PCB
+	// Se crea el PCB
+	var processCreate kerneltypes.PCB
 	PIDcount++
-	procesoCreate.PID = PIDcount
-	procesoCreate.TIDs[0] = 0
+	processCreate.PID = PIDcount
+	processCreate.TIDs[0] = 0
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", procesoCreado.PID)
 
 	// Se agrega el proceso a NEW
-	kernelglobals.NewStateQueue.Add(&procesoCreate)
-	kernelsync.ChannelProcessCreate <- procesoCreate
+	kernelglobals.NewStateQueue.Add(&processCreate)
+	kernelsync.ChannelProcessArguments <- args
 
 	return nil
 }
 
 func ProcessExit(args []string) error {
 	// nose si estara bien pero el valor TCB ya esta en el canal
-	kernelglobals.ExecStateThread // sino usar una lista de un elemento consultar con los pibes
-	if tcb.TID == 0 {             // tiene que ser el hiloMain
+	tcb := kernelglobals.ExecStateThread
+	if tcb.TID == 0 { // tiene que ser el hiloMain
 		conectedProcess := tcb.ConectPCB
 		processToExit(conectedProcess)
 	} else {
