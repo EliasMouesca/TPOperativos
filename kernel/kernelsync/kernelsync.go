@@ -14,6 +14,7 @@ var PlanificadorLPMutex sync.Mutex
 var PendingThreadsChannel = make(chan any, 1)
 
 var ChannelProcessCreate = make(chan kerneltypes.PCB)
+var ChannelProcessArguments = make(chan []string)
 
 // QuantumChannel se manda una señal por acá cuando se acabó el quantum
 var QuantumChannel = make(chan any)

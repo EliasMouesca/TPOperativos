@@ -62,10 +62,11 @@ func ProcessCreate(args []string) error {
 	processCreate.PID = PIDcount
 	processCreate.TIDs[0] = 0
 
-	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", procesoCreado.PID)
+	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", processCreate.PID)
 
 	// Se agrega el proceso a NEW
 	kernelglobals.NewStateQueue.Add(&processCreate)
+	kernelsync.ChannelProcessCreate <- processCreate
 	kernelsync.ChannelProcessArguments <- args
 
 	return nil

@@ -31,10 +31,17 @@ func processToReady() {
 			if err != nil {
 				logger.Error("Error en la cola NEW - %v", err)
 			}
-			mainThread := kerneltypes.TCB{
-				TID:       0,
-				Prioridad: prioridad,
-				ConectPCB: pcb,
+			// busco al tcb con TID = 0 del pcb que se obtuvo de la cola de NEW
+			var mainThread kerneltypes.TCB
+			for _, tid := range pcb.TIDs {
+				if tid == 0 {
+					mainThread = kerneltypes.TCB{
+						TID:       tid,
+						Prioridad: prioridad,
+						ConectPCB: pcb,
+					}
+					break
+				}
 			}
 			kernelglobals.ReadyStateQueue.Add(&mainThread)
 			available = 0 // reiniciar available
@@ -101,7 +108,7 @@ func availableMemory(processSize int, fileName string) {
 
 	// Hacer request a memoria
 	memoria := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", Config.MemoryAddress, Config.MemoryPort)
+	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort)
 	logger.Debug("Enviando request a memoria")
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(processSize_json))
 	if err != nil {
