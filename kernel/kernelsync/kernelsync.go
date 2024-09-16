@@ -9,6 +9,8 @@ import (
 var MutexCPU sync.Mutex
 
 var PlanificadorLPMutex sync.Mutex
+var MemorySemaphore sync.Mutex
+var ReadyQueueMutex sync.Mutex
 
 // PendingThreadsChannel un canal para que el corto sepa que hay procesos pendientes de planificar
 var PendingThreadsChannel = make(chan any, 1)

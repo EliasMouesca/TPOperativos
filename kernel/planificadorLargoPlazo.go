@@ -17,16 +17,16 @@ func planificadorLargoPlazo() {
 	go processToExit()
 }
 
+var available int = 0
+
 func processToReady() {
-	var available int = 0
 	for {
 		args := <-kernelsync.ChannelProcessArguments
 		fileName := args[0]
 		processSize, _ := strconv.Atoi(args[1])
 		prioridad, _ := strconv.Atoi(args[2])
 
-		availableMemory(processSize, fileName)
-		if !kernelglobals.NewStateQueue.IsEmpty() && available == 1 {
+		if availableMemory(processSize, fileName) && !kernelglobals.NewStateQueue.IsEmpty() {
 			pcb, err := kernelglobals.NewStateQueue.GetAndRemoveNext()
 			if err != nil {
 				logger.Error("Error en la cola NEW - %v", err)
@@ -43,8 +43,9 @@ func processToReady() {
 					break
 				}
 			}
+			//kernelsync.ReadyQueueMutex.Lock() // Revisar este Mutex, deberia ir uno en algun lugar aca pero no tuve tiempo de pensarlo demasiado hoy -tobi
 			kernelglobals.ReadyStateQueue.Add(&mainThread)
-			available = 0 // reiniciar available
+			//kernelsync.ReadyQueueMutex.Unlock()
 		}
 	}
 }
@@ -88,7 +89,10 @@ func processToExit() {
 // esto hay que mejorarlo seguro quiza hacerlo de alguna manera
 // polimorfica, ya que lo unico que hace  basicamente
 // largo plazo es comunicarse con memoria
-func availableMemory(processSize int, fileName string) {
+func availableMemory(processSize int, fileName string) bool {
+
+	kernelsync.MemorySemaphore.Lock()
+	defer kernelsync.MemorySemaphore.Unlock()
 
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
 	request := struct {
@@ -102,18 +106,18 @@ func availableMemory(processSize int, fileName string) {
 	// Serializar mensaje
 	request_json, err := json.Marshal(request)
 	if err != nil {
-		logger.Fatal("Error al serializar processSize - %v", err)
-		return
+		logger.Fatal("Error al serializar request - %v", err)
+		return false
 	}
 
 	// Hacer request a memoria
 	memoria := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort)
 	logger.Debug("Enviando request a memoria")
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(processSize_json))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(request_json))
 	if err != nil {
 		logger.Fatal("Error al conectar con memoria - %v", err)
-		return
+		return false
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -121,11 +125,12 @@ func availableMemory(processSize int, fileName string) {
 	resp, err := memoria.Do(req)
 	if err != nil {
 		logger.Fatal("Error al obtener mensaje de respuesta por parte de memoria - %v", err)
-		return
+		return false
 	}
 	if resp.StatusCode != http.StatusOK {
-		available = 1
+		return true
 	} else {
 		logger.Info("No hay espacio disponible en memoria")
+		return false
 	}
 }
