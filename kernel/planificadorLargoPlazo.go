@@ -44,6 +44,32 @@ func processToReady() {
 
 func processToExit() {
 
+	tcb := kernelglobals.ExecStateThread
+	pcb := tcb.ConectPCB
+
+	queueSize := kernelglobals.ReadyStateQueue.Size()
+	for i := 0; i < queueSize; i++ {
+		readyTCB, err := kernelglobals.ReadyStateQueue.GetAndRemoveNext()
+		if err != nil {
+			logger.Error("Error al obtener el siguiente TCB de ReadyStateQueue - %v", err)
+			continue
+		}
+
+		// Verificar si el TCB pertenece al mismo PCB que el proceso que está finalizando
+		if readyTCB.ConectPCB == pcb {
+			// Si el TCB pertenece al PCB, lo eliminamos de la cola y no lo reinsertamos
+			logger.Debug("Eliminando TCB con TID %d del proceso con PID %d de ReadyStateQueue", readyTCB.TID, pcb.PID)
+		} else {
+			// Si no pertenece, lo volvemos a insertar en la cola
+			kernelglobals.ReadyStateQueue.Add(readyTCB)
+		}
+	}
+	kernelsync.PlanificadorLPMutex.Unlock()
+
+	logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", pcb.PID)
+	//informarMemoriaProcessToExit(pcb.PID)
+	processToReady()
+
 	// aca hay que hacer sincronizacion
 	// por que hay q informar a memoria
 	// y despues volver al flujo de PROCESS_EXIT

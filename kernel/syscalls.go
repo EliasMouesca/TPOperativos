@@ -73,10 +73,10 @@ func ProcessCreate(args []string) error {
 
 func ProcessExit(args []string) error {
 	// nose si estara bien pero el valor TCB ya esta en el canal
+	kernelsync.PlanificadorLPMutex.Lock()
 	tcb := kernelglobals.ExecStateThread
 	if tcb.TID == 0 { // tiene que ser el hiloMain
-		conectedProcess := tcb.ConectPCB
-		processToExit(conectedProcess)
+		processToExit()
 	} else {
 		return errors.New("El hilo que quizo eliminar el proceso, no es el hilo main")
 	}
