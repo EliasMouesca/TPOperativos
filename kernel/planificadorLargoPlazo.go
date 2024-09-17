@@ -13,12 +13,22 @@ import (
 )
 
 func planificadorLargoPlazo() {
-	go processToReady()
-	go processToExit()
+	kernelsync.WaitPlanificadorLP.Add(1)
+	go func() {
+		defer kernelsync.WaitPlanificadorLP.Done()
+		processToReady()
+	}()
+
+	kernelsync.WaitPlanificadorLP.Add(1)
+	go func() {
+		defer kernelsync.WaitPlanificadorLP.Done()
+		processToReady()
+	}()
+
+	kernelsync.WaitPlanificadorLP.Wait()
 }
 
 func processToReady() {
-	defer kernelsync.Wg.Done()
 	for {
 		args := <-kernelsync.ChannelProcessArguments
 		fileName := args[0]
@@ -69,7 +79,7 @@ func processToExit() {
 			kernelglobals.ReadyStateQueue.Add(readyTCB)
 		}
 	}
-	kernelsync.PlanificadorLPMutex.Unlock()
+	kernelsync.MutexPlanificadorLP.Unlock()
 
 	logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", pcb.PID)
 	//informarMemoriaProcessToExit(pcb.PID)

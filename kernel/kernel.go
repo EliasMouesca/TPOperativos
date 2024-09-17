@@ -86,13 +86,17 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// map a la libreria de syscalls
-	err = ExecuteSyscall(syscall)
-	if err != nil {
-		// Por alguna razón esto rompe cuando quiero compilar
-		//logger.Fatal("Error al ejecutar la syscall: &v - %v", request.Description, err)
-	}
-	w.WriteHeader(http.StatusOK)
+	kernelsync.WaitPlanificadorLP.Add(1)
+	go func() {
+		defer kernelsync.WaitPlanificadorLP.Done()
+		err = ExecuteSyscall(syscall) // map a la libreria de syscalls
+		if err != nil {
+			// Por alguna razón esto rompe cuando quiero compilar
+			logger.Error("Error al ejecutar la syscall: &v - %v", syscalls.SyscallNames[syscall.Type], err)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	}()
 }
 
 func processFinish(w http.ResponseWriter, r *http.Request) {

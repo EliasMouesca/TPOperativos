@@ -50,7 +50,6 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 var PIDcount int = 0
 
 func ProcessCreate(args []string) error {
-	defer kernelsync.Wg.Done()
 	// Esta syscall recibirá 3 parámetros de la CPU, el primero será el nombre del archivo
 	// de pseudocódigo que deberá ejecutar el proceso, el segundo parámetro es el tamaño del proceso en
 	// Memoria y el tercer parámetro es la prioridad del hilo main (TID 0). El Kernel creará un nuevo PCB y
@@ -73,13 +72,12 @@ func ProcessCreate(args []string) error {
 }
 
 func ProcessExit(args []string) error {
-
 	// Esta syscall finalizará el PCB correspondiente al TCB que ejecutó la instrucción,
 	// enviando todos sus TCBs asociados a la cola de EXIT. Esta instrucción sólo será llamada por el TID 0
 	// del proceso y le deberá indicar a la memoria la finalización de dicho proceso.
 
 	// nose si estara bien pero el valor TCB ya esta en el canal
-	kernelsync.PlanificadorLPMutex.Lock()
+	kernelsync.MutexPlanificadorLP.Lock()
 	tcb := kernelglobals.ExecStateThread
 	if tcb.TID == 0 { // tiene que ser el hiloMain
 		processToExit()
