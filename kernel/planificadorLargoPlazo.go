@@ -40,24 +40,21 @@ func processToReady() {
 		processSize := args[1]
 		prioridad, _ := strconv.Atoi(args[2])
 
-		request := kerneltypes.MemoryRequest{
+		request := kerneltypes.RequestToMemory{
 			Type:      kerneltypes.CreateProcess,
 			Arguments: []string{fileName, processSize},
 		}
 		// Se crea un hilo porque tiene que esperar a que se libere espacio en memoria
 		// para mandar el siguiente proceso a Ready
-		kernelsync.WaitPlanificadorLP.Add(1)
+		kernelsync.InitProcess.Add(1)
 		go func() { // lo testie y funciona, con esto podemos hacer un availableMemory polimorfico, quiza, esta en prueba todavia
-			defer kernelsync.WaitPlanificadorLP.Done()
+			defer kernelsync.InitProcess.Done()
 			sendMemoryRequest(request)
 		}()
 
-		<-kernelsync.MemorychannelCreateprocess
+		// Memory Semaphore Create Process
+		<-kernelsync.SemCreateprocess
 		// Se libero espacio en memoria.
-
-		// Si no se pudo liberar memoria tiene que enviar una señal
-		// de volver a inicializar cuando un proceso haya finalizado
-		// NO ESTA HECHO TODAVIA
 
 		// El if para preguntar si esta vacia la cola New no hace falta,
 		// porque esta planificacion solo ocurre si se creo el proceso,
@@ -111,18 +108,17 @@ func processToExit() {
 
 	logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", pcb.PID)
 	//finishProcessMemory(pcb.PID)
+
+	// enviar señal para intentar inicializar
+	// un proceso en ready
+	kernelsync.InitProcess.Add(1)
 }
 
-// esto hay que mejorarlo seguro quiza hacerlo de alguna manera
-// polimorfica, ya que lo unico que hace  basicamente
-// largo plazo es comunicarse con memoria
-// address es la direccion en la cual esta la handleFunc de memoria
-// por ejemplo: http.HandleFunc("/kernel/createProcess", createProcess)
-func sendMemoryRequest(request kerneltypes.MemoryRequest) {
+func sendMemoryRequest(request kerneltypes.RequestToMemory) {
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
 
 	// Serializar mensaje
-	request_json, err := json.Marshal(request)
+	jsonRequest, err := json.Marshal(request)
 	if err != nil {
 		logger.Fatal("Error al serializar request - %v", err)
 		return
@@ -132,7 +128,7 @@ func sendMemoryRequest(request kerneltypes.MemoryRequest) {
 	memoria := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/memoria/"+request.Type, kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort)
 	logger.Debug("Enviando request a memoria")
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(request_json))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonRequest))
 	if err != nil {
 		logger.Fatal("Error al conectar con memoria - %v", err)
 		return
@@ -152,15 +148,16 @@ func sendMemoryRequest(request kerneltypes.MemoryRequest) {
 	}
 }
 
+// esta funcion es auxiliar de sendMemoryRequest
 func handleMemoryResponse(response *http.Response, TypeRequest string) error {
 	if response.StatusCode != http.StatusOK {
-		err := kerneltypes.MapErrorRequestType[TypeRequest]
+		err := kerneltypes.ErrorRequestType[TypeRequest]
 		return err
 	}
 
 	switch TypeRequest {
 	case kerneltypes.CreateProcess:
-		kernelsync.MemorychannelCreateprocess <- 0
+		kernelsync.SemCreateprocess <- 0
 	case kerneltypes.FinishProcess:
 
 	case kerneltypes.CreateThread:
