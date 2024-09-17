@@ -13,6 +13,9 @@ import (
 )
 
 func planificadorLargoPlazo() {
+	// En el enunciado en implementacion dice que hay que inicializar un proceso
+	// quiza hay que hacerlo aca o en kernel.go es lo mismo creo
+
 	kernelsync.WaitPlanificadorLP.Add(1)
 	go func() {
 		defer kernelsync.WaitPlanificadorLP.Done()
@@ -30,37 +33,48 @@ func planificadorLargoPlazo() {
 
 func processToReady() {
 	for {
+		// Espera a que se cree un proceso y le mande sus argumentos,
+		// se van guardando los argumentos de cada proceso en el canal a medidad que se crean
 		args := <-kernelsync.ChannelProcessArguments
 		fileName := args[0]
 		processSize, _ := strconv.Atoi(args[1])
 		prioridad, _ := strconv.Atoi(args[2])
-		go func() {
+
+		// Se crea un hilo porque tiene que esperar a que se libere espacio en memoria
+		// para mandar el siguiente proceso a Ready
+		kernelsync.WaitPlanificadorLP.Add(1)
+		go func() { // lo testie y funciona, con esto podemos hacer un availableMemory polimorfico, quiza, esta en prueba todavia
 			defer kernelsync.WaitPlanificadorLP.Done()
-			availableMemory(processSize, fileName)
+			availableProcessMemory(processSize, fileName)
 		}()
 
-		available := <-kernelsync.ChannelMemoryRequest
+		<-kernelsync.ChannelMemoryRequest
+		// Se libero espacio en memoria
 
-		if available && !kernelglobals.NewStateQueue.IsEmpty() {
-			pcb, err := kernelglobals.NewStateQueue.GetAndRemoveNext()
-			if err != nil {
-				logger.Error("Error en la cola NEW - %v", err)
-			}
-			// busco al tcb con TID = 0 del pcb que se obtuvo de la cola de NEW
-			var mainThread kerneltypes.TCB
-			for _, tid := range pcb.TIDs {
-				if tid == 0 {
-					mainThread = kerneltypes.TCB{
-						TID:       tid,
-						Prioridad: prioridad,
-						ConectPCB: pcb,
-					}
-					break
-				}
-			}
-			kernelglobals.ReadyStateQueue.Add(&mainThread)
-			logger.Info("Se agrego el hilo main a la cola Ready")
+		// El if para preguntar si esta vacia la cola New no hace falta,
+		// porque esta planificacion solo ocurre si se creo el proceso,
+		// el cual se envian sus argumentos atraves de ChannelProcessArguments
+		pcb, err := kernelglobals.NewStateQueue.GetAndRemoveNext()
+		if err != nil {
+			logger.Error("Error en la cola NEW - %v", err)
 		}
+
+		// busco al tcb con TID = 0 del pcb que se obtuvo de la cola de NEW
+		var mainThread kerneltypes.TCB
+		for _, tid := range pcb.TIDs {
+			if tid == 0 {
+				mainThread = kerneltypes.TCB{
+					TID:       tid,
+					Prioridad: prioridad,
+					ConectPCB: pcb,
+				}
+				break
+			}
+		}
+
+		// Mandamos el hiloMain a Ready
+		kernelglobals.ReadyStateQueue.Add(&mainThread)
+		logger.Info("Se agrego el hilo main a la cola Ready")
 	}
 }
 
@@ -94,11 +108,8 @@ func processToExit() {
 // esto hay que mejorarlo seguro quiza hacerlo de alguna manera
 // polimorfica, ya que lo unico que hace  basicamente
 // largo plazo es comunicarse con memoria
-func availableMemory(processSize int, fileName string) {
+func availableProcessMemory(processSize int, fileName string) {
 	for {
-		//kernelsync.MemorySemaphore.Lock()
-		//defer kernelsync.MemorySemaphore.Unlock()
-
 		logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
 		request := struct {
 			ProcessSize int
@@ -133,7 +144,7 @@ func availableMemory(processSize int, fileName string) {
 			return
 		}
 		if resp.StatusCode != http.StatusOK {
-			kernelsync.ChannelMemoryRequest <- true
+			kernelsync.ChannelMemoryRequest <- 0
 		} else {
 			logger.Info("No hay espacio disponible en memoria")
 			return
