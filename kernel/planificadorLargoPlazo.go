@@ -17,9 +17,8 @@ func planificadorLargoPlazo() {
 	go processToExit()
 }
 
-var available int = 0
-
 func processToReady() {
+	defer kernelsync.Wg.Done()
 	for {
 		args := <-kernelsync.ChannelProcessArguments
 		fileName := args[0]
@@ -43,15 +42,13 @@ func processToReady() {
 					break
 				}
 			}
-			//kernelsync.ReadyQueueMutex.Lock() // Revisar este Mutex, deberia ir uno en algun lugar aca pero no tuve tiempo de pensarlo demasiado hoy -tobi
 			kernelglobals.ReadyStateQueue.Add(&mainThread)
-			//kernelsync.ReadyQueueMutex.Unlock()
+			logger.Info("Se agrego el hilo main a la cola Ready")
 		}
 	}
 }
 
 func processToExit() {
-
 	tcb := kernelglobals.ExecStateThread
 	pcb := tcb.ConectPCB
 
@@ -76,14 +73,6 @@ func processToExit() {
 
 	logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", pcb.PID)
 	//informarMemoriaProcessToExit(pcb.PID)
-	processToReady()
-
-	// aca hay que hacer sincronizacion
-	// por que hay q informar a memoria
-	// y despues volver al flujo de PROCESS_EXIT
-	// y despues volver al flujo de esta funcion con processToReady
-	// vamos por buen camino processToReady se tiene que inicializar por el enunciado
-	// hay que ver el tema de sincroo!!
 }
 
 // esto hay que mejorarlo seguro quiza hacerlo de alguna manera
@@ -91,8 +80,8 @@ func processToExit() {
 // largo plazo es comunicarse con memoria
 func availableMemory(processSize int, fileName string) bool {
 
-	kernelsync.MemorySemaphore.Lock()
-	defer kernelsync.MemorySemaphore.Unlock()
+	//kernelsync.MemorySemaphore.Lock()
+	//defer kernelsync.MemorySemaphore.Unlock()
 
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
 	request := struct {

@@ -1,5 +1,14 @@
 package main
 
+import (
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
+	"github.com/sisoputnfrba/tp-golang/types/syscalls"
+	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"reflect"
+	"testing"
+)
+
 type SyscallRequest struct {
 	Type        int      `json:"type"`
 	Arguments   []string `json:"arguments"`
@@ -7,6 +16,39 @@ type SyscallRequest struct {
 }
 
 // TODO: Esto no tiene que ser un main, porque sino se rompe el proceso de compilación, léase https://go.dev/doc/tutorial/add-a-test
+
+func setup() {
+	logger.ConfigureLogger("test.log", "INFO")
+}
+
+func TestProcessToReady(t *testing.T) {
+	setup()
+	args := []string{"testfile", "1024", "1"}
+	syscall := syscalls.Syscall{
+		Type:      2,
+		Arguments: args,
+	}
+
+	kernelsync.Wg.Add(1)
+	go ExecuteSyscall(syscall)
+
+	kernelsync.Wg.Add(1)
+	go processToReady()
+
+	// Esperamos a que finalicen todas las rutinas
+	kernelsync.Wg.Wait()
+
+	// Verificar si el thread fue movido a la cola Ready
+	if kernelglobals.ReadyStateQueue.IsEmpty() {
+		logger.Error("Expected ReadyStateQueue to contain a thread, but it's empty")
+	} else {
+		thread, _ := kernelglobals.ReadyStateQueue.GetAndRemoveNext()
+		logger.Debug("se creo el hilo")
+		if !reflect.DeepEqual(thread.TID, 0) {
+			logger.Error("Expected TID = 0, but got %v", thread.TID)
+		}
+	}
+}
 
 /*func main() {
 	logger.Info("--- Comienzo ejecución KERNEL-TEST ---")

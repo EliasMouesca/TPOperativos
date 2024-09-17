@@ -16,7 +16,7 @@ var AlgorithmsMap = map[string]kerneltypes.ShortTermSchedulerInterface{
 
 func planificadorCortoPlazo() {
 	// Inicializamos el planificador de corto plazo (PCP)
-	kernelglobals.ShortTermScheduler = AlgorithmsMap[Config.SchedulerAlgorithm]
+	kernelglobals.ShortTermScheduler = AlgorithmsMap[kernelglobals.Config.SchedulerAlgorithm]
 
 	// Mientras vivas, corré lo siguiente
 	for {
