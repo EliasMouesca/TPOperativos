@@ -92,7 +92,7 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		err = ExecuteSyscall(syscall) // map a la libreria de syscalls
 		if err != nil {
 			// Por alguna razón esto rompe cuando quiero compilar
-			logger.Error("Error al ejecutar la syscall: &v - %v", syscalls.SyscallNames[syscall.Type], err)
+			logger.Error("Error al ejecutar la syscall: %v - %v", syscalls.SyscallNames[syscall.Type], err)
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
