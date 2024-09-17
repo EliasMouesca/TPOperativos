@@ -37,6 +37,7 @@ func processToReady() {
 		// Espera a que se cree un proceso y le mande sus argumentos,
 		// se van guardando los argumentos de cada proceso en el canal a medidad que se crean
 		args := <-kernelsync.ChannelProcessArguments
+		logger.Debug("Llegaron los argumentos de la syscall")
 		fileName := args[0]
 		processSize := args[1]
 		prioridad, _ := strconv.Atoi(args[2])
@@ -47,8 +48,9 @@ func processToReady() {
 		}
 		// Se crea un hilo porque tiene que esperar a que se libere espacio en memoria
 		// para mandar el siguiente proceso a Ready
+		logger.Debug("Preguntando a memoria si tiene espacio disponible")
 		kernelsync.InitProcess.Add(1)
-		go func() { // lo testie y funciona, con esto podemos hacer un availableMemory polimorfico, quiza, esta en prueba todavia
+		go func() {
 			defer kernelsync.InitProcess.Done()
 			sendMemoryRequest(request)
 		}()
@@ -85,34 +87,20 @@ func processToReady() {
 }
 
 func processToExit() {
-	tcb := kernelglobals.ExecStateThread
-	pcb := tcb.ConectPCB
-
-	queueSize := kernelglobals.ReadyStateQueue.Size()
-	for i := 0; i < queueSize; i++ {
-		readyTCB, err := kernelglobals.ReadyStateQueue.GetAndRemoveNext()
-		if err != nil {
-			logger.Error("Error al obtener el siguiente TCB de ReadyStateQueue - %v", err)
-			continue
+	for {
+		PID := <-kernelsync.ChannelFinishprocess
+		pid := strconv.Itoa(PID)
+		request := types.RequestToMemory{
+			Type:      types.FinishProcess,
+			Arguments: []string{pid},
 		}
-
-		// Verificar si el TCB pertenece al mismo PCB que el proceso que está finalizando
-		if readyTCB.ConectPCB == pcb {
-			// Si el TCB pertenece al PCB, lo eliminamos de la cola y no lo reinsertamos
-			logger.Debug("Eliminando TCB con TID %d del proceso con PID %d de ReadyStateQueue", readyTCB.TID, pcb.PID)
-		} else {
-			// Si no pertenece, lo volvemos a insertar en la cola
-			kernelglobals.ReadyStateQueue.Add(readyTCB)
-		}
+		logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", PID)
+		kernelsync.Finishprocess.Add(1)
+		go func() {
+			defer kernelsync.Finishprocess.Done()
+			sendMemoryRequest(request)
+		}()
 	}
-	kernelsync.MutexPlanificadorLP.Unlock()
-
-	logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", pcb.PID)
-	//finishProcessMemory(pcb.PID)
-
-	// enviar señal para intentar inicializar
-	// un proceso en ready
-	kernelsync.InitProcess.Add(1)
 }
 
 func sendMemoryRequest(request types.RequestToMemory) {
@@ -160,7 +148,7 @@ func handleMemoryResponse(response *http.Response, TypeRequest string) error {
 	case types.CreateProcess:
 		kernelsync.SemCreateprocess <- 0
 	case types.FinishProcess:
-
+		kernelsync.SemFinishprocess <- 0
 	case types.CreateThread:
 
 	case types.FinishThread:

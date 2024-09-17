@@ -76,11 +76,33 @@ func ProcessExit(args []string) error {
 	// enviando todos sus TCBs asociados a la cola de EXIT. Esta instrucción sólo será llamada por el TID 0
 	// del proceso y le deberá indicar a la memoria la finalización de dicho proceso.
 
-	// nose si estara bien pero el valor TCB ya esta en el canal
-	kernelsync.MutexPlanificadorLP.Lock()
 	tcb := kernelglobals.ExecStateThread
+	pcb := tcb.ConectPCB
+	queueSize := kernelglobals.ReadyStateQueue.Size()
+
 	if tcb.TID == 0 { // tiene que ser el hiloMain
-		processToExit()
+		kernelsync.ChannelFinishprocess <- pcb.PID
+		<-kernelsync.SemFinishprocess
+
+		for i := 0; i < queueSize; i++ {
+			readyTCB, err := kernelglobals.ReadyStateQueue.GetAndRemoveNext()
+			if err != nil {
+				logger.Error("Error al obtener el siguiente TCB de ReadyStateQueue - %v", err)
+			}
+
+			// Verificar si el TCB pertenece al mismo PCB que el proceso que está finalizando
+			if readyTCB.ConectPCB == pcb {
+				// Si el TCB pertenece al PCB, lo eliminamos de la cola y no lo reinsertamos
+				logger.Info("Eliminando TCB con TID %d del proceso con PID %d de ReadyStateQueue", readyTCB.TID, pcb.PID)
+			} else {
+				// Si no pertenece, lo volvemos a insertar en la cola
+				kernelglobals.ReadyStateQueue.Add(readyTCB)
+			}
+		}
+		logger.Info("## Finaliza el proceso <%v>", pcb.PID)
+		// enviar señal para intentar inicializar
+		// un proceso en ready
+		kernelsync.InitProcess.Add(1)
 	} else {
 		return errors.New("El hilo que quizo eliminar el proceso, no es el hilo main")
 	}

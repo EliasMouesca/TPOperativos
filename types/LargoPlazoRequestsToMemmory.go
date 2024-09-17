@@ -25,6 +25,7 @@ type RequestToMemory struct {
 
 var ErrorRequestType = map[string]error{
 	CreateProcess: errors.New("No hay espacio disponible en memoria "),
+	FinishProcess: errors.New("No se puedo finalizar el proceso"),
 	// FinishProcess:
 	// CreateThread:
 	// FinishThread:
