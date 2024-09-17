@@ -1,11 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler"
+	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"net/http"
+	"time"
 )
 
 var AlgorithmsMap = map[string]kerneltypes.ShortTermSchedulerInterface{
@@ -33,8 +39,16 @@ func planificadorCortoPlazo() {
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
 		logger.Debug("Hilo a ejecutar: %d", tcbToExecute.TID)
 
-		// TODO: convertir el tcb en Thread
+		// Crafteo proximo hilo
+		nextThread := types.Thread{Tid: tcbToExecute.TID, Pid: tcbToExecute.ConectPCB.PID}
+		data, err := json.Marshal(nextThread)
 
-		// TODO: Mandarle el types.Thread a cpu
+		// Envio proximo hilo a cpu
+		url := fmt.Sprintf("http://%v:%v/cpu/execute", kernelglobals.Config.CpuAddress, kernelglobals.Config.CpuPort)
+		_, err = http.Post(url, "application/json", bytes.NewBuffer(data))
+		if err != nil {
+			return
+		}
+		kernelsync.QuantumChannel <- time.After(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
 	}
 }

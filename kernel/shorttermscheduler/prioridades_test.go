@@ -126,5 +126,4 @@ func TestAddToReadyFIFO(t *testing.T) {
 	}
 
 	logger.Debug("\nCorrect slice: %v\nReceived Slice: %v\n", correctSlice, prioridades.readyThreads)
-
 }
