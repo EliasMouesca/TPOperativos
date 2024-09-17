@@ -14,7 +14,7 @@ var MemorySemaphore sync.Mutex
 var PendingThreadsChannel = make(chan any, 1)
 
 var ChannelProcessArguments = make(chan []string)
-var ChannelMemoryRequest = make(chan any)
+var MemorychannelCreateprocess = make(chan any)
 
 // QuantumChannel se manda una señal por acá cuando se acabó el quantum
 var QuantumChannel = make(chan any)

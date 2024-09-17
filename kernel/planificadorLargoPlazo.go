@@ -37,18 +37,22 @@ func processToReady() {
 		// se van guardando los argumentos de cada proceso en el canal a medidad que se crean
 		args := <-kernelsync.ChannelProcessArguments
 		fileName := args[0]
-		processSize, _ := strconv.Atoi(args[1])
+		processSize := args[1]
 		prioridad, _ := strconv.Atoi(args[2])
 
+		request := kerneltypes.MemoryRequest{
+			Type:      kerneltypes.CreateProcess,
+			Arguments: []string{fileName, processSize},
+		}
 		// Se crea un hilo porque tiene que esperar a que se libere espacio en memoria
 		// para mandar el siguiente proceso a Ready
 		kernelsync.WaitPlanificadorLP.Add(1)
 		go func() { // lo testie y funciona, con esto podemos hacer un availableMemory polimorfico, quiza, esta en prueba todavia
 			defer kernelsync.WaitPlanificadorLP.Done()
-			availableProcessMemory(processSize, fileName)
+			sendMemoryRequest(request)
 		}()
 
-		<-kernelsync.ChannelMemoryRequest
+		<-kernelsync.MemorychannelCreateprocess
 		// Se libero espacio en memoria.
 
 		// Si no se pudo liberar memoria tiene que enviar una señal
@@ -112,15 +116,10 @@ func processToExit() {
 // esto hay que mejorarlo seguro quiza hacerlo de alguna manera
 // polimorfica, ya que lo unico que hace  basicamente
 // largo plazo es comunicarse con memoria
-func availableProcessMemory(processSize int, fileName string) {
+// address es la direccion en la cual esta la handleFunc de memoria
+// por ejemplo: http.HandleFunc("/kernel/createProcess", createProcess)
+func sendMemoryRequest(request kerneltypes.MemoryRequest) {
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
-	request := struct {
-		ProcessSize int
-		FileName    string
-	}{
-		ProcessSize: processSize,
-		FileName:    fileName,
-	}
 
 	// Serializar mensaje
 	request_json, err := json.Marshal(request)
@@ -131,7 +130,7 @@ func availableProcessMemory(processSize int, fileName string) {
 
 	// Hacer request a memoria
 	memoria := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort)
+	url := fmt.Sprintf("http://%s:%d/memoria/"+request.Type, kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort)
 	logger.Debug("Enviando request a memoria")
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(request_json))
 	if err != nil {
@@ -146,10 +145,30 @@ func availableProcessMemory(processSize int, fileName string) {
 		logger.Fatal("Error al obtener mensaje de respuesta por parte de memoria - %v", err)
 		return
 	}
-	if resp.StatusCode == http.StatusOK {
-		kernelsync.ChannelMemoryRequest <- 0
-	} else {
-		logger.Info("No hay espacio disponible en memoria")
-		return
+
+	err = handleMemoryResponse(resp, request.Type)
+	if err != nil {
+		logger.Error("Memoria respondio con un error - %v", err)
 	}
+}
+
+func handleMemoryResponse(response *http.Response, TypeRequest string) error {
+	if response.StatusCode != http.StatusOK {
+		err := kerneltypes.MapErrorRequestType[TypeRequest]
+		return err
+	}
+
+	switch TypeRequest {
+	case kerneltypes.CreateProcess:
+		kernelsync.MemorychannelCreateprocess <- 0
+	case kerneltypes.FinishProcess:
+
+	case kerneltypes.CreateThread:
+
+	case kerneltypes.FinishThread:
+
+	case kerneltypes.MemoryDump:
+
+	}
+	return nil
 }
