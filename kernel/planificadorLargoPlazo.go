@@ -25,7 +25,7 @@ func planificadorLargoPlazo() {
 	kernelsync.WaitPlanificadorLP.Add(1)
 	go func() {
 		defer kernelsync.WaitPlanificadorLP.Done()
-		processToReady()
+		processToExit()
 	}()
 
 	kernelsync.WaitPlanificadorLP.Wait()
@@ -49,7 +49,11 @@ func processToReady() {
 		}()
 
 		<-kernelsync.ChannelMemoryRequest
-		// Se libero espacio en memoria
+		// Se libero espacio en memoria.
+
+		// Si no se pudo liberar memoria tiene que enviar una señal
+		// de volver a inicializar cuando un proceso haya finalizado
+		// NO ESTA HECHO TODAVIA
 
 		// El if para preguntar si esta vacia la cola New no hace falta,
 		// porque esta planificacion solo ocurre si se creo el proceso,
@@ -102,52 +106,50 @@ func processToExit() {
 	kernelsync.MutexPlanificadorLP.Unlock()
 
 	logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", pcb.PID)
-	//informarMemoriaProcessToExit(pcb.PID)
+	//finishProcessMemory(pcb.PID)
 }
 
 // esto hay que mejorarlo seguro quiza hacerlo de alguna manera
 // polimorfica, ya que lo unico que hace  basicamente
 // largo plazo es comunicarse con memoria
 func availableProcessMemory(processSize int, fileName string) {
-	for {
-		logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
-		request := struct {
-			ProcessSize int
-			FileName    string
-		}{
-			ProcessSize: processSize,
-			FileName:    fileName,
-		}
+	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
+	request := struct {
+		ProcessSize int
+		FileName    string
+	}{
+		ProcessSize: processSize,
+		FileName:    fileName,
+	}
 
-		// Serializar mensaje
-		request_json, err := json.Marshal(request)
-		if err != nil {
-			logger.Fatal("Error al serializar request - %v", err)
-			return
-		}
+	// Serializar mensaje
+	request_json, err := json.Marshal(request)
+	if err != nil {
+		logger.Fatal("Error al serializar request - %v", err)
+		return
+	}
 
-		// Hacer request a memoria
-		memoria := &http.Client{}
-		url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort)
-		logger.Debug("Enviando request a memoria")
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(request_json))
-		if err != nil {
-			logger.Fatal("Error al conectar con memoria - %v", err)
-			return
-		}
-		req.Header.Set("Content-Type", "application/json")
+	// Hacer request a memoria
+	memoria := &http.Client{}
+	url := fmt.Sprintf("http://%s:%d/memoria/availableMemory", kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort)
+	logger.Debug("Enviando request a memoria")
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(request_json))
+	if err != nil {
+		logger.Fatal("Error al conectar con memoria - %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
 
-		// Recibo repuesta de memoria
-		resp, err := memoria.Do(req)
-		if err != nil {
-			logger.Fatal("Error al obtener mensaje de respuesta por parte de memoria - %v", err)
-			return
-		}
-		if resp.StatusCode != http.StatusOK {
-			kernelsync.ChannelMemoryRequest <- 0
-		} else {
-			logger.Info("No hay espacio disponible en memoria")
-			return
-		}
+	// Recibo repuesta de memoria
+	resp, err := memoria.Do(req)
+	if err != nil {
+		logger.Fatal("Error al obtener mensaje de respuesta por parte de memoria - %v", err)
+		return
+	}
+	if resp.StatusCode == http.StatusOK {
+		kernelsync.ChannelMemoryRequest <- 0
+	} else {
+		logger.Info("No hay espacio disponible en memoria")
+		return
 	}
 }
