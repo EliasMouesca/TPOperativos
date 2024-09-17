@@ -7,6 +7,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"strconv"
@@ -40,8 +41,8 @@ func processToReady() {
 		processSize := args[1]
 		prioridad, _ := strconv.Atoi(args[2])
 
-		request := kerneltypes.RequestToMemory{
-			Type:      kerneltypes.CreateProcess,
+		request := types.RequestToMemory{
+			Type:      types.CreateProcess,
 			Arguments: []string{fileName, processSize},
 		}
 		// Se crea un hilo porque tiene que esperar a que se libere espacio en memoria
@@ -114,7 +115,7 @@ func processToExit() {
 	kernelsync.InitProcess.Add(1)
 }
 
-func sendMemoryRequest(request kerneltypes.RequestToMemory) {
+func sendMemoryRequest(request types.RequestToMemory) {
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
 
 	// Serializar mensaje
@@ -151,20 +152,20 @@ func sendMemoryRequest(request kerneltypes.RequestToMemory) {
 // esta funcion es auxiliar de sendMemoryRequest
 func handleMemoryResponse(response *http.Response, TypeRequest string) error {
 	if response.StatusCode != http.StatusOK {
-		err := kerneltypes.ErrorRequestType[TypeRequest]
+		err := types.ErrorRequestType[TypeRequest]
 		return err
 	}
 
 	switch TypeRequest {
-	case kerneltypes.CreateProcess:
+	case types.CreateProcess:
 		kernelsync.SemCreateprocess <- 0
-	case kerneltypes.FinishProcess:
+	case types.FinishProcess:
 
-	case kerneltypes.CreateThread:
+	case types.CreateThread:
 
-	case kerneltypes.FinishThread:
+	case types.FinishThread:
 
-	case kerneltypes.MemoryDump:
+	case types.MemoryDump:
 
 	}
 	return nil

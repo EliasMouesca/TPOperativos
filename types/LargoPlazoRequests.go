@@ -1,4 +1,4 @@
-package kerneltypes
+package types
 
 import "errors"
 
