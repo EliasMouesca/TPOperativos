@@ -49,15 +49,20 @@ func processToReady() {
 		// Se crea un hilo porque tiene que esperar a que se libere espacio en memoria
 		// para mandar el siguiente proceso a Ready
 		logger.Debug("Preguntando a memoria si tiene espacio disponible")
-		kernelsync.InitProcess.Add(1)
+		kernelsync.WaitPlanificadorLP.Add(1)
 		go func() {
-			defer kernelsync.InitProcess.Done()
-			sendMemoryRequest(request)
+			defer kernelsync.WaitPlanificadorLP.Done()
+			for {
+				err := sendMemoryRequest(request)
+				if err != nil {
+					logger.Debug("Error en la request de memoria sobre la creacion del proceso- %v", err)
+					<-kernelsync.InitProcess
+				} else {
+					logger.Debug("Hay espacio disponible en memoria")
+					break
+				}
+			}
 		}()
-
-		// Memory Semaphore Create Process
-		<-kernelsync.SemCreateprocess
-		// Se libero espacio en memoria.
 
 		// El if para preguntar si esta vacia la cola New no hace falta,
 		// porque esta planificacion solo ocurre si se creo el proceso,
@@ -98,19 +103,25 @@ func processToExit() {
 		kernelsync.Finishprocess.Add(1)
 		go func() {
 			defer kernelsync.Finishprocess.Done()
-			sendMemoryRequest(request)
+			for {
+				err := sendMemoryRequest(request)
+				if err != nil {
+					logger.Error("Error en la request de memoria sobre la finalizacion del proceso - %v", err)
+				} else {
+					kernelsync.SemFinishprocess <- 0
+				}
+			}
 		}()
 	}
 }
 
-func sendMemoryRequest(request types.RequestToMemory) {
+func sendMemoryRequest(request types.RequestToMemory) error {
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
 
 	// Serializar mensaje
 	jsonRequest, err := json.Marshal(request)
 	if err != nil {
-		logger.Fatal("Error al serializar request - %v", err)
-		return
+		return err
 	}
 
 	// Hacer request a memoria
@@ -119,22 +130,21 @@ func sendMemoryRequest(request types.RequestToMemory) {
 	logger.Debug("Enviando request a memoria")
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonRequest))
 	if err != nil {
-		logger.Fatal("Error al conectar con memoria - %v", err)
-		return
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	// Recibo repuesta de memoria
 	resp, err := memoria.Do(req)
 	if err != nil {
-		logger.Fatal("Error al obtener mensaje de respuesta por parte de memoria - %v", err)
-		return
+		return err
 	}
 
 	err = handleMemoryResponse(resp, request.Type)
 	if err != nil {
-		logger.Error("Memoria respondio con un error - %v", err)
+		return err
 	}
+	return nil
 }
 
 // esta funcion es auxiliar de sendMemoryRequest
@@ -142,19 +152,6 @@ func handleMemoryResponse(response *http.Response, TypeRequest string) error {
 	if response.StatusCode != http.StatusOK {
 		err := types.ErrorRequestType[TypeRequest]
 		return err
-	}
-
-	switch TypeRequest {
-	case types.CreateProcess:
-		kernelsync.SemCreateprocess <- 0
-	case types.FinishProcess:
-		kernelsync.SemFinishprocess <- 0
-	case types.CreateThread:
-
-	case types.FinishThread:
-
-	case types.MemoryDump:
-
 	}
 	return nil
 }

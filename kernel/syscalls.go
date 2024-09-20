@@ -63,9 +63,6 @@ func ProcessCreate(args []string) error {
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", processCreate.PID)
 
-	// Se agrega el proceso a NEW
-	kernelglobals.NewStateQueue.Add(&processCreate)
-
 	kernelsync.ChannelProcessArguments <- args
 
 	return nil
@@ -102,7 +99,7 @@ func ProcessExit(args []string) error {
 		logger.Info("## Finaliza el proceso <%v>", pcb.PID)
 		// enviar señal para intentar inicializar
 		// un proceso en ready
-		kernelsync.InitProcess.Add(1)
+		kernelsync.InitProcess <- 0
 	} else {
 		return errors.New("El hilo que quizo eliminar el proceso, no es el hilo main")
 	}

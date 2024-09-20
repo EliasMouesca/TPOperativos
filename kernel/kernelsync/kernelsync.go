@@ -20,8 +20,7 @@ var MutexPlanificadorLP sync.Mutex
 var WaitPlanificadorLP sync.WaitGroup
 
 var ChannelProcessArguments = make(chan []string)
-var SemCreateprocess = make(chan any)
-var InitProcess sync.WaitGroup
+var InitProcess = make(chan any)
 
 var ChannelFinishprocess = make(chan int)
 var Finishprocess sync.WaitGroup
