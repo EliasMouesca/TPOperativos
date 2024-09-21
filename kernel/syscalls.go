@@ -294,7 +294,7 @@ func MutexLock(args []string) error {
 	defer mutexWrapper.Mutex.Unlock()
 
 	if mutexWrapper.AssignedTID != -1 && mutexWrapper.AssignedTID != execTCB.TID {
-		mutexWrapper.BlockedThreads = append(mutexWrapper.BlockedThreads, &kernelglobals.ExecStateThread)
+		mutexWrapper.BlockedThreads = append(mutexWrapper.BlockedThreads, &execTCB)
 		logger.Info("## El mutex <%d> ya está tomado. Bloqueando al TID <%d> del proceso con PID <%d>", mutexID, execTCB.TID, execTCB.ConectPCB.PID)
 		return nil
 	}
