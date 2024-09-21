@@ -40,3 +40,23 @@ func (c *Queue[T]) Size() int {
 	defer c.mutex.Unlock()
 	return len(c.elements)
 }
+
+func (c *Queue[T]) Do(f func(*T)) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	for i := range c.elements {
+		f(&c.elements[i])
+	}
+}
+
+func (c *Queue[T]) Remove(t *T) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	for i, element := range c.elements {
+		if &element == t {
+			c.elements = append(c.elements[:i], c.elements[i+1:]...)
+			return nil
+		}
+	}
+	return errors.New("elemento no encontrado en la cola")
+}
