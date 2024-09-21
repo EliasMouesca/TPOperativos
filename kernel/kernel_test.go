@@ -188,6 +188,24 @@ func TestMutexCreate(t *testing.T) {
 	t.Logf("Se creó correctamente el mutex con ID <%d> para el proceso con PID <%d>", mutexID, pcb.PID)
 }
 
+// Función auxiliar para registrar el estado actual de ExecStateThread y de los hilos bloqueados
+func logCurrentState(context string) {
+	logger.Info("### %s ###", context)
+	logger.Info("Estado actual de ExecStateThread: PID <%d>, TID <%d>, Mutex: %v",
+		kernelglobals.ExecStateThread.ConectPCB.PID,
+		kernelglobals.ExecStateThread.TID,
+		kernelglobals.ExecStateThread.Mutex,
+	)
+
+	for mutexID, mutexWrapper := range kernelglobals.GlobalMutexRegistry {
+		logger.Info("Estado del Mutex ID <%d>: AssignedTID <%d>, BlockedThreads: [", mutexID, mutexWrapper.AssignedTID)
+		for _, blockedTCB := range mutexWrapper.BlockedThreads {
+			logger.Info("  TID <%d> del PCB con PID <%d>", blockedTCB.TID, blockedTCB.ConectPCB.PID)
+		}
+		logger.Info("]")
+	}
+}
+
 func TestMutexLock(t *testing.T) {
 	setup()
 
@@ -292,24 +310,6 @@ func TestMutexLock(t *testing.T) {
 	}
 
 	t.Logf("El segundo hilo con TID <%d> se bloqueó correctamente al intentar tomar el mutex con ID <%d>", tcb2.TID, mutexID)
-}
-
-// Función auxiliar para registrar el estado actual de ExecStateThread y de los hilos bloqueados
-func logCurrentState(context string) {
-	logger.Info("### %s ###", context)
-	logger.Info("Estado actual de ExecStateThread: PID <%d>, TID <%d>, Mutex: %v",
-		kernelglobals.ExecStateThread.ConectPCB.PID,
-		kernelglobals.ExecStateThread.TID,
-		kernelglobals.ExecStateThread.Mutex,
-	)
-
-	for mutexID, mutexWrapper := range kernelglobals.GlobalMutexRegistry {
-		logger.Info("Estado del Mutex ID <%d>: AssignedTID <%d>, BlockedThreads: [", mutexID, mutexWrapper.AssignedTID)
-		for _, blockedTCB := range mutexWrapper.BlockedThreads {
-			logger.Info("  TID <%d> del PCB con PID <%d>", blockedTCB.TID, blockedTCB.ConectPCB.PID)
-		}
-		logger.Info("]")
-	}
 }
 
 func TestMutexUnlock(t *testing.T) {
@@ -442,4 +442,63 @@ func TestMutexUnlock(t *testing.T) {
 	logCurrentState("Estado final después de las pruebas de MutexUnlock")
 
 	t.Logf("El tercer hilo con TID <%d> se bloqueó correctamente al intentar tomar el mutex con ID <%d>", tcb3.TID, mutexID)
+}
+
+func TestThreadExit(t *testing.T) {
+	setup()
+
+	// Crear un PCB y TCB de prueba
+	pcb := kerneltypes.PCB{
+		PID:   0,
+		TIDs:  []int{0}, // Hilos con TID 0 y 1
+		Mutex: []int{},
+	}
+
+	// Crear dos TCBs asociados al mismo PCB
+	tcb1 := kerneltypes.TCB{
+		TID:       0,
+		Prioridad: 0,
+		ConectPCB: &pcb,
+	}
+
+	// Simulamos que el primer hilo (tcb1) es el que está en ejecución
+	kernelglobals.ExecStateThread = tcb1
+
+	// Verificamos el estado inicial del hilo en ejecución
+	logCurrentState("Estado inicial antes de la syscall ThreadExit")
+
+	// Llamar a la syscall ThreadExit con el hilo actual
+	args := []string{}
+	syscall := syscalls.Syscall{
+		Type:      syscalls.ThreadExit,
+		Arguments: args,
+	}
+
+	err := ExecuteSyscall(syscall)
+	if err != nil {
+		t.Fatalf("Error al ejecutar syscall THREAD_EXIT: %v", err)
+	}
+
+	// Verificar que el hilo en ejecución ha sido movido a la cola de Exit
+	// Comprobar si ConectPCB es nil antes de acceder a él
+	if kernelglobals.ExecStateThread.TID != -1 {
+		t.Fatalf("El ExecStateThread no se ha vaciado correctamente, se esperaba un TCB vacío, pero se encontró TID <%d> y PID <%d>", kernelglobals.ExecStateThread.TID, kernelglobals.ExecStateThread.ConectPCB.PID)
+	}
+
+	// Verificar que el TCB se encuentra en la cola de ExitState
+	foundInExit := false
+	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
+		if tcb.TID == tcb1.TID && tcb.ConectPCB == &pcb {
+			foundInExit = true
+		}
+	})
+
+	if !foundInExit {
+		t.Fatalf("El TCB del hilo con TID <%d> no se encontró en la cola de ExitStateQueue", tcb1.TID)
+	}
+
+	// Mostrar el estado final después de la syscall
+	logCurrentState("Estado final después de la syscall ThreadExit")
+
+	t.Logf("El hilo con TID <%d> se ha movido correctamente al estado EXIT", tcb1.TID)
 }

@@ -247,8 +247,10 @@ func ThreadExit(args []string) error {
 	logger.Info("## Moviendo el TID <%d> al estado EXIT", execTCB.TID)
 	kernelglobals.ExitStateQueue.Add(&execTCB)
 
-	kernelglobals.ExecStateThread = kerneltypes.TCB{} // Asigno un TCB vacío para indicar que no hay un hilo en ejecución
-	// el planificador deberia asignar el siguiente hilo a ejecutar. Esto solamente manda a exit el actual.
+	kernelglobals.ExecStateThread = kerneltypes.TCB{
+		TID:       -1,
+		ConectPCB: currentPCB,
+	}
 
 	return nil
 }
