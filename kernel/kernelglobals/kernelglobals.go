@@ -3,7 +3,6 @@ package kernelglobals
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/types"
-	"sync"
 )
 
 //var NEW []types.PCB
@@ -17,9 +16,9 @@ var ExitStateQueue types.Queue[kerneltypes.TCB]
 
 var ShortTermScheduler kerneltypes.ShortTermSchedulerInterface
 
-var ExecStateThread kerneltypes.TCB
+var ExecStateThread kerneltypes.TCB // TODO: ESTO NO DEBERIA SER UN PUNTERO? Y EL RESTO DE QUEUES, NO DEBERIAN SER PUNTEROS?
 
 var Config kerneltypes.KernelConfig
 
 // Map para guardar todos los mutex, dsp cada PCB hace referencia a su id dentro de GlobalMutexRegistry
-var GlobalMutexRegistry = map[int]*sync.Mutex{}
+var GlobalMutexRegistry = map[int]*kerneltypes.MutexWrapper{}

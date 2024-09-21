@@ -20,12 +20,12 @@ var syscallSet = map[int]syscallFunction{
 	syscalls.ProcessCreate: ProcessCreate,
 	syscalls.ProcessExit:   ProcessExit,
 	syscalls.ThreadCreate:  ThreadCreate,
-	// "THREAD_JOIN": THREAD_JOIN,
-	// "THREAD_CANCEL": THREAD_CANCEL
-	// "THREAD_EXIT": THREAD_CREATE,
-	// "MUTEX_CREATE": MUTEX_CREATE,
-	// "MUTEX_LOCK": MUTEX_LOCK,
-	// "MUTEX_UNLOCK": MUTEX_UNLOCK,
+	syscalls.ThreadJoin:    ThreadJoin,
+	syscalls.ThreadCancel:  ThreadCancel,
+	syscalls.ThreadExit:    ThreadExit,
+	syscalls.MutexCreate:   MutexCreate,
+	syscalls.MutexLock:     MutexLock,
+	syscalls.MutexUnlock:   MutexUnlock,
 }
 
 func ExecuteSyscall(syscall syscalls.Syscall) error {
@@ -135,7 +135,7 @@ func ThreadCreate(args []string) error {
 	return nil
 }
 
-func THREAD_JOIN(args []string) error {
+func ThreadJoin(args []string) error {
 	// Esta syscall recibe como parámetro un TID, mueve el hilo que la invocó al estado
 	// BLOCK hasta que el TID pasado por parámetro finalice. En caso de que el TID pasado por parámetro
 	// no exista o ya haya finalizado, esta syscall no hace nada y el hilo que la invocó continuará su
@@ -187,7 +187,7 @@ func THREAD_JOIN(args []string) error {
 	return nil
 }
 
-func THREAD_CANCEL(args []string) error {
+func ThreadCancel(args []string) error {
 	// Esta syscall recibe como parámetro un TID con el objetivo de finalizarlo
 	// pasando al mismo al estado EXIT. Se deberá indicar a la Memoria la
 	// finalización de dicho hilo. En caso de que el TID pasado por parámetro no
@@ -234,7 +234,7 @@ func THREAD_CANCEL(args []string) error {
 	return nil
 }
 
-func THREAD_EXIT(args []string) error {
+func ThreadExit(args []string) error {
 	// Esta syscall finaliza al hilo que la invocó, pasando el mismo al estado EXIT.
 	// Se deberá indicar a la Memoria la finalización de dicho hilo.
 
@@ -253,15 +253,21 @@ func THREAD_EXIT(args []string) error {
 	return nil
 }
 
-func MUTEX_CREATE(args []string) error {
+func MutexCreate(args []string) error {
 	// Crea un nuevo mutex para el proceso sin asignar a ningún hilo.
 
 	execTCB := kernelglobals.ExecStateThread
 	currentPCB := execTCB.ConectPCB
 	newMutexID := len(kernelglobals.GlobalMutexRegistry) + 1
 
-	newMutex := &sync.Mutex{}
-	kernelglobals.GlobalMutexRegistry[newMutexID] = newMutex
+	newMutexWrapper := &kerneltypes.MutexWrapper{
+		Mutex:          sync.Mutex{},
+		ID:             newMutexID,
+		AssignedTID:    -1,
+		BlockedThreads: []*kerneltypes.TCB{},
+	}
+
+	kernelglobals.GlobalMutexRegistry[newMutexID] = newMutexWrapper
 
 	currentPCB.Mutex = append(currentPCB.Mutex, newMutexID)
 
@@ -270,7 +276,7 @@ func MUTEX_CREATE(args []string) error {
 	return nil
 }
 
-func MUTEX_LOCK(args []string) error {
+func MutexLock(args []string) error {
 
 	mutexID, err := strconv.Atoi(args[0])
 	if err != nil {
@@ -278,40 +284,30 @@ func MUTEX_LOCK(args []string) error {
 	}
 
 	execTCB := kernelglobals.ExecStateThread
-	currentPCB := execTCB.ConectPCB
 
-	mutex, exists := kernelglobals.GlobalMutexRegistry[mutexID]
+	mutexWrapper, exists := kernelglobals.GlobalMutexRegistry[mutexID]
 	if !exists {
 		return errors.New(fmt.Sprintf("No se encontró el mutex con ID <%d>", mutexID))
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutexWrapper.Mutex.Lock()
+	defer mutexWrapper.Mutex.Unlock()
 
-	var tcbWithMutex *kerneltypes.TCB
-	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.ConectPCB == currentPCB { // verifica solo hilos del mismo proceso
-			for _, tcbMutexID := range tcb.Mutex {
-				if tcbMutexID == mutexID {
-					tcbWithMutex = tcb
-					return
-				}
-			}
-		}
-	})
-
-	if tcbWithMutex != nil {
-		logger.Info("## El mutex <%d> ya está tomado por el TID <%d> del proceso con PID <%d>", mutexID, tcbWithMutex.TID, currentPCB.PID)
+	if mutexWrapper.AssignedTID != -1 && mutexWrapper.AssignedTID != execTCB.TID {
+		mutexWrapper.BlockedThreads = append(mutexWrapper.BlockedThreads, &kernelglobals.ExecStateThread)
+		logger.Info("## El mutex <%d> ya está tomado. Bloqueando al TID <%d> del proceso con PID <%d>", mutexID, execTCB.TID, execTCB.ConectPCB.PID)
 		return nil
 	}
 
+	mutexWrapper.AssignedTID = execTCB.TID
 	execTCB.Mutex = append(execTCB.Mutex, mutexID)
-	logger.Info("## El mutex <%d> ha sido asignado al TID <%d> del proceso con PID <%d>", mutexID, execTCB.TID, currentPCB.PID)
+	logger.Info("## El mutex <%d> ha sido asignado al TID <%d> del proceso con PID <%d>", mutexID, execTCB.TID, execTCB.ConectPCB.PID)
+	kernelglobals.ExecStateThread = execTCB
 
 	return nil
 }
 
-func MUTEX_UNLOCK(args []string) {
+func MutexUnlock(args []string) error {
 	// Se deberá verificar primero que exista el mutex solicitado y esté
 	// tomado por el hilo que realizó la syscall. En caso de que
 	// corresponda, se deberá desbloquear al primer hilo de la cola de
@@ -320,4 +316,53 @@ func MUTEX_UNLOCK(args []string) {
 	// que realizó la syscall MUTEX_UNLOCK. En caso de que el hilo que
 	// realiza la syscall no tenga asignado el mutex, no realizará
 	// ningún desbloqueo.
+
+	mutexID, err := strconv.Atoi(args[0])
+	if err != nil {
+		return errors.New("error al convertir el ID del mutex a entero")
+	}
+
+	execTCB := kernelglobals.ExecStateThread
+
+	mutexWrapper, exists := kernelglobals.GlobalMutexRegistry[mutexID]
+	if !exists {
+		return errors.New(fmt.Sprintf("No se encontró el mutex con ID <%d>", mutexID))
+	}
+
+	mutexWrapper.Mutex.Lock()
+	defer mutexWrapper.Mutex.Unlock()
+
+	if mutexWrapper.AssignedTID != execTCB.TID {
+		logger.Info("## El hilo actual (TID <%d>) no tiene asignado el mutex <%d>. No se realizará ningún desbloqueo.", execTCB.TID, mutexID)
+		return nil
+	}
+
+	mutexWrapper.AssignedTID = -1
+
+	var newMutexList []int
+	for _, tcbMutexID := range execTCB.Mutex {
+		if tcbMutexID != mutexID {
+			newMutexList = append(newMutexList, tcbMutexID)
+		}
+	}
+	execTCB.Mutex = newMutexList
+
+	if len(mutexWrapper.BlockedThreads) > 0 {
+		nextThread := mutexWrapper.BlockedThreads[0]
+		mutexWrapper.BlockedThreads = mutexWrapper.BlockedThreads[1:]
+
+		// Asignar el mutex al hilo desbloqueado
+		nextThread.Mutex = append(nextThread.Mutex, mutexID)
+		mutexWrapper.AssignedTID = nextThread.TID
+		logger.Info("## El mutex <%d> ha sido reasignado al TID <%d> del proceso con PID <%d>", mutexID, nextThread.TID, nextThread.ConectPCB.PID)
+
+		kernelglobals.ReadyStateQueue.Add(nextThread)
+		kernelglobals.ExecStateThread = *nextThread
+
+	} else {
+		logger.Info("## No hay hilos bloqueados esperando el mutex <%d>. Se ha liberado.", mutexID)
+		kernelglobals.ExecStateThread = kerneltypes.TCB{}
+	}
+
+	return nil
 }
