@@ -1,0 +1,19 @@
+# Conecciones con CPU
+
+## Guardar(o actualizar) contexto de ejecución
+Guarda (creando uno nuevo o actualizando) el contexto de ejecución con pid = 123 y tid = 123
+
+verbo: POST
+
+body: json de struct ExecutionContext
+
+ejemplo URL: ".../memoria/saveContext?pid=123&tid=123"
+
+
+## Obtener contexto de ejecución
+Devuelve json del ExecutionContext solicitado a partir de los parametros de la query
+
+verbo: POST
+
+ejemplo URL: ".../memoria/getContext?pid=123?tid=123"
+

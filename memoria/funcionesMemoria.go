@@ -1,0 +1,104 @@
+package main
+
+import (
+	"encoding/json"
+	"github.com/sisoputnfrba/tp-golang/types"
+	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"io"
+	"net/http"
+	"strconv"
+)
+
+func saveContext(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		logger.Error("Metodo no permitido")
+		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	logger.Debug("# Request recibida de: %v", r.RemoteAddr)
+	// Get pid and tid from query params
+	queryParams := r.URL.Query()
+	tidS := queryParams.Get("tid")
+	pidS := queryParams.Get("pid")
+
+	logger.Trace("Contexto a guardar - (PID:TID) - (%v,%v)", pidS, tidS)
+
+	// Read body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		logger.Error("No se pudo leer el cuerpo del request")
+		BadRequest(w, r)
+		return
+	}
+	defer r.Body.Close()
+
+	// Decode JSON from body
+	var contexto types.ExecutionContext
+	err = json.Unmarshal(body, &contexto)
+	if err != nil {
+		logger.Error("No se pudo decodificar el cuerpo del request")
+		BadRequest(w, r)
+		return
+	}
+
+	tid, err := strconv.Atoi(tidS)
+	pid, err := strconv.Atoi(pidS)
+	thread := types.Thread{Pid: pid, Tid: tid}
+
+	_, exists := execContext[thread]
+	if !exists {
+		logger.Trace("No existe el thread buscado, se creará un nuevo contexto")
+	}
+	execContext[thread] = contexto
+	logger.Debug("Contexto guardado exitosamente: %v", execContext[thread])
+
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write([]byte("Contexto guardado exitosamente"))
+	if err != nil {
+		logger.Error("Error escribiendo el response - %v", err.Error())
+		BadRequest(w, r)
+	}
+
+	// Logger obligatorio
+	logger.Info("## Contexto Actualizado - (PID:TID) - (%v:%v)", pidS, tidS)
+}
+
+func getContext(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		logger.Error("Metodo no permitido")
+		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	logger.Debug("Request recibida de: %v", r.RemoteAddr)
+
+	query := r.URL.Query()
+	tidS := query.Get("tid")
+	pidS := query.Get("pid")
+
+	logger.Debug("Contexto a buscar - (PID:TID) - (%v,%v)", pidS, tidS)
+
+	tid, err := strconv.Atoi(tidS)
+	pid, err := strconv.Atoi(pidS)
+	thread := types.Thread{Pid: pid, Tid: tid}
+
+	context, exists := execContext[thread]
+	if !exists {
+		logger.Error("No se pudo encontrar el contexto")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	logger.Debug("Contexto hayado: %v", context)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(context)
+	if err != nil {
+		logger.Error("Error al escribir el response - %v", err.Error())
+		BadRequest(w, r)
+		return
+	}
+
+	//log obligatorio
+	logger.Info("Contexto Solicitado - (PID:TID) - (%v,%v)", pidS, tidS)
+}
