@@ -1,4 +1,4 @@
-package shorttermscheduler
+package Prioridades
 
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
@@ -47,7 +47,7 @@ func TestPrioridades(t *testing.T) {
 
 	for _, v := range correctSlice {
 		planned, _ := prioridades.Planificar()
-		if v != planned {
+		if v.TID != planned.TID {
 			t.Errorf("No se planificó de acuerdo al algoritmo")
 			return
 		}
@@ -55,7 +55,7 @@ func TestPrioridades(t *testing.T) {
 
 }
 
-// Test: si shuffleo la lista, sigue insertando por orden de prioridades??
+// Test: si shuffleo la lista, sigue insertando por orden de fifo??
 func TestAddToReady(t *testing.T) {
 	setup()
 
@@ -86,7 +86,7 @@ func TestAddToReady(t *testing.T) {
 	}
 
 	for i := range correctSlice {
-		if correctSlice[i] != prioridades.readyThreads[i] {
+		if correctSlice[i].TID != prioridades.readyThreads[i].TID {
 			t.Errorf("\nCorrect slice: %v\nReceived Slice: %v\nTest slice: %v", correctSlice, prioridades.readyThreads, testSlice)
 			return
 		}
@@ -96,7 +96,7 @@ func TestAddToReady(t *testing.T) {
 
 }
 
-// Ok, inserta por prioridades, pero si llegan dos hilos con misma prioridad, hace FIFO?
+// Ok, inserta por fifo, pero si llegan dos hilos con misma prioridad, hace FIFO?
 func TestAddToReadyFIFO(t *testing.T) {
 	setup()
 
@@ -119,7 +119,7 @@ func TestAddToReadyFIFO(t *testing.T) {
 	}
 
 	for i := range correctSlice {
-		if correctSlice[i] != prioridades.readyThreads[i] {
+		if correctSlice[i].TID != prioridades.readyThreads[i].TID {
 			t.Errorf("\nCorrect slice: %v\nReceived Slice: %v", correctSlice, prioridades.readyThreads)
 			return
 		}

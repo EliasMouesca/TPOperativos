@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func cpuInterrupt(interruption types.Interruption) error {
+func CpuInterrupt(interruption types.Interruption) error {
 	url := fmt.Sprintf("http://%v:%v/cpu/interrupt",
 		kernelglobals.Config.CpuAddress,
 		kernelglobals.Config.CpuPort)

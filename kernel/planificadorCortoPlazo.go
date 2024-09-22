@@ -7,7 +7,9 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
-	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/ColasMultinivel"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Prioridades"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -15,9 +17,9 @@ import (
 )
 
 var AlgorithmsMap = map[string]kerneltypes.ShortTermSchedulerInterface{
-	"FIFO": &shorttermscheduler.Fifo{},
-	"P":    &shorttermscheduler.Prioridades{},
-	"CMM":  &shorttermscheduler.ColasMultiNivel{},
+	"FIFO": &Fifo.Fifo{},
+	"P":    &Prioridades.Prioridades{},
+	"CMM":  &ColasMultinivel.ColasMultiNivel{},
 }
 
 func planificadorCortoPlazo() {

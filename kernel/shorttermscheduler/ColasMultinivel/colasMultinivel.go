@@ -1,10 +1,12 @@
-package shorttermscheduler
+package ColasMultinivel
 
 import (
 	"errors"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler"
 	"github.com/sisoputnfrba/tp-golang/types"
+	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
 // TODO: Tests
@@ -97,10 +99,14 @@ func roundRobin(queue *types.Queue[kerneltypes.TCB]) (*kerneltypes.TCB, error) {
 
 	go func() {
 		<-kernelsync.QuantumChannel
-		cpuInterrupt(
+		err := shorttermscheduler.CpuInterrupt(
 			types.Interruption{
 				Type: types.InterruptionEndOfQuantum,
 			})
+		if err != nil {
+			logger.Error("Failed to interrupt the CPU (end of quantum) - %v", err)
+			return
+		}
 	}()
 
 	selectedTCB, err := queue.GetAndRemoveNext()

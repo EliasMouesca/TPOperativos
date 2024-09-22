@@ -1,4 +1,4 @@
-package shorttermscheduler
+package Fifo
 
 import (
 	"errors"

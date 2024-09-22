@@ -1,9 +1,10 @@
-package shorttermscheduler
+package Prioridades
 
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
@@ -55,7 +56,7 @@ func (prioridades *Prioridades) AddToReady(threadToAdd kerneltypes.TCB) error {
 
 	// Si es necesario, desalojá la cpu
 	if threadToAdd.Prioridad < kernelglobals.ExecStateThread.Prioridad {
-		err := cpuInterrupt(
+		err := shorttermscheduler.CpuInterrupt(
 			types.Interruption{
 				Type: types.InterruptionEviction,
 			})
