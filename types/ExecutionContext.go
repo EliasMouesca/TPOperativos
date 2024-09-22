@@ -6,8 +6,6 @@ import (
 )
 
 type ExecutionContext struct {
-	Thread Thread `json:"thread"`
-
 	MemoryBase uint32 `json:"memory_base"`
 	MemorySize uint32 `json:"memory_size"`
 
