@@ -52,8 +52,8 @@ func (c *Queue[T]) Do(f func(*T)) {
 func (c *Queue[T]) Remove(t *T) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	for i, element := range c.elements {
-		if &element == t {
+	for i := range c.elements {
+		if &c.elements[i] == t { // Comparación de punteros directamente
 			c.elements = append(c.elements[:i], c.elements[i+1:]...)
 			return nil
 		}

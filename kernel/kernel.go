@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
@@ -105,4 +106,24 @@ func processFinish(w http.ResponseWriter, r *http.Request) {
 
 	kernelsync.MutexCPU.Unlock()
 
+}
+
+func ExecuteSyscall(syscall syscalls.Syscall) error {
+	syscallFunc, exists := syscallSet[syscall.Type]
+	if !exists {
+		return errors.New("la syscall pedida no es una syscall que el kernel entienda")
+	}
+
+	logger.Info("## (<%v>:<%v>) - Solicitó syscall: <%v>",
+		kernelglobals.ExecStateThread.ConectPCB.PID,
+		kernelglobals.ExecStateThread.TID,
+		syscalls.SyscallNames[syscall.Type],
+	)
+
+	err := syscallFunc(syscall.Arguments)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

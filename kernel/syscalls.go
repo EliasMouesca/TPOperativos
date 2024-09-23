@@ -28,26 +28,6 @@ var syscallSet = map[int]syscallFunction{
 	syscalls.MutexUnlock:   MutexUnlock,
 }
 
-func ExecuteSyscall(syscall syscalls.Syscall) error {
-	syscallFunc, exists := syscallSet[syscall.Type]
-	if !exists {
-		return errors.New("la syscall pedida no es una syscall que el kernel entienda")
-	}
-
-	logger.Info("## (%v:%v) - Solicitó syscall: <%v>",
-		kernelglobals.ExecStateThread.ConectPCB.PID,
-		kernelglobals.ExecStateThread.TID,
-		syscalls.SyscallNames[syscall.Type],
-	)
-
-	err := syscallFunc(syscall.Arguments)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 var PIDcount int = 0
 
 func ProcessCreate(args []string) error {
@@ -147,6 +127,20 @@ func ThreadJoin(args []string) error {
 	execTCB := kernelglobals.ExecStateThread
 	currentPCB := execTCB.ConectPCB
 
+	// Verificar si el tidAFinalizar ya está en ExitStateQueue (ya ha finalizado)
+	finalizado := false
+	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
+		if tcb.TID == tidAFinalizar && tcb.ConectPCB == currentPCB {
+			finalizado = true
+		}
+	})
+
+	if finalizado {
+		logger.Info("## (<%d>:<%d>) TID <%d> ya ha finalizado. Continúa la ejecución. ", currentPCB.PID, execTCB.TID, tidAFinalizar)
+		return nil
+	}
+
+	// Verificar si el tidAFinalizar está en la lista de TIDs del PCB actual
 	tidExiste := false
 	for _, tid := range currentPCB.TIDs {
 		if tid == tidAFinalizar {
@@ -156,13 +150,11 @@ func ThreadJoin(args []string) error {
 	}
 
 	if !tidExiste {
-		logger.Info("## (<%d>:<%d>) TID <%d> no existe o ya ha finalizado, continúa la ejecución. ", currentPCB.PID, execTCB.TID, tidAFinalizar)
+		logger.Info("## (<%d>:<%d>) TID <%d> no existe. Continúa la ejecución. ", currentPCB.PID, execTCB.TID, tidAFinalizar)
 		return nil
 	}
 
-	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidAFinalizar)
-	kernelglobals.BlockedStateQueue.Add(&execTCB)
-
+	// Buscar el tcbAFinalizar en la ReadyStateQueue
 	var tcbAFinalizar *kerneltypes.TCB
 	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		if tcb.TID == tidAFinalizar && tcb.ConectPCB == currentPCB {
@@ -170,17 +162,16 @@ func ThreadJoin(args []string) error {
 		}
 	})
 
+	// Si el tcbAFinalizar no está en ReadyStateQueue, pero tampoco en Exit, significa que no está ejecutándose y puede causar deadlock
 	if tcbAFinalizar == nil {
-		return errors.New(fmt.Sprintf("no se encontró el TID <%d> en la cola de ReadyState para el PCB con PID <%d>", tidAFinalizar, currentPCB.PID))
+		return errors.New(fmt.Sprintf("No se encontró el TID <%d> en la cola de ReadyState para el PCB con PID <%d>", tidAFinalizar, currentPCB.PID))
 	}
 
-	// Remover el TCB encontrado de la ReadyStateQueue
-	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb == tcbAFinalizar {
-			kernelglobals.ReadyStateQueue.Remove(tcb)
-		}
-	})
+	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidAFinalizar)
+	kernelglobals.BlockedStateQueue.Add(&execTCB)
 
+	// Cambiar el hilo tcbAFinalizar a EXEC
+	kernelglobals.ReadyStateQueue.Remove(tcbAFinalizar)
 	logger.Info("## (<%d>:<%d>) TID <%d> se mueve a estado EXEC", currentPCB.PID, tcbAFinalizar.TID, tidAFinalizar)
 	kernelglobals.ExecStateThread = *tcbAFinalizar
 
@@ -203,9 +194,13 @@ func ThreadCancel(args []string) error {
 
 	var tcbCancelar *kerneltypes.TCB
 
+	var estaEnReady = false
+	var estaEnBlocked = false
+
 	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		if tcb.TID == tidCancelar && tcb.ConectPCB == currentPCB {
 			tcbCancelar = tcb
+			estaEnReady = true
 		}
 	})
 
@@ -213,6 +208,7 @@ func ThreadCancel(args []string) error {
 		kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
 			if tcb.TID == tidCancelar && tcb.ConectPCB == currentPCB {
 				tcbCancelar = tcb
+				estaEnBlocked = true
 			}
 		})
 	}
@@ -227,9 +223,21 @@ func ThreadCancel(args []string) error {
 
 	logger.Info("## Moviendo el TID <%d> al estado EXIT", tcbCancelar.TID)
 	kernelglobals.ExitStateQueue.Add(tcbCancelar)
+	if estaEnReady {
+		err = kernelglobals.ReadyStateQueue.Remove(tcbCancelar)
+		if err != nil {
+			logger.Info("No ha sido posible eliminar al TCB con TID: %d de la cola de ReadyStateQueue", tcbCancelar.TID)
+			return nil
+		}
+	}
 
-	kernelglobals.ReadyStateQueue.Remove(tcbCancelar)
-	kernelglobals.BlockedStateQueue.Remove(tcbCancelar)
+	if estaEnBlocked {
+		err = kernelglobals.BlockedStateQueue.Remove(tcbCancelar)
+		if err != nil {
+			logger.Info("No ha sido posible eliminar al TCB con TID: %d de la cola de BlockedStateQueue", tcbCancelar.TID)
+			return nil
+		}
+	}
 
 	return nil
 }
@@ -248,7 +256,8 @@ func ThreadExit(args []string) error {
 	kernelglobals.ExitStateQueue.Add(&execTCB)
 
 	kernelglobals.ExecStateThread = kerneltypes.TCB{
-		TID:       -1,
+		TID: -1, //Para indicar que no hay un hilo en ejecucion puse el -1,
+		// total este no afecta en nada y nunca va a haber un hilo con TID -1
 		ConectPCB: currentPCB,
 	}
 

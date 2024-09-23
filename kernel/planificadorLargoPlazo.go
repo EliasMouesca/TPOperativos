@@ -20,19 +20,19 @@ func planificadorLargoPlazo() {
 	kernelsync.WaitPlanificadorLP.Add(1)
 	go func() {
 		defer kernelsync.WaitPlanificadorLP.Done()
-		processToReady()
+		ProcessToReady()
 	}()
 
 	kernelsync.WaitPlanificadorLP.Add(1)
 	go func() {
 		defer kernelsync.WaitPlanificadorLP.Done()
-		processToExit()
+		ProcessToExit()
 	}()
 
 	kernelsync.WaitPlanificadorLP.Wait()
 }
 
-func processToReady() {
+func ProcessToReady() {
 	for {
 		// Espera a que se cree un proceso y le mande sus argumentos,
 		// se van guardando los argumentos de cada proceso en el canal a medidad que se crean
@@ -91,7 +91,7 @@ func processToReady() {
 	}
 }
 
-func processToExit() {
+func ProcessToExit() {
 	for {
 		PID := <-kernelsync.ChannelFinishprocess
 		pid := strconv.Itoa(PID)
