@@ -167,6 +167,9 @@ func ThreadJoin(args []string) error {
 		return errors.New(fmt.Sprintf("No se encontró el TID <%d> en la cola de ReadyState para el PCB con PID <%d>", tidAFinalizar, currentPCB.PID))
 	}
 
+	execTCB.WaitingForTID = tidAFinalizar // Aquí se asigna el TID que está esperando.
+	kernelglobals.ExecStateThread = execTCB
+
 	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidAFinalizar)
 	kernelglobals.BlockedStateQueue.Add(&execTCB)
 

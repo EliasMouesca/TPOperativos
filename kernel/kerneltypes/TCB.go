@@ -1,8 +1,9 @@
 package kerneltypes
 
 type TCB struct {
-	TID       int
-	Prioridad int
-	ConectPCB *PCB
-	Mutex     []int
+	TID           int
+	Prioridad     int
+	ConectPCB     *PCB
+	Mutex         []int
+	WaitingForTID int
 }
