@@ -16,7 +16,7 @@ var ExitStateQueue types.Queue[kerneltypes.TCB]
 
 var ShortTermScheduler kerneltypes.ShortTermSchedulerInterface
 
-var ExecStateThread kerneltypes.TCB // TODO: ESTO NO DEBERIA SER UN PUNTERO? Y EL RESTO DE QUEUES, NO DEBERIAN SER PUNTEROS?
+var ExecStateThread kerneltypes.TCB
 
 var Config kerneltypes.KernelConfig
 

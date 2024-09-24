@@ -208,6 +208,6 @@ func TestThreadEnding(t *testing.T) {
 
 	// Mostrar el estado final del PCB después de ejecutar ThreadEnding
 	logPCBState("Estado final del PCB después de ejecutar ThreadEnding", &pcb)
-
+	logCurrentState("Estado final del contexto")
 	t.Logf("El hilo con TID <%d> se ha finalizado correctamente y los hilos bloqueados han sido movidos a Ready", tcb1.TID)
 }

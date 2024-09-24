@@ -150,6 +150,10 @@ func ThreadEnding() {
 	logger.Info("## Finalización del TID <%d> del PCB con PID <%d> completada", tidFinalizando, currentPCB.PID)
 }
 
+func ThreadToReady() {
+
+}
+
 func moveBlockedThreadsByJoin(tidFinalizado int) {
 	var threadsToMove []*kerneltypes.TCB
 

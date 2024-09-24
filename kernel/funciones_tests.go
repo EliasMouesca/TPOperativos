@@ -18,6 +18,26 @@ func logCurrentState(context string) {
 		kernelglobals.ExecStateThread.TID,
 		kernelglobals.ExecStateThread.Mutex,
 	)
+	// Estado de ReadyStateQueue
+	logger.Info("Estado actual de ReadyStateQueue:")
+	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
+		logger.Info("  TID <%d> del PCB con PID <%d>, Prioridad <%d>, Mutexes: %v",
+			tcb.TID, tcb.ConectPCB.PID, tcb.Prioridad, tcb.Mutex)
+	})
+
+	// Estado de BlockedStateQueue
+	logger.Info("Estado actual de BlockedStateQueue:")
+	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
+		logger.Info("  TID <%d> del PCB con PID <%d>, Prioridad <%d>, Mutexes: %v",
+			tcb.TID, tcb.ConectPCB.PID, tcb.Prioridad, tcb.Mutex)
+	})
+
+	// Estado de ExitStateQueue
+	logger.Info("Estado actual de ExitStateQueue:")
+	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
+		logger.Info("  TID <%d> del PCB con PID <%d>",
+			tcb.TID, tcb.ConectPCB.PID)
+	})
 
 	for mutexID, mutexWrapper := range kernelglobals.GlobalMutexRegistry {
 		logger.Info("Estado del Mutex ID <%d>: AssignedTID <%d>, BlockedThreads: [", mutexID, mutexWrapper.AssignedTID)
@@ -46,7 +66,11 @@ func logPCBState(context string, pcb *kerneltypes.PCB) {
 		logger.Info("		TCB -> TID <%d>: Prioridad <%d>, Mutexes: %v",
 			kernelglobals.ExecStateThread.TID, kernelglobals.ExecStateThread.Prioridad, kernelglobals.ExecStateThread.Mutex)
 	}
-
+	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
+		if tcb.ConectPCB == pcb {
+			logger.Info("		TCB -> TID <%d>: Prioridad <%d>, Mutexes: %v", tcb.TID, tcb.Prioridad, tcb.Mutex)
+		}
+	})
 	// Mostrar información de los mutexes asociados al PCB
 	logger.Info("	Mutexes asociados al PCB con PID <%d>: %v", pcb.PID, pcb.Mutex)
 }
