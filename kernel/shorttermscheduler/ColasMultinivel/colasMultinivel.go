@@ -15,6 +15,35 @@ type ColasMultiNivel struct {
 	readyQueue []*types.Queue[kerneltypes.TCB]
 }
 
+func (cmm *ColasMultiNivel) ThreadExists(thread types.Thread) (bool, error) {
+	for _, q := range cmm.readyQueue {
+		for _, v := range q.GetElements() {
+			if v.TID == thread.Tid {
+				return true, nil
+			}
+		}
+	}
+	return false, errors.New("hilo no encontrado")
+}
+
+func (cmm *ColasMultiNivel) ThreadRemove(thread types.Thread) error {
+	existe, _ := cmm.ThreadExists(thread)
+	if existe {
+		for _, v := range cmm.readyQueue {
+			for _, q := range v.GetElements() {
+				r, err := v.GetAndRemoveNext()
+				if err != nil {
+					return err
+				}
+				if q.TID != thread.Tid {
+					v.Add(r)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (cmm *ColasMultiNivel) Planificar() (kerneltypes.TCB, error) {
 	<-kernelsync.PendingThreadsChannel
 

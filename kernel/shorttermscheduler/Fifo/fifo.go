@@ -7,10 +7,43 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types"
 )
 
-// TODO: Tests
-
 type Fifo struct {
 	ready types.Queue[kerneltypes.TCB]
+}
+
+func (f *Fifo) ThreadExists(thread types.Thread) (bool, error) {
+	for _, v := range f.ready.GetElements() {
+		if v.TID == thread.Tid {
+			return true, nil
+		}
+	}
+	return false, errors.New("hilo no encontrado")
+}
+
+func (f *Fifo) ThreadRemove(thread types.Thread) error {
+	existe, err := f.ThreadExists(thread)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Cursed
+	if existe {
+		for !f.ready.IsEmpty() {
+			v, err := f.ready.GetAndRemoveNext()
+			if err != nil {
+				return err
+			}
+
+			if v.TID != thread.Tid {
+				f.ready.Add(v)
+			}
+		}
+	} else {
+		return errors.New("el hilo pedido no existe :/")
+	}
+
+	return nil
+
 }
 
 // Planificar devuelve el próximo hilo a ejecutar o error en función del algoritmo FIFO

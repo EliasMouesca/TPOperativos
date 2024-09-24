@@ -5,10 +5,15 @@ import (
 	"sync"
 )
 
+// Queue Cola de procesos o hilos
 type Queue[T any] struct {
 	elements []T
 	mutex    sync.Mutex
 	Priority int
+}
+
+func (c *Queue[T]) GetElements() []T {
+	return c.elements
 }
 
 func (c *Queue[T]) Add(t *T) {
@@ -41,6 +46,7 @@ func (c *Queue[T]) Size() int {
 	return len(c.elements)
 }
 
+// TODO: Bonito pero quizás no está bueno que cualquiera pueda hacer cualquier cosa con la cola
 func (c *Queue[T]) Do(f func(*T)) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()

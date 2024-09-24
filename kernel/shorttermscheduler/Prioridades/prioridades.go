@@ -1,6 +1,7 @@
 package Prioridades
 
 import (
+	"errors"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
@@ -11,6 +12,37 @@ import (
 
 type Prioridades struct {
 	readyThreads []kerneltypes.TCB
+}
+
+func (prioridades *Prioridades) ThreadExists(thread types.Thread) (bool, error) {
+	for _, v := range prioridades.readyThreads {
+		if v.TID == thread.Tid {
+			return true, nil
+		}
+	}
+	return false, errors.New("hilo no encontrado")
+}
+
+func (prioridades *Prioridades) ThreadRemove(thread types.Thread) error {
+	existe, err := prioridades.ThreadExists(thread)
+	if err != nil {
+		return err
+	}
+
+	if existe {
+		for i, v := range prioridades.readyThreads {
+			if v.TID != thread.Tid {
+				copy(prioridades.readyThreads[i:], prioridades.readyThreads[i+1:])
+				prioridades.readyThreads = prioridades.readyThreads[:len(prioridades.readyThreads)-1]
+				return nil
+			}
+		}
+	} else {
+		return errors.New("el hilo pedido no existe :/")
+	}
+
+	return nil
+
 }
 
 func (prioridades *Prioridades) Planificar() (kerneltypes.TCB, error) {

@@ -1,8 +1,10 @@
 package kerneltypes
 
+import "github.com/sisoputnfrba/tp-golang/types"
+
 type ShortTermSchedulerInterface interface {
-	Planificar() (TCB, error)
-	AddToReady(TCB) error
-	//ThreadExists(int) bool  // TODO: LARGO PLAZO NECESITA PARA LAS SYSCALLS!!!!!
-	//ThreadRemove(int) error // ESTE TMB
+	Planificar() (*TCB, error)
+	AddToReady(*TCB) error
+	ThreadExists(types.Thread) (bool, error) // Si existe -> true, sino -> false
+	ThreadRemove(types.Thread) error         // SACA DE READY (si existe, sino, error)
 }
