@@ -9,8 +9,15 @@ import (
 	"os"
 )
 
+//TODO: Agregar el tiempo de espera para cada petición del CPU
+
+// GOBALES DE LA MEMORIA
 var config MemoriaConfig
 var execContext = make(map[types.Thread]types.ExecutionContext)
+var indexInstructionsLists = make(map[types.Thread][]string)
+var userMem = make([]byte, config.MemorySize)
+
+// ------------------------------------------------------------------------
 
 func init() {
 	loggerLevel := "INFO"
@@ -19,6 +26,7 @@ func init() {
 		fmt.Println("No se pudo crear el logger - ", err)
 		os.Exit(1)
 	}
+	logger.Debug("Logger creado")
 
 	// Load config
 	configData, err := os.ReadFile("config.json")
@@ -46,15 +54,20 @@ func init() {
 func main() {
 	logger.Info("--- Comienzo ejecución MEMORIA ---")
 
-	// --- INICIALIZAR EL SERVER ---
-	http.HandleFunc("/", TerribleRequest)
+	// TRUE RESPONSE
+	http.HandleFunc("/", BadRequest)
 	http.HandleFunc("/memoria/getContext", getContext)
 	http.HandleFunc("/memoria/saveContext", saveContext)
+	// STUB FORMAT RESPONSE
+	http.HandleFunc("/memoria/getInstruction", getInstruction)
+	http.HandleFunc("/memoria/readMem", readMemory)
+	http.HandleFunc("/memoria/writeMem", writeMemory)
+	http.HandleFunc("/memoria/createProcess", createProcess)
+	http.HandleFunc("/memoria/finishProcess", finishProcess)
+	http.HandleFunc("/memoria/createThread", createThread)
+	http.HandleFunc("/memoria/finishThread", finishThread)
+	http.HandleFunc("/memoria/dump", dump)
 	// TODO: -----------------
-	http.HandleFunc("POST /memoria/updateExecutionContext", GoodRequest)
-	http.HandleFunc("POST /memoria/getInstruction", GoodRequest)
-	http.HandleFunc("POST /memoria/ReadMem", GoodRequest)
-	http.HandleFunc("POST /WriteMem", GoodRequest)
 	// -----------------------
 
 	self := fmt.Sprintf("%v:%v", config.SelfAddress, config.SelfPort)
@@ -62,14 +75,5 @@ func main() {
 	err := http.ListenAndServe(self, nil)
 	if err != nil {
 		logger.Fatal("No se puede escuchar el puerto 8082: " + err.Error())
-	}
-	// --- FIN DE INICIALIZACION DE SERVER ---
-}
-func TerribleRequest(w http.ResponseWriter, r *http.Request) {
-	logger.Info("Ke ac vo aca? Request inválida: %v", r.RemoteAddr)
-	w.WriteHeader(http.StatusBadRequest)
-	_, err := w.Write([]byte("Request mal formada"))
-	if err != nil {
-		logger.Error("Error al escribir el response a %v", r.RemoteAddr)
 	}
 }
