@@ -86,7 +86,7 @@ func ProcessToReady() {
 		}
 
 		// Mandamos el hiloMain a Ready
-		kernelglobals.ReadyStateQueue.Add(&mainThread)
+		kernelglobals.ShortTermScheduler.AddToReady(&mainThread)
 		logger.Info("Se agrego el hilo main a la cola Ready")
 	}
 }
