@@ -27,12 +27,14 @@ func (f *Fifo) ThreadRemove(tid int, pid int) error {
 	}
 
 	if existe {
-		for !f.ready.IsEmpty() {
+		queueSize := f.ready.Size()
+		for i := 0; i < queueSize; i++ {
 			v, err := f.ready.GetAndRemoveNext()
 			if err != nil {
 				return err
 			}
 
+			// Volver a agregar el TCB solo si no coincide con el tid y pid
 			if v.TID != tid || v.ConectPCB.PID != pid {
 				f.ready.Add(v)
 			}

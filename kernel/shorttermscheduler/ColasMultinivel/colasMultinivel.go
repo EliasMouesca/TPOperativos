@@ -28,21 +28,26 @@ func (cmm *ColasMultiNivel) ThreadExists(tid int, pid int) (bool, error) {
 
 func (cmm *ColasMultiNivel) ThreadRemove(tid int, pid int) error {
 	existe, _ := cmm.ThreadExists(tid, pid)
-	if existe {
-		for _, queue := range cmm.readyQueue {
-			for !queue.IsEmpty() {
-				r, err := queue.GetAndRemoveNext()
-				if err != nil {
-					return err
-				}
-				if r.TID != tid || r.ConectPCB.PID != pid {
-					queue.Add(r)
-				} else {
-					return nil
-				}
+	if !existe {
+		return errors.New("no se pudo eliminar el hilo con TID especificado o no pertenece al PCB con PID especificado")
+	}
+
+	for _, queue := range cmm.readyQueue {
+		queueSize := queue.Size()
+		for i := 0; i < queueSize; i++ {
+			r, err := queue.GetAndRemoveNext()
+			if err != nil {
+				return err
+			}
+
+			if r.TID != tid || r.ConectPCB.PID != pid {
+				queue.Add(r)
+			} else {
+				return nil
 			}
 		}
 	}
+
 	return errors.New("no se pudo eliminar el hilo con TID especificado o no pertenece al PCB con PID especificado")
 }
 

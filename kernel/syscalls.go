@@ -146,11 +146,17 @@ func ThreadJoin(args []string) error {
 	currentPCB := execTCB.ConectPCB
 
 	finalizado := false
-	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
+	queueSize := kernelglobals.ExitStateQueue.Size()
+	for i := 0; i < queueSize; i++ {
+		tcb, err := kernelglobals.ExitStateQueue.GetAndRemoveNext()
+		if err != nil {
+			return errors.New("error al obtener el siguiente TCB de ExitStateQueue")
+		}
 		if tcb.TID == tidAFinalizar && tcb.ConectPCB == currentPCB {
 			finalizado = true
 		}
-	})
+		kernelglobals.ExitStateQueue.Add(tcb)
+	}
 
 	if finalizado {
 		logger.Info("## (<%d>:<%d>) TID <%d> ya ha finalizado. Continúa la ejecución.", currentPCB.PID, execTCB.TID, tidAFinalizar)
