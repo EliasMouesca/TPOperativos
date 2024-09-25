@@ -137,6 +137,7 @@ func ThreadJoin(args []string) error {
 	// BLOCK hasta que el TID pasado por parámetro finalice. En caso de que el TID pasado por parámetro
 	// no exista o ya haya finalizado, esta syscall no hace nada y el hilo que la invocó continuará su
 	// ejecución.
+
 	tidAFinalizar, err := strconv.Atoi(args[0])
 	if err != nil {
 		return errors.New("error al convertir el TID a entero")
@@ -144,7 +145,6 @@ func ThreadJoin(args []string) error {
 	execTCB := kernelglobals.ExecStateThread
 	currentPCB := execTCB.ConectPCB
 
-	// Verificar si el tidAFinalizar ya está en ExitStateQueue (ya ha finalizado)
 	finalizado := false
 	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		if tcb.TID == tidAFinalizar && tcb.ConectPCB == currentPCB {
@@ -153,11 +153,10 @@ func ThreadJoin(args []string) error {
 	})
 
 	if finalizado {
-		logger.Info("## (<%d>:<%d>) TID <%d> ya ha finalizado. Continúa la ejecución. ", currentPCB.PID, execTCB.TID, tidAFinalizar)
+		logger.Info("## (<%d>:<%d>) TID <%d> ya ha finalizado. Continúa la ejecución.", currentPCB.PID, execTCB.TID, tidAFinalizar)
 		return nil
 	}
 
-	// Verificar si el tidAFinalizar está en la lista de TIDs del PCB actual
 	tidExiste := false
 	for _, tid := range currentPCB.TIDs {
 		if tid == tidAFinalizar {
@@ -167,34 +166,21 @@ func ThreadJoin(args []string) error {
 	}
 
 	if !tidExiste {
-		logger.Info("## (<%d>:<%d>) TID <%d> no existe. Continúa la ejecución. ", currentPCB.PID, execTCB.TID, tidAFinalizar)
+		logger.Info("## (<%d>:<%d>) TID <%d> no pertenece a la lista de TIDs del PCB con PID <%d>. Continúa la ejecución.", currentPCB.PID, execTCB.TID, tidAFinalizar, currentPCB.PID)
 		return nil
 	}
 
-	// Buscar el tcbAFinalizar en la ReadyStateQueue
-	var tcbAFinalizar *kerneltypes.TCB
-	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tidAFinalizar && tcb.ConectPCB == currentPCB {
-			tcbAFinalizar = tcb
-		}
-	})
-
-	// Si el tcbAFinalizar no está en ReadyStateQueue, pero tampoco en Exit, significa que no está ejecutándose y puede causar deadlock
-	if tcbAFinalizar == nil {
-		return errors.New(fmt.Sprintf("No se encontró el TID <%d> en la cola de ReadyState para el PCB con PID <%d>", tidAFinalizar, currentPCB.PID))
-	}
-
-	execTCB.WaitingForTID = tidAFinalizar // Aquí se asigna el TID que está esperando.
-	kernelglobals.ExecStateThread = execTCB
-
-	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidAFinalizar)
+	execTCB.WaitingForTID = tidAFinalizar
 	kernelglobals.BlockedStateQueue.Add(&execTCB)
 
-	// Cambiar el hilo tcbAFinalizar a EXEC
-	kernelglobals.ReadyStateQueue.Remove(tcbAFinalizar)
-	logger.Info("## (<%d>:<%d>) TID <%d> se mueve a estado EXEC", currentPCB.PID, tcbAFinalizar.TID, tidAFinalizar)
-	kernelglobals.ExecStateThread = *tcbAFinalizar
+	// ESTA PARTE ESTA MEDIO MAL. SI ExecStateThread FUERA UN PUNTERO
+	// DIRECTAMENTE SE LE ASIGNA NIL, NO ESTE MAMARRACHO DE CREAR UN TCB CON TID = -1
+	kernelglobals.ExecStateThread = kerneltypes.TCB{
+		TID:       -1,
+		ConectPCB: currentPCB,
+	}
 
+	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidAFinalizar)
 	return nil
 }
 
