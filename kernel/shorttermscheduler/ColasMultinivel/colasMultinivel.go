@@ -9,7 +9,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
-// TODO: Tests
+// TODO: Arreglar
 
 type ColasMultiNivel struct {
 	readyQueue []*types.Queue[kerneltypes.TCB]

@@ -201,7 +201,7 @@ func getInstruction(w http.ResponseWriter, r *http.Request) {
 	tid, err := strconv.Atoi(tidS)
 	pid, err := strconv.Atoi(pidS)
 	pc, err := strconv.Atoi(pcS)
-	thread := types.Thread{PID: pid, TID: tid}
+	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
 
 	instruccion, err := getInstructionPosta(thread, pc)
 	if err != nil {

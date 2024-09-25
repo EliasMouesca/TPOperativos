@@ -16,20 +16,20 @@ func logCurrentState(context string) {
 	logger.Info("Estado actual de ExecStateThread: PID <%d>, TID <%d>, CreatedMutexes: %v",
 		kernelglobals.ExecStateThread.FatherPCB.PID,
 		kernelglobals.ExecStateThread.TID,
-		kernelglobals.ExecStateThread.Mutex,
+		kernelglobals.ExecStateThread.LockedMutexes,
 	)
 	// Estado de ReadyStateQueue
 	logger.Info("Estado actual de ReadyStateQueue:")
 	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		logger.Info("  TID <%d> del PCB con PID <%d>, Prioridad <%d>, Mutexes: %v",
-			tcb.TID, tcb.FatherPCB.PID, tcb.Prioridad, tcb.Mutex)
+			tcb.TID, tcb.FatherPCB.PID, tcb.Prioridad, tcb.LockedMutexes)
 	})
 
 	// Estado de BlockedStateQueue
 	logger.Info("Estado actual de BlockedStateQueue:")
 	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		logger.Info("  TID <%d> del PCB con PID <%d>, Prioridad <%d>, Mutexes: %v",
-			tcb.TID, tcb.FatherPCB.PID, tcb.Prioridad, tcb.Mutex)
+			tcb.TID, tcb.FatherPCB.PID, tcb.Prioridad, tcb.LockedMutexes)
 	})
 
 	// Estado de ExitStateQueue
@@ -59,16 +59,16 @@ func logPCBState(context string, pcb *kerneltypes.PCB) {
 	// Recorrer los TCBs en la ReadyStateQueue para obtener información detallada de los hilos
 	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		if tcb.FatherPCB == pcb {
-			logger.Info("		TCB -> TID <%d>: Prioridad <%d>, Mutexes: %v", tcb.TID, tcb.Prioridad, tcb.Mutex)
+			logger.Info("		TCB -> TID <%d>: Prioridad <%d>, Mutexes: %v", tcb.TID, tcb.Prioridad, tcb.LockedMutexes)
 		}
 	})
 	if kernelglobals.ExecStateThread.FatherPCB == pcb {
 		logger.Info("		TCB -> TID <%d>: Prioridad <%d>, Mutexes: %v",
-			kernelglobals.ExecStateThread.TID, kernelglobals.ExecStateThread.Prioridad, kernelglobals.ExecStateThread.Mutex)
+			kernelglobals.ExecStateThread.TID, kernelglobals.ExecStateThread.Prioridad, kernelglobals.ExecStateThread.LockedMutexes)
 	}
 	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		if tcb.FatherPCB == pcb {
-			logger.Info("		TCB -> TID <%d>: Prioridad <%d>, Mutexes: %v", tcb.TID, tcb.Prioridad, tcb.Mutex)
+			logger.Info("		TCB -> TID <%d>: Prioridad <%d>, Mutexes: %v", tcb.TID, tcb.Prioridad, tcb.LockedMutexes)
 		}
 	})
 	// Mostrar información de los mutexes asociados al PCB

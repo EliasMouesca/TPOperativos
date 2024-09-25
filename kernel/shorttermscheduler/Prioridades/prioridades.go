@@ -10,6 +10,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
+// TODO: Arreglar
 type Prioridades struct {
 	readyThreads []kerneltypes.TCB
 }

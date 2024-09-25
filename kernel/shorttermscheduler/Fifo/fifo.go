@@ -7,6 +7,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types"
 )
 
+// TODO: Arreglar
 type Fifo struct {
 	ready types.Queue[kerneltypes.TCB]
 }

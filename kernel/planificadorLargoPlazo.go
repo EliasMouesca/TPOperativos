@@ -158,14 +158,11 @@ func ThreadEnding() {
 		releaseMutexes(TID)
 
 		// Mover el hilo actual a ExitStateQueue
-		kernelglobals.ExitStateQueue.Add(&execTCB)
+		kernelglobals.ExitStateQueue.Add(execTCB)
 		logger.Info("## Moviendo el TID <%d> al estado EXIT", TID)
 
 		// Limpiar el ExecStateThread para indicar que no hay hilo en ejecución
-		kernelglobals.ExecStateThread = kerneltypes.TCB{
-			TID:       -1,
-			FatherPCB: nil,
-		}
+		kernelglobals.ExecStateThread = nil
 
 		logger.Info("## Finalización del TID <%d> del PCB con PID <%d> completada", TID, currentPCB.PID)
 	}
@@ -202,7 +199,7 @@ func moveBlockedThreadsByJoin(tidFinalizado int) {
 
 func releaseMutexes(tid int) {
 	tcb := kernelglobals.ExecStateThread
-	for _, mutexID := range tcb.Mutex {
+	for _, mutexID := range tcb.LockedMutexes {
 		mutexWrapper, exists := kernelglobals.GlobalMutexRegistry[mutexID]
 		if !exists {
 			logger.Error("## No se encontró el mutex con ID <%d> en el registro global", mutexID)

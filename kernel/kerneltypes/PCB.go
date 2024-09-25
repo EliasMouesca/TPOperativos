@@ -10,5 +10,13 @@ type PCB struct {
 	TIDs []types.Tid
 
 	// Lista de los mutex creados para el proceso
-	CreatedMutexes []*MutexWrapper
+	CreatedMutexes []*Mutex
+}
+
+func (a *PCB) New() *PCB {
+	return nil
+}
+
+func (a *PCB) Equal(b *PCB) bool {
+	return a.PID == b.PID
 }
