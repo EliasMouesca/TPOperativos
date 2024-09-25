@@ -106,7 +106,10 @@ func ThreadCreate(args []string) error {
 	// deberá generar el nuevo TCB con un TID autoincremental y poner al mismo en el estado READY.
 
 	//fileName := args[0]
-	prioridad, _ := strconv.Atoi(args[1])
+	prioridad, err := strconv.Atoi(args[1])
+	if err != nil {
+		return fmt.Errorf("error al convertir la prioridad a entero: %v", err)
+	}
 
 	execTCB := kernelglobals.ExecStateThread
 	currentPCB := execTCB.ConectPCB
@@ -120,7 +123,10 @@ func ThreadCreate(args []string) error {
 	}
 
 	currentPCB.TIDs = append(currentPCB.TIDs, newTID)
-	kernelglobals.ReadyStateQueue.Add(&newTCB)
+	err = kernelglobals.ShortTermScheduler.AddToReady(&newTCB)
+	if err != nil {
+		return fmt.Errorf("error al agregar el TCB a la cola de Ready: %v", err)
+	}
 	logger.Info("## (<%d>:<%d>) Se crea un nuevo hilo - Estado: READY", currentPCB.PID, newTCB.TID)
 
 	return nil
