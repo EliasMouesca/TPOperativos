@@ -198,53 +198,31 @@ func ThreadCancel(args []string) error {
 
 	currentPCB := kernelglobals.ExecStateThread.ConectPCB
 
-	var tcbCancelar *kerneltypes.TCB
-
-	var estaEnReady = false
-	var estaEnBlocked = false
-
-	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tidCancelar && tcb.ConectPCB == currentPCB {
-			tcbCancelar = tcb
-			estaEnReady = true
-		}
-	})
-
-	if tcbCancelar == nil {
-		kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
-			if tcb.TID == tidCancelar && tcb.ConectPCB == currentPCB {
-				tcbCancelar = tcb
-				estaEnBlocked = true
-			}
-		})
-	}
-
-	if tcbCancelar == nil {
-		logger.Info("## No se encontró el TID <%d> en ninguna cola para el PCB con PID <%d>. Continúa la ejecución normal.", tidCancelar, currentPCB.PID)
+	// Intentar eliminar el TID de las colas Ready usando ThreadRemove del planificador
+	err = kernelglobals.ShortTermScheduler.ThreadRemove(tidCancelar, currentPCB.PID)
+	if err == nil {
+		logger.Info("Se movió el TID <%d> del PCB con PID <%d> de ReadyStateQueue a ExitStateQueue", tidCancelar, currentPCB.PID)
 		return nil
 	}
 
-	logger.Info("## Finalizando el TID <%d> del PCB con PID <%d>", tcbCancelar.TID, currentPCB.PID)
-	// falta la logica para avisarle a memoria que se finalizo el hilo
-
-	logger.Info("## Moviendo el TID <%d> al estado EXIT", tcbCancelar.TID)
-	kernelglobals.ExitStateQueue.Add(tcbCancelar)
-	if estaEnReady {
-		err = kernelglobals.ReadyStateQueue.Remove(tcbCancelar)
+	// Si no estaba en Ready, verificar y eliminar hilos en la cola de Blocked
+	for !kernelglobals.BlockedStateQueue.IsEmpty() {
+		tcb, err := kernelglobals.BlockedStateQueue.GetAndRemoveNext()
 		if err != nil {
-			logger.Info("No ha sido posible eliminar al TCB con TID: %d de la cola de ReadyStateQueue", tcbCancelar.TID)
+			logger.Error("Error al obtener el siguiente TCB de BlockedStateQueue: %v", err)
+			break
+		}
+
+		if tcb.TID == tidCancelar && tcb.ConectPCB == currentPCB {
+			kernelglobals.ExitStateQueue.Add(tcb)
+			logger.Info("Se movió el TID <%d> del PCB con PID <%d> de BlockedStateQueue a ExitStateQueue", tidCancelar, currentPCB.PID)
 			return nil
+		} else {
+			kernelglobals.BlockedStateQueue.Add(tcb)
 		}
 	}
 
-	if estaEnBlocked {
-		err = kernelglobals.BlockedStateQueue.Remove(tcbCancelar)
-		if err != nil {
-			logger.Info("No ha sido posible eliminar al TCB con TID: %d de la cola de BlockedStateQueue", tcbCancelar.TID)
-			return nil
-		}
-	}
-
+	logger.Info("## No se encontró el TID <%d> en ninguna cola para el PCB con PID <%d>. Continúa la ejecución normal.", tidCancelar, currentPCB.PID)
 	return nil
 }
 
