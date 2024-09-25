@@ -14,35 +14,35 @@ type Prioridades struct {
 	readyThreads []kerneltypes.TCB
 }
 
-func (prioridades *Prioridades) ThreadExists(thread types.Thread) (bool, error) {
+func (prioridades *Prioridades) ThreadExists(tid int, pid int) (bool, error) {
 	for _, v := range prioridades.readyThreads {
-		if v.TID == thread.Tid {
+		if v.TID == tid && v.ConectPCB.PID == pid {
 			return true, nil
 		}
 	}
-	return false, errors.New("hilo no encontrado")
+
+	return false, errors.New("hilo no encontrado en la cola de prioridades o no pertenece al PCB con PID especificado")
 }
 
-func (prioridades *Prioridades) ThreadRemove(thread types.Thread) error {
-	existe, err := prioridades.ThreadExists(thread)
+func (prioridades *Prioridades) ThreadRemove(tid int, pid int) error {
+	existe, err := prioridades.ThreadExists(tid, pid)
 	if err != nil {
 		return err
 	}
 
-	if existe {
-		for i, v := range prioridades.readyThreads {
-			if v.TID != thread.Tid {
-				copy(prioridades.readyThreads[i:], prioridades.readyThreads[i+1:])
-				prioridades.readyThreads = prioridades.readyThreads[:len(prioridades.readyThreads)-1]
-				return nil
-			}
-		}
-	} else {
-		return errors.New("el hilo pedido no existe :/")
+	if !existe {
+		return errors.New("el hilo con el TID especificado no se encontró en la cola de prioridades o no pertenece al PCB con PID especificado")
 	}
 
-	return nil
+	for i, v := range prioridades.readyThreads {
+		if v.TID == tid && v.ConectPCB.PID == pid {
+			prioridades.readyThreads = append(prioridades.readyThreads[:i], prioridades.readyThreads[i+1:]...)
+			logger.Info("Hilo con TID <%d> del PCB con PID <%d> eliminado de la cola de prioridades", tid, pid)
+			return nil
+		}
+	}
 
+	return errors.New("el hilo con el TID especificado no se encontró en la cola de prioridades después de la verificación")
 }
 
 func (prioridades *Prioridades) Planificar() (kerneltypes.TCB, error) {

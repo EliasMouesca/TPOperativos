@@ -15,33 +15,35 @@ type ColasMultiNivel struct {
 	readyQueue []*types.Queue[kerneltypes.TCB]
 }
 
-func (cmm *ColasMultiNivel) ThreadExists(thread types.Thread) (bool, error) {
-	for _, q := range cmm.readyQueue {
-		for _, v := range q.GetElements() {
-			if v.TID == thread.Tid {
+func (cmm *ColasMultiNivel) ThreadExists(tid int, pid int) (bool, error) {
+	for _, queue := range cmm.readyQueue {
+		for _, tcb := range queue.GetElements() {
+			if tcb.TID == tid && tcb.ConectPCB.PID == pid {
 				return true, nil
 			}
 		}
 	}
-	return false, errors.New("hilo no encontrado")
+	return false, errors.New("hilo no encontrado o no pertenece al PCB con PID especificado")
 }
 
-func (cmm *ColasMultiNivel) ThreadRemove(thread types.Thread) error {
-	existe, _ := cmm.ThreadExists(thread)
+func (cmm *ColasMultiNivel) ThreadRemove(tid int, pid int) error {
+	existe, _ := cmm.ThreadExists(tid, pid)
 	if existe {
-		for _, v := range cmm.readyQueue {
-			for _, q := range v.GetElements() {
-				r, err := v.GetAndRemoveNext()
+		for _, queue := range cmm.readyQueue {
+			for !queue.IsEmpty() {
+				r, err := queue.GetAndRemoveNext()
 				if err != nil {
 					return err
 				}
-				if q.TID != thread.Tid {
-					v.Add(r)
+				if r.TID != tid || r.ConectPCB.PID != pid {
+					queue.Add(r)
+				} else {
+					return nil
 				}
 			}
 		}
 	}
-	return nil
+	return errors.New("no se pudo eliminar el hilo con TID especificado o no pertenece al PCB con PID especificado")
 }
 
 func (cmm *ColasMultiNivel) Planificar() (kerneltypes.TCB, error) {
