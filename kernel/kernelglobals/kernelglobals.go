@@ -10,6 +10,7 @@ import (
 
 // Colas de New y Ready usnaod el tipo Queue, quedaria cambiar donde se usan
 var NewStateQueue types.Queue[kerneltypes.PCB]
+
 var ReadyStateQueue types.Queue[kerneltypes.TCB]
 var BlockedStateQueue types.Queue[kerneltypes.TCB]
 var ExitStateQueue types.Queue[kerneltypes.TCB]

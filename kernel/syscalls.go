@@ -56,34 +56,45 @@ func ProcessExit(args []string) error {
 
 	tcb := kernelglobals.ExecStateThread
 	pcb := tcb.ConectPCB
-	queueSize := kernelglobals.ReadyStateQueue.Size()
 
-	if tcb.TID == 0 { // tiene que ser el hiloMain
-		kernelsync.ChannelFinishprocess <- pcb.PID
-		<-kernelsync.SemFinishprocess
+	if tcb.TID != 0 {
+		return errors.New("el hilo que quiso eliminar el proceso no es el hilo main")
+	}
 
-		for i := 0; i < queueSize; i++ {
-			readyTCB, err := kernelglobals.ReadyStateQueue.GetAndRemoveNext()
+	kernelsync.ChannelFinishprocess <- pcb.PID
+	<-kernelsync.SemFinishprocess
+
+	// Eliminar todos los hilos del PCB de las colas de Ready
+	for _, tid := range pcb.TIDs {
+		existsInReady, _ := kernelglobals.ShortTermScheduler.ThreadExists(tid, pcb.PID)
+		if existsInReady {
+			err := kernelglobals.ShortTermScheduler.ThreadRemove(tid, pcb.PID)
 			if err != nil {
-				logger.Error("Error al obtener el siguiente TCB de ReadyStateQueue - %v", err)
-			}
-
-			// Verificar si el TCB pertenece al mismo PCB que el proceso que está finalizando
-			if readyTCB.ConectPCB == pcb {
-				// Si el TCB pertenece al PCB, lo eliminamos de la cola y no lo reinsertamos
-				logger.Info("Eliminando TCB con TID %d del proceso con PID %d de ReadyStateQueue", readyTCB.TID, pcb.PID)
+				logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
 			} else {
-				// Si no pertenece, lo volvemos a insertar en la cola
-				kernelglobals.ReadyStateQueue.Add(readyTCB)
+				logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de las colas de Ready y se movió a ExitStateQueue", tid, pcb.PID)
 			}
 		}
-		logger.Info("## Finaliza el proceso <%v>", pcb.PID)
-		// enviar señal para intentar inicializar
-		// un proceso en ready
-		kernelsync.InitProcess <- 0
-	} else {
-		return errors.New("El hilo que quizo eliminar el proceso, no es el hilo main")
+
+		// 2. Verificar y eliminar hilos en la cola de Blocked
+		for !kernelglobals.BlockedStateQueue.IsEmpty() {
+			blockedTCB, err := kernelglobals.BlockedStateQueue.GetAndRemoveNext()
+			if err != nil {
+				logger.Error("Error al obtener el siguiente TCB de BlockedStateQueue - %v", err)
+				break
+			}
+			// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
+			if blockedTCB.TID == tid && blockedTCB.ConectPCB == pcb {
+				kernelglobals.ExitStateQueue.Add(blockedTCB)
+				logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de BlockedStateQueue y se movió a ExitStateQueue", tid, pcb.PID)
+			} else {
+				// Si no es, se vuelve a insertar en la cola de bloqueados
+				kernelglobals.BlockedStateQueue.Add(blockedTCB)
+			}
+		}
 	}
+	logger.Info("## Finaliza el proceso <%v>", pcb.PID)
+	kernelsync.InitProcess <- 0
 
 	return nil
 }
