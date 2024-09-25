@@ -115,64 +115,93 @@ func ProcessToExit() {
 	}
 }
 
-func ThreadEnding() {
-	execTCB := kernelglobals.ExecStateThread
-	tidFinalizando := execTCB.TID
-	currentPCB := execTCB.ConectPCB
-
-	logger.Info("## Iniciando finalización del TID <%d> del PCB con PID <%d>", tidFinalizando, currentPCB.PID)
-
-	// Desbloquear hilos que estaban bloqueados esperando el término de este TID
-	moveBlockedThreadsByJoin(tidFinalizando)
-
-	// Liberar los mutexes que tenía el hilo que se está finalizando
-	releaseMutexes(execTCB)
-
-	// Mover el hilo actual a ExitStateQueue
-	kernelglobals.ExitStateQueue.Add(&execTCB)
-	logger.Info("## Moviendo el TID <%d> al estado EXIT", tidFinalizando)
-
-	// Limpiar el ExecStateThread para indicar que no hay hilo en ejecución
-	kernelglobals.ExecStateThread = kerneltypes.TCB{
-		TID:       -1,
-		ConectPCB: nil,
-	}
-
-	// Si hay hilos en ReadyStateQueue, asignar el siguiente a ExecStateThread
-	nextThread, err := kernelglobals.ReadyStateQueue.GetAndRemoveNext()
-	if err == nil {
-		kernelglobals.ExecStateThread = *nextThread
-		logger.Info("## Asignando el TID <%d> al estado EXEC", nextThread.TID)
-	} else {
-		logger.Info("## No hay hilos en la cola de Ready")
-	}
-
-	logger.Info("## Finalización del TID <%d> del PCB con PID <%d> completada", tidFinalizando, currentPCB.PID)
-}
-
 func ThreadToReady() {
 
 }
 
-func moveBlockedThreadsByJoin(tidFinalizado int) {
-	var threadsToMove []*kerneltypes.TCB
-
-	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		// Si este hilo estaba bloqueado esperando el tidFinalizado, lo movemos a Ready
-		if tcb.WaitingForTID == tidFinalizado {
-			threadsToMove = append(threadsToMove, tcb)
+func ThreadEnding() {
+	// Al momento de finalizar un hilo, el Kernel deberá informar a la Memoria
+	// la finalización del mismo y deberá mover al estado READY a todos los
+	// hilos que se encontraban bloqueados por ese TID. De esta manera, se
+	// desbloquean aquellos hilos bloqueados por THREAD_JOIN y por mutex
+	// tomados por el hilo finalizado (en caso que hubiera).
+	execTCB := kernelglobals.ExecStateThread
+	currentPCB := execTCB.ConectPCB
+	for {
+		TID := <-kernelsync.ChannelFinishThread
+		tid := strconv.Itoa(TID)
+		request := types.RequestToMemory{
+			Type:      types.FinishThread,
+			Arguments: []string{tid},
 		}
-	})
 
-	for _, tcb := range threadsToMove {
-		tcb.WaitingForTID = -1 // Resetear el campo WaitingForTID
-		kernelglobals.BlockedStateQueue.Remove(tcb)
-		kernelglobals.ReadyStateQueue.Add(tcb)
-		logger.Info("## Moviendo el TID <%d> del PCB con PID <%d> de estado BLOCK a estado READY por THREAD_JOIN", tcb.TID, tcb.ConectPCB.PID)
+		logger.Info("## Iniciando finalización del TID <%d> del PCB con PID <%d>", tid, currentPCB.PID)
+
+		logger.Debug("Informando a Memoria sobre la finalización del hilo con TID %d", tid)
+		kernelsync.FinishThread.Add(1)
+		go func() {
+			defer kernelsync.FinishThread.Done()
+			for {
+				err := sendMemoryRequest(request)
+				if err != nil {
+					logger.Error("Error en la request de memoria sobre la finalizacion del hilo - %v", err)
+				} else {
+					kernelsync.SemFinishThread <- 0
+				}
+			}
+		}()
+
+		// Desbloquear hilos que estaban bloqueados esperando el término de este TID
+		moveBlockedThreadsByJoin(TID)
+
+		// Liberar los mutexes que tenía el hilo que se está finalizando
+		releaseMutexes(TID)
+
+		// Mover el hilo actual a ExitStateQueue
+		kernelglobals.ExitStateQueue.Add(&execTCB)
+		logger.Info("## Moviendo el TID <%d> al estado EXIT", TID)
+
+		// Limpiar el ExecStateThread para indicar que no hay hilo en ejecución
+		kernelglobals.ExecStateThread = kerneltypes.TCB{
+			TID:       -1,
+			ConectPCB: nil,
+		}
+
+		logger.Info("## Finalización del TID <%d> del PCB con PID <%d> completada", TID, currentPCB.PID)
 	}
 }
 
-func releaseMutexes(tcb kerneltypes.TCB) {
+func moveBlockedThreadsByJoin(tidFinalizado int) {
+	// Obtener el tamaño inicial de la cola de bloqueados
+	blockedQueueSize := kernelglobals.BlockedStateQueue.Size()
+	for i := 0; i < blockedQueueSize; i++ {
+		// Obtener y remover el siguiente TCB de la cola de bloqueados
+		tcb, err := kernelglobals.BlockedStateQueue.GetAndRemoveNext()
+		if err != nil {
+			logger.Error("Error al obtener el siguiente TCB de BlockedStateQueue: %v", err)
+			continue
+		}
+
+		// Si el hilo estaba esperando al tidFinalizado, moverlo a la cola de Ready
+		if tcb.WaitingForTID == tidFinalizado {
+			tcb.WaitingForTID = -1 // Resetear el campo WaitingForTID
+
+			// Agregar el hilo a la cola de Ready
+			err = kernelglobals.ShortTermScheduler.AddToReady(tcb)
+			if err != nil {
+				logger.Error("Error al agregar el TID <%d> del PCB con PID <%d> a la cola de Ready: %v", tcb.TID, tcb.ConectPCB.PID, err)
+			} else {
+				logger.Info("## Moviendo el TID <%d> del PCB con PID <%d> de estado BLOCK a estado READY por THREAD_JOIN", tcb.TID, tcb.ConectPCB.PID)
+			}
+		} else {
+			// Si el hilo no estaba esperando, volver a agregarlo a la cola de bloqueados
+			kernelglobals.BlockedStateQueue.Add(tcb)
+		}
+	}
+}
+
+func releaseMutexes(tid int) {
+	tcb := kernelglobals.ExecStateThread
 	for _, mutexID := range tcb.Mutex {
 		mutexWrapper, exists := kernelglobals.GlobalMutexRegistry[mutexID]
 		if !exists {
@@ -189,8 +218,14 @@ func releaseMutexes(tcb kerneltypes.TCB) {
 			mutexWrapper.BlockedThreads = mutexWrapper.BlockedThreads[1:]
 			mutexWrapper.AssignedTID = nextThread.TID
 			nextThread.Mutex = append(nextThread.Mutex, mutexID)
-			kernelglobals.ReadyStateQueue.Add(nextThread)
-			logger.Info("## Asignando el mutex <%d> al TID <%d> del PCB con PID <%d>", mutexID, nextThread.TID, nextThread.ConectPCB.PID)
+			err := kernelglobals.ShortTermScheduler.AddToReady(nextThread)
+			if err != nil {
+				logger.Error("Error al mover el TID <%d> del PCB con PID <%d> de estado BLOCK a READY: %v", nextThread.TID, nextThread.ConectPCB.PID, err)
+			} else {
+				logger.Info("## Asignando el mutex <%d> al TID <%d> del PCB con PID <%d> y moviendo a estado READY", mutexID, nextThread.TID, nextThread.ConectPCB.PID)
+			}
+		} else {
+			logger.Info("## No hay hilos bloqueados esperando el mutex <%d>. Se ha liberado.", mutexID)
 		}
 
 		mutexWrapper.Mutex.Unlock()

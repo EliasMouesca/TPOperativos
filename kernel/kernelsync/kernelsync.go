@@ -23,3 +23,7 @@ var InitProcess = make(chan any)
 var ChannelFinishprocess = make(chan int)
 var Finishprocess sync.WaitGroup
 var SemFinishprocess = make(chan any)
+
+var ChannelFinishThread = make(chan int)
+var FinishThread sync.WaitGroup
+var SemFinishThread = make(chan any)
