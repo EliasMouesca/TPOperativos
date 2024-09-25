@@ -13,7 +13,7 @@ type Fifo struct {
 
 func (f *Fifo) ThreadExists(tid int, pid int) (bool, error) {
 	for _, v := range f.ready.GetElements() {
-		if v.TID == tid && v.ConectPCB.PID == pid {
+		if v.TID == tid && v.FatherPCB.PID == pid {
 			return true, nil
 		}
 	}
@@ -35,7 +35,7 @@ func (f *Fifo) ThreadRemove(tid int, pid int) error {
 			}
 
 			// Volver a agregar el TCB solo si no coincide con el tid y pid
-			if v.TID != tid || v.ConectPCB.PID != pid {
+			if v.TID != tid || v.FatherPCB.PID != pid {
 				f.ready.Add(v)
 			}
 		}

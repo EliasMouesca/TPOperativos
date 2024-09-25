@@ -201,7 +201,7 @@ func getInstruction(w http.ResponseWriter, r *http.Request) {
 	tid, err := strconv.Atoi(tidS)
 	pid, err := strconv.Atoi(pidS)
 	pc, err := strconv.Atoi(pcS)
-	thread := types.Thread{Pid: pid, Tid: tid}
+	thread := types.Thread{PID: pid, TID: tid}
 
 	instruccion, err := getInstructionPosta(thread, pc)
 	if err != nil {
@@ -257,7 +257,7 @@ func saveContext(w http.ResponseWriter, r *http.Request) {
 
 	tid, err := strconv.Atoi(tidS)
 	pid, err := strconv.Atoi(pidS)
-	thread := types.Thread{Pid: pid, Tid: tid}
+	thread := types.Thread{PID: pid, TID: tid}
 
 	_, exists := execContext[thread]
 	if !exists {
@@ -293,7 +293,7 @@ func getContext(w http.ResponseWriter, r *http.Request) {
 
 	tid, err := strconv.Atoi(tidS)
 	pid, err := strconv.Atoi(pidS)
-	thread := types.Thread{Pid: pid, Tid: tid}
+	thread := types.Thread{PID: pid, TID: tid}
 
 	context, exists := execContext[thread]
 	if !exists {

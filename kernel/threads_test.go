@@ -14,16 +14,16 @@ func TestThreadCreate(t *testing.T) {
 
 	// Crear un PCB y un TCB inicial para el proceso
 	pcb := kerneltypes.PCB{
-		PID:   0,
-		TIDs:  []int{0}, // El proceso comienza con un solo hilo TID 0
-		Mutex: []int{},
+		PID:            0,
+		TIDs:           []int{0}, // El proceso comienza con un solo hilo TID 0
+		CreatedMutexes: []int{},
 	}
 
 	// Crear el hilo inicial (main) asociado al PCB
 	tcb1 := kerneltypes.TCB{
 		TID:       0,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 
 	// Asignar el hilo inicial como el hilo en ejecución
@@ -65,7 +65,7 @@ func TestThreadCreate(t *testing.T) {
 	// Verificar que el nuevo hilo se encuentra en la cola de Ready
 	foundInReady := false
 	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == newTID && tcb.ConectPCB == &pcb {
+		if tcb.TID == newTID && tcb.FatherPCB == &pcb {
 			foundInReady = true
 		}
 	})
@@ -85,21 +85,21 @@ func TestThreadJoin(t *testing.T) {
 
 	// Crear un PCB y dos TCBs para el proceso
 	pcb := kerneltypes.PCB{
-		PID:   0,
-		TIDs:  []int{0, 1}, // El proceso comienza con dos hilos TID 0 y 1
-		Mutex: []int{},
+		PID:            0,
+		TIDs:           []int{0, 1}, // El proceso comienza con dos hilos TID 0 y 1
+		CreatedMutexes: []int{},
 	}
 
 	// Crear dos TCBs asociados al mismo PCB
 	tcb1 := kerneltypes.TCB{
 		TID:       0,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 	tcb2 := kerneltypes.TCB{
 		TID:       1,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 
 	// Asignar el primer hilo (tcb1) como el hilo en ejecución
@@ -127,7 +127,7 @@ func TestThreadJoin(t *testing.T) {
 	// Verificar que el hilo 0 se ha movido a la cola de Blocked
 	foundInBlocked := false
 	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb1.TID && tcb.ConectPCB == &pcb {
+		if tcb.TID == tcb1.TID && tcb.FatherPCB == &pcb {
 			foundInBlocked = true
 		}
 	})
@@ -160,7 +160,7 @@ func TestThreadJoin(t *testing.T) {
 	// Verificar que el hilo 1 se ha movido a la cola de Exit
 	foundInExit := false
 	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb2.TID && tcb.ConectPCB == &pcb {
+		if tcb.TID == tcb2.TID && tcb.FatherPCB == &pcb {
 			foundInExit = true
 		}
 	})
@@ -174,7 +174,7 @@ func TestThreadJoin(t *testing.T) {
 	// Verificar que el hilo 0 se ha movido de Blocked a Ready después de que el hilo 1 finalizó
 	foundInReady := false
 	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb1.TID && tcb.ConectPCB == &pcb {
+		if tcb.TID == tcb1.TID && tcb.FatherPCB == &pcb {
 			foundInReady = true
 		}
 	})
@@ -194,26 +194,26 @@ func TestThreadCancel(t *testing.T) {
 
 	// Crear un PCB y TCBs de prueba
 	pcb := kerneltypes.PCB{
-		PID:   0,
-		TIDs:  []int{0, 1, 2}, // El proceso tiene tres hilos TID 0, 1 y 2
-		Mutex: []int{},
+		PID:            0,
+		TIDs:           []int{0, 1, 2}, // El proceso tiene tres hilos TID 0, 1 y 2
+		CreatedMutexes: []int{},
 	}
 
 	// Crear tres TCBs asociados al mismo PCB
 	tcb1 := kerneltypes.TCB{
 		TID:       0,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 	tcb2 := kerneltypes.TCB{
 		TID:       1,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 	tcb3 := kerneltypes.TCB{
 		TID:       2,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 
 	// Añadir los TCBs a la cola de Ready, simulando que están listos para ejecutarse
@@ -242,7 +242,7 @@ func TestThreadCancel(t *testing.T) {
 	// Verificar que el hilo 1 ha sido movido a la cola de Exit
 	foundInExit := false
 	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb2.TID && tcb.ConectPCB == &pcb {
+		if tcb.TID == tcb2.TID && tcb.FatherPCB == &pcb {
 			foundInExit = true
 		}
 	})
@@ -254,7 +254,7 @@ func TestThreadCancel(t *testing.T) {
 	// Verificar que el hilo 1 ha sido eliminado de ReadyState y BlockedState
 	foundInReady := false
 	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb2.TID && tcb.ConectPCB == &pcb {
+		if tcb.TID == tcb2.TID && tcb.FatherPCB == &pcb {
 			foundInReady = true
 		}
 	})
@@ -265,7 +265,7 @@ func TestThreadCancel(t *testing.T) {
 
 	foundInBlocked := false
 	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb2.TID && tcb.ConectPCB == &pcb {
+		if tcb.TID == tcb2.TID && tcb.FatherPCB == &pcb {
 			foundInBlocked = true
 		}
 	})
@@ -285,16 +285,16 @@ func TestThreadExit(t *testing.T) {
 
 	// Crear un PCB y TCB de prueba
 	pcb := kerneltypes.PCB{
-		PID:   0,
-		TIDs:  []int{0}, // Hilos con TID 0 y 1
-		Mutex: []int{},
+		PID:            0,
+		TIDs:           []int{0}, // Hilos con TID 0 y 1
+		CreatedMutexes: []int{},
 	}
 
 	// Crear dos TCBs asociados al mismo PCB
 	tcb1 := kerneltypes.TCB{
 		TID:       0,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 
 	// Simulamos que el primer hilo (tcb1) es el que está en ejecución
@@ -316,15 +316,15 @@ func TestThreadExit(t *testing.T) {
 	}
 
 	// Verificar que el hilo en ejecución ha sido movido a la cola de Exit
-	// Comprobar si ConectPCB es nil antes de acceder a él
+	// Comprobar si FatherPCB es nil antes de acceder a él
 	if kernelglobals.ExecStateThread.TID != -1 {
-		t.Fatalf("El ExecStateThread no se ha vaciado correctamente, se esperaba un TCB vacío, pero se encontró TID <%d> y PID <%d>", kernelglobals.ExecStateThread.TID, kernelglobals.ExecStateThread.ConectPCB.PID)
+		t.Fatalf("El ExecStateThread no se ha vaciado correctamente, se esperaba un TCB vacío, pero se encontró TID <%d> y PID <%d>", kernelglobals.ExecStateThread.TID, kernelglobals.ExecStateThread.FatherPCB.PID)
 	}
 
 	// Verificar que el TCB se encuentra en la cola de ExitState
 	foundInExit := false
 	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb1.TID && tcb.ConectPCB == &pcb {
+		if tcb.TID == tcb1.TID && tcb.FatherPCB == &pcb {
 			foundInExit = true
 		}
 	})

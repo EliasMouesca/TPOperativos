@@ -79,7 +79,7 @@ func ProcessToReady() {
 				mainThread = kerneltypes.TCB{
 					TID:       tid,
 					Prioridad: prioridad,
-					ConectPCB: pcb,
+					FatherPCB: pcb,
 				}
 				break
 			}
@@ -126,7 +126,7 @@ func ThreadEnding() {
 	// desbloquean aquellos hilos bloqueados por THREAD_JOIN y por mutex
 	// tomados por el hilo finalizado (en caso que hubiera).
 	execTCB := kernelglobals.ExecStateThread
-	currentPCB := execTCB.ConectPCB
+	currentPCB := execTCB.FatherPCB
 	for {
 		TID := <-kernelsync.ChannelFinishThread
 		tid := strconv.Itoa(TID)
@@ -164,7 +164,7 @@ func ThreadEnding() {
 		// Limpiar el ExecStateThread para indicar que no hay hilo en ejecución
 		kernelglobals.ExecStateThread = kerneltypes.TCB{
 			TID:       -1,
-			ConectPCB: nil,
+			FatherPCB: nil,
 		}
 
 		logger.Info("## Finalización del TID <%d> del PCB con PID <%d> completada", TID, currentPCB.PID)
@@ -183,15 +183,15 @@ func moveBlockedThreadsByJoin(tidFinalizado int) {
 		}
 
 		// Si el hilo estaba esperando al tidFinalizado, moverlo a la cola de Ready
-		if tcb.WaitingForTID == tidFinalizado {
-			tcb.WaitingForTID = -1 // Resetear el campo WaitingForTID
+		if tcb.JoinedTCB == tidFinalizado {
+			tcb.JoinedTCB = -1 // Resetear el campo JoinedTCB
 
 			// Agregar el hilo a la cola de Ready
 			err = kernelglobals.ShortTermScheduler.AddToReady(tcb)
 			if err != nil {
-				logger.Error("Error al agregar el TID <%d> del PCB con PID <%d> a la cola de Ready: %v", tcb.TID, tcb.ConectPCB.PID, err)
+				logger.Error("Error al agregar el TID <%d> del PCB con PID <%d> a la cola de Ready: %v", tcb.TID, tcb.FatherPCB.PID, err)
 			} else {
-				logger.Info("## Moviendo el TID <%d> del PCB con PID <%d> de estado BLOCK a estado READY por THREAD_JOIN", tcb.TID, tcb.ConectPCB.PID)
+				logger.Info("## Moviendo el TID <%d> del PCB con PID <%d> de estado BLOCK a estado READY por THREAD_JOIN", tcb.TID, tcb.FatherPCB.PID)
 			}
 		} else {
 			// Si el hilo no estaba esperando, volver a agregarlo a la cola de bloqueados
@@ -213,16 +213,16 @@ func releaseMutexes(tid int) {
 		mutexWrapper.AssignedTID = -1 // Marcar el mutex como libre
 		logger.Info("## Liberando el mutex <%d> del TID <%d>", mutexID, tcb.TID)
 
-		if len(mutexWrapper.BlockedThreads) > 0 {
-			nextThread := mutexWrapper.BlockedThreads[0]
-			mutexWrapper.BlockedThreads = mutexWrapper.BlockedThreads[1:]
+		if len(mutexWrapper.BlockedTCBs) > 0 {
+			nextThread := mutexWrapper.BlockedTCBs[0]
+			mutexWrapper.BlockedTCBs = mutexWrapper.BlockedTCBs[1:]
 			mutexWrapper.AssignedTID = nextThread.TID
 			nextThread.Mutex = append(nextThread.Mutex, mutexID)
 			err := kernelglobals.ShortTermScheduler.AddToReady(nextThread)
 			if err != nil {
-				logger.Error("Error al mover el TID <%d> del PCB con PID <%d> de estado BLOCK a READY: %v", nextThread.TID, nextThread.ConectPCB.PID, err)
+				logger.Error("Error al mover el TID <%d> del PCB con PID <%d> de estado BLOCK a READY: %v", nextThread.TID, nextThread.FatherPCB.PID, err)
 			} else {
-				logger.Info("## Asignando el mutex <%d> al TID <%d> del PCB con PID <%d> y moviendo a estado READY", mutexID, nextThread.TID, nextThread.ConectPCB.PID)
+				logger.Info("## Asignando el mutex <%d> al TID <%d> del PCB con PID <%d> y moviendo a estado READY", mutexID, nextThread.TID, nextThread.FatherPCB.PID)
 			}
 		} else {
 			logger.Info("## No hay hilos bloqueados esperando el mutex <%d>. Se ha liberado.", mutexID)

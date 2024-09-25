@@ -15,14 +15,14 @@ func TestMutexCreate(t *testing.T) {
 
 	// Crear un PCB y TCB de prueba
 	pcb := kerneltypes.PCB{
-		PID:   0,
-		TIDs:  []int{0},
-		Mutex: []int{},
+		PID:            0,
+		TIDs:           []int{0},
+		CreatedMutexes: []int{},
 	}
 	tcb := kerneltypes.TCB{
 		TID:       0,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 	kernelglobals.ExecStateThread = tcb
 
@@ -40,14 +40,14 @@ func TestMutexCreate(t *testing.T) {
 	}
 
 	// Verificar que el mutex se ha creado en el registro global
-	mutexID := len(pcb.Mutex)
+	mutexID := len(pcb.CreatedMutexes)
 	if _, exists := kernelglobals.GlobalMutexRegistry[mutexID]; !exists {
 		t.Fatalf("No se encontró el mutex con ID <%d> en el registro global", mutexID)
 	}
 
 	// Verificar que el mutex ha sido añadido a la lista de mutexes del PCB
 	found := false
-	for _, id := range pcb.Mutex {
+	for _, id := range pcb.CreatedMutexes {
 		if id == mutexID {
 			found = true
 			break
@@ -65,21 +65,21 @@ func TestMutexLock(t *testing.T) {
 
 	// Crear un PCB y TCB de prueba
 	pcb := kerneltypes.PCB{
-		PID:   0,
-		TIDs:  []int{0, 1}, // Hilos con TID 0 y 1
-		Mutex: []int{},
+		PID:            0,
+		TIDs:           []int{0, 1}, // Hilos con TID 0 y 1
+		CreatedMutexes: []int{},
 	}
 
 	// Crear dos TCBs asociados al mismo PCB
 	tcb1 := kerneltypes.TCB{
 		TID:       0,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 	tcb2 := kerneltypes.TCB{
 		TID:       1,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 
 	// Simulamos que el primer hilo (tcb1) es el que está en ejecución
@@ -101,7 +101,7 @@ func TestMutexLock(t *testing.T) {
 	}
 
 	// Obtener el ID del mutex recién creado
-	mutexID := len(pcb.Mutex)
+	mutexID := len(pcb.CreatedMutexes)
 
 	// Mostrar estado después de crear el mutex
 	logCurrentState(fmt.Sprintf("Después de crear el mutex con ID <%d>", mutexID))
@@ -152,7 +152,7 @@ func TestMutexLock(t *testing.T) {
 
 	// Verificar que el segundo hilo (tcb2) está bloqueado
 	blocked := false
-	for _, blockedTCB := range mutexWrapper.BlockedThreads {
+	for _, blockedTCB := range mutexWrapper.BlockedTCBs {
 		if blockedTCB.TID == tcb2.TID {
 			blocked = true
 			break
@@ -171,26 +171,26 @@ func TestMutexUnlock(t *testing.T) {
 
 	// Crear un PCB y TCB de prueba
 	pcb := kerneltypes.PCB{
-		PID:   0,
-		TIDs:  []int{0, 1, 2}, // Hilos con TID 0, 1 y 2
-		Mutex: []int{},
+		PID:            0,
+		TIDs:           []int{0, 1, 2}, // Hilos con TID 0, 1 y 2
+		CreatedMutexes: []int{},
 	}
 
 	// Crear tres TCBs asociados al mismo PCB
 	tcb1 := kerneltypes.TCB{
 		TID:       0,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 	tcb2 := kerneltypes.TCB{
 		TID:       1,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 	tcb3 := kerneltypes.TCB{
 		TID:       2,
 		Prioridad: 0,
-		ConectPCB: &pcb,
+		FatherPCB: &pcb,
 	}
 
 	// Simulamos que el primer hilo (tcb1) es el que está en ejecución
@@ -213,7 +213,7 @@ func TestMutexUnlock(t *testing.T) {
 	logCurrentState("Después de crear el mutex")
 
 	// Obtener el ID del mutex recién creado
-	mutexID := len(pcb.Mutex)
+	mutexID := len(pcb.CreatedMutexes)
 
 	// Ahora intentamos que el primer hilo (tcb1) tome el mutex
 	argsLock1 := []string{fmt.Sprintf("%d", mutexID)}
@@ -248,8 +248,8 @@ func TestMutexUnlock(t *testing.T) {
 	if !exists {
 		t.Fatalf("No se encontró el mutex con ID <%d> en el registro global", mutexID)
 	}
-	if len(mutexWrapper.BlockedThreads) != 1 {
-		t.Fatalf("Se esperaba 1 hilo bloqueado en el mutex con ID <%d>, pero se encontraron %d", mutexID, len(mutexWrapper.BlockedThreads))
+	if len(mutexWrapper.BlockedTCBs) != 1 {
+		t.Fatalf("Se esperaba 1 hilo bloqueado en el mutex con ID <%d>, pero se encontraron %d", mutexID, len(mutexWrapper.BlockedTCBs))
 	}
 
 	// Ahora intentamos desbloquear el mutex con el primer hilo (tcb1)
@@ -288,8 +288,8 @@ func TestMutexUnlock(t *testing.T) {
 	logCurrentState("Después de que TID 2 intenta tomar el mutex y se bloquea")
 
 	// Verificar que el tercer hilo (tcb3) está bloqueado
-	if len(mutexWrapper.BlockedThreads) != 1 {
-		t.Fatalf("Se esperaba 1 hilo bloqueado en el mutex con ID <%d>, pero se encontraron %d", mutexID, len(mutexWrapper.BlockedThreads))
+	if len(mutexWrapper.BlockedTCBs) != 1 {
+		t.Fatalf("Se esperaba 1 hilo bloqueado en el mutex con ID <%d>, pero se encontraron %d", mutexID, len(mutexWrapper.BlockedTCBs))
 	}
 
 	// Verificar el estado final de ExecStateThread

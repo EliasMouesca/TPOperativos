@@ -142,12 +142,12 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	cpuMutex.Lock()
 
 	// Obtenemos el contexto de ejecución
-	logger.Debug("Proceso P%v T%v admitido en la CPU", execMsg.Pid, execMsg.Tid)
+	logger.Debug("Proceso P%v T%v admitido en la CPU", execMsg.PID, execMsg.TID)
 	logger.Debug("Obteniendo contexto de ejecución")
 	currentExecutionContext, err = memoryGiveMeExecutionContext(execMsg)
 	if err != nil {
 		logger.Error("No se pudo obtener el contexto de ejecución del T%v P%v - %v",
-			execMsg.Tid, execMsg.Pid, err.Error())
+			execMsg.TID, execMsg.PID, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("No se pudo obtener el contexto de ejecución - " + err.Error()))
 
@@ -157,7 +157,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Si hasta acá las cosas salieron bien, poné a ejecutar el proceso
-	logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", execMsg.Tid, execMsg.Pid)
+	logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", execMsg.TID, execMsg.PID)
 	currentThread = &execMsg
 	go loopInstructionCycle()
 
@@ -186,7 +186,7 @@ func loopInstructionCycle() {
 
 		// Execute
 		logger.Info("T%v P%v - Ejecutando: '%v' %v",
-			currentThread.Tid, currentThread.Pid, instructionToParse, arguments)
+			currentThread.TID, currentThread.PID, instructionToParse, arguments)
 
 		err = instruction(&currentExecutionContext, arguments)
 		if err != nil {

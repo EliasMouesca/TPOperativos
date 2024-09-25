@@ -19,12 +19,12 @@ type SyscallRequest struct {
 //	pcb := kerneltypes.PCB{
 //		PID:   0,
 //		TIDs:  []int{0},
-//		Mutex: nil,
+//		CreatedMutexes: nil,
 //	}
 //	tcb := kerneltypes.TCB{
 //		TID:       0,
 //		Prioridad: 0,
-//		ConectPCB: &pcb,
+//		FatherPCB: &pcb,
 //	}
 //	kernelglobals.ExecStateThread = tcb
 //
@@ -61,17 +61,17 @@ type SyscallRequest struct {
 //	pcb := kerneltypes.PCB{
 //		PID:   0,
 //		TIDs:  []int{0, 1},
-//		Mutex: nil,
+//		CreatedMutexes: nil,
 //	}
 //	tcb := kerneltypes.TCB{
 //		TID:       0,
 //		Prioridad: 0,
-//		ConectPCB: &pcb,
+//		FatherPCB: &pcb,
 //	}
 //	tcb1 := kerneltypes.TCB{
 //		TID:       1,
 //		Prioridad: 0,
-//		ConectPCB: &pcb,
+//		FatherPCB: &pcb,
 //	}
 //	kernelglobals.ReadyStateQueue.Add(&tcb1)
 //	kernelglobals.ExecStateThread = tcb
@@ -106,17 +106,17 @@ type SyscallRequest struct {
 //	pcb := kerneltypes.PCB{
 //		PID:   0,
 //		TIDs:  []int{0, 1},
-//		Mutex: nil,
+//		CreatedMutexes: nil,
 //	}
 //	tcb := kerneltypes.TCB{
 //		TID:       0,
 //		Prioridad: 0,
-//		ConectPCB: &pcb,
+//		FatherPCB: &pcb,
 //	}
 //	tcb1 := kerneltypes.TCB{
 //		TID:       1,
 //		Prioridad: 0,
-//		ConectPCB: &pcb,
+//		FatherPCB: &pcb,
 //	}
 //	kernelglobals.ExecStateThread = tcb
 //	kernelglobals.ReadyStateQueue.Add(&tcb1)
@@ -137,29 +137,29 @@ func TestThreadEnding(t *testing.T) {
 
 	// Crear un PCB y tres TCBs para el proceso
 	pcb := kerneltypes.PCB{
-		PID:   0,
-		TIDs:  []int{0, 1, 2}, // El proceso comienza con tres hilos TID 0, 1 y 2
-		Mutex: []int{},
+		PID:            0,
+		TIDs:           []int{0, 1, 2}, // El proceso comienza con tres hilos TID 0, 1 y 2
+		CreatedMutexes: []int{},
 	}
 
 	// Crear tres TCBs asociados al mismo PCB
 	tcb1 := kerneltypes.TCB{
-		TID:           0,
-		Prioridad:     0,
-		ConectPCB:     &pcb,
-		WaitingForTID: -1,
+		TID:       0,
+		Prioridad: 0,
+		FatherPCB: &pcb,
+		JoinedTCB: -1,
 	}
 	tcb2 := kerneltypes.TCB{
-		TID:           1,
-		Prioridad:     0,
-		ConectPCB:     &pcb,
-		WaitingForTID: 0, // tcb2 espera la finalización de tcb1
+		TID:       1,
+		Prioridad: 0,
+		FatherPCB: &pcb,
+		JoinedTCB: 0, // tcb2 espera la finalización de tcb1
 	}
 	tcb3 := kerneltypes.TCB{
-		TID:           2,
-		Prioridad:     0,
-		ConectPCB:     &pcb,
-		WaitingForTID: -1,
+		TID:       2,
+		Prioridad: 0,
+		FatherPCB: &pcb,
+		JoinedTCB: -1,
 	}
 
 	// Añadir el hilo tcb2 a BlockedStateQueue simulando un ThreadJoin esperando a tcb1
@@ -180,7 +180,7 @@ func TestThreadEnding(t *testing.T) {
 	// Verificar que tcb1 se ha movido a ExitStateQueue
 	foundInExit := false
 	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb1.TID && tcb.ConectPCB == &pcb {
+		if tcb.TID == tcb1.TID && tcb.FatherPCB == &pcb {
 			foundInExit = true
 		}
 	})
@@ -192,7 +192,7 @@ func TestThreadEnding(t *testing.T) {
 	// Verificar que tcb2 se ha movido de Blocked a ReadyStateQueue
 	foundInReady := false
 	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb2.TID && tcb.ConectPCB == &pcb {
+		if tcb.TID == tcb2.TID && tcb.FatherPCB == &pcb {
 			foundInReady = true
 		}
 	})

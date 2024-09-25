@@ -18,7 +18,7 @@ type ColasMultiNivel struct {
 func (cmm *ColasMultiNivel) ThreadExists(tid int, pid int) (bool, error) {
 	for _, queue := range cmm.readyQueue {
 		for _, tcb := range queue.GetElements() {
-			if tcb.TID == tid && tcb.ConectPCB.PID == pid {
+			if tcb.TID == tid && tcb.FatherPCB.PID == pid {
 				return true, nil
 			}
 		}
@@ -40,7 +40,7 @@ func (cmm *ColasMultiNivel) ThreadRemove(tid int, pid int) error {
 				return err
 			}
 
-			if r.TID != tid || r.ConectPCB.PID != pid {
+			if r.TID != tid || r.FatherPCB.PID != pid {
 				queue.Add(r)
 			} else {
 				return nil

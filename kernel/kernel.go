@@ -115,7 +115,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 	}
 
 	logger.Info("## (<%v>:<%v>) - Solicitó syscall: <%v>",
-		kernelglobals.ExecStateThread.ConectPCB.PID,
+		kernelglobals.ExecStateThread.FatherPCB.PID,
 		kernelglobals.ExecStateThread.TID,
 		syscalls.SyscallNames[syscall.Type],
 	)

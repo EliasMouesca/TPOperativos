@@ -16,7 +16,7 @@ type Prioridades struct {
 
 func (prioridades *Prioridades) ThreadExists(tid int, pid int) (bool, error) {
 	for _, v := range prioridades.readyThreads {
-		if v.TID == tid && v.ConectPCB.PID == pid {
+		if v.TID == tid && v.FatherPCB.PID == pid {
 			return true, nil
 		}
 	}
@@ -35,7 +35,7 @@ func (prioridades *Prioridades) ThreadRemove(tid int, pid int) error {
 	}
 
 	for i, v := range prioridades.readyThreads {
-		if v.TID == tid && v.ConectPCB.PID == pid {
+		if v.TID == tid && v.FatherPCB.PID == pid {
 			prioridades.readyThreads = append(prioridades.readyThreads[:i], prioridades.readyThreads[i+1:]...)
 			logger.Info("Hilo con TID <%d> del PCB con PID <%d> eliminado de la cola de prioridades", tid, pid)
 			return nil

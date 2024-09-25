@@ -42,7 +42,7 @@ func planificadorCortoPlazo() {
 		logger.Debug("Hilo a ejecutar: %d", tcbToExecute.TID)
 
 		// Crafteo proximo hilo
-		nextThread := types.Thread{Tid: tcbToExecute.TID, Pid: tcbToExecute.ConectPCB.PID}
+		nextThread := types.Thread{TID: tcbToExecute.TID, PID: tcbToExecute.FatherPCB.PID}
 		data, err := json.Marshal(nextThread)
 
 		// Envio proximo hilo a cpu

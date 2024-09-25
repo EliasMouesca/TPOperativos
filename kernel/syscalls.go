@@ -55,7 +55,7 @@ func ProcessExit(args []string) error {
 	// del proceso y le deberá indicar a la memoria la finalización de dicho proceso.
 
 	tcb := kernelglobals.ExecStateThread
-	pcb := tcb.ConectPCB
+	pcb := tcb.FatherPCB
 
 	if tcb.TID != 0 {
 		return errors.New("el hilo que quiso eliminar el proceso no es el hilo main")
@@ -84,7 +84,7 @@ func ProcessExit(args []string) error {
 				break
 			}
 			// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
-			if blockedTCB.TID == tid && blockedTCB.ConectPCB == pcb {
+			if blockedTCB.TID == tid && blockedTCB.FatherPCB == pcb {
 				kernelglobals.ExitStateQueue.Add(blockedTCB)
 				logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de BlockedStateQueue y se movió a ExitStateQueue", tid, pcb.PID)
 			} else {
@@ -112,14 +112,14 @@ func ThreadCreate(args []string) error {
 	}
 
 	execTCB := kernelglobals.ExecStateThread
-	currentPCB := execTCB.ConectPCB
+	currentPCB := execTCB.FatherPCB
 
 	newTID := len(currentPCB.TIDs)
 
 	newTCB := kerneltypes.TCB{
 		TID:       newTID,
 		Prioridad: prioridad,
-		ConectPCB: currentPCB,
+		FatherPCB: currentPCB,
 	}
 
 	currentPCB.TIDs = append(currentPCB.TIDs, newTID)
@@ -143,7 +143,7 @@ func ThreadJoin(args []string) error {
 		return errors.New("error al convertir el TID a entero")
 	}
 	execTCB := kernelglobals.ExecStateThread
-	currentPCB := execTCB.ConectPCB
+	currentPCB := execTCB.FatherPCB
 
 	finalizado := false
 	queueSize := kernelglobals.ExitStateQueue.Size()
@@ -152,7 +152,7 @@ func ThreadJoin(args []string) error {
 		if err != nil {
 			return errors.New("error al obtener el siguiente TCB de ExitStateQueue")
 		}
-		if tcb.TID == tidAFinalizar && tcb.ConectPCB == currentPCB {
+		if tcb.TID == tidAFinalizar && tcb.FatherPCB == currentPCB {
 			finalizado = true
 		}
 		kernelglobals.ExitStateQueue.Add(tcb)
@@ -176,14 +176,14 @@ func ThreadJoin(args []string) error {
 		return nil
 	}
 
-	execTCB.WaitingForTID = tidAFinalizar
+	execTCB.JoinedTCB = tidAFinalizar
 	kernelglobals.BlockedStateQueue.Add(&execTCB)
 
 	// ESTA PARTE ESTA MEDIO MAL. SI ExecStateThread FUERA UN PUNTERO
 	// DIRECTAMENTE SE LE ASIGNA NIL, NO ESTE MAMARRACHO DE CREAR UN TCB CON TID = -1
 	kernelglobals.ExecStateThread = kerneltypes.TCB{
 		TID:       -1,
-		ConectPCB: currentPCB,
+		FatherPCB: currentPCB,
 	}
 
 	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidAFinalizar)
@@ -202,7 +202,7 @@ func ThreadCancel(args []string) error {
 		return errors.New("error al convertir el TID a entero")
 	}
 
-	currentPCB := kernelglobals.ExecStateThread.ConectPCB
+	currentPCB := kernelglobals.ExecStateThread.FatherPCB
 
 	// Intentar eliminar el TID de las colas Ready usando ThreadRemove del planificador
 	err = kernelglobals.ShortTermScheduler.ThreadRemove(tidCancelar, currentPCB.PID)
@@ -219,7 +219,7 @@ func ThreadCancel(args []string) error {
 			break
 		}
 
-		if tcb.TID == tidCancelar && tcb.ConectPCB == currentPCB {
+		if tcb.TID == tidCancelar && tcb.FatherPCB == currentPCB {
 			kernelglobals.ExitStateQueue.Add(tcb)
 			logger.Info("Se movió el TID <%d> del PCB con PID <%d> de BlockedStateQueue a ExitStateQueue", tidCancelar, currentPCB.PID)
 			return nil
@@ -237,7 +237,7 @@ func ThreadExit(args []string) error {
 	// Se deberá indicar a la Memoria la finalización de dicho hilo.
 
 	execTCB := kernelglobals.ExecStateThread
-	currentPCB := execTCB.ConectPCB
+	currentPCB := execTCB.FatherPCB
 
 	logger.Info("## Finalizando el TID <%d> del PCB con PID <%d>", execTCB.TID, currentPCB.PID)
 	// falta la logica para avisarle a memoria que se finalizo el hilo
@@ -248,7 +248,7 @@ func ThreadExit(args []string) error {
 	kernelglobals.ExecStateThread = kerneltypes.TCB{
 		TID: -1, //Para indicar que no hay un hilo en ejecucion puse el -1,
 		// total este no afecta en nada y nunca va a haber un hilo con TID -1
-		ConectPCB: currentPCB,
+		FatherPCB: currentPCB,
 	}
 
 	return nil
@@ -258,19 +258,19 @@ func MutexCreate(args []string) error {
 	// Crea un nuevo mutex para el proceso sin asignar a ningún hilo.
 
 	execTCB := kernelglobals.ExecStateThread
-	currentPCB := execTCB.ConectPCB
+	currentPCB := execTCB.FatherPCB
 	newMutexID := len(kernelglobals.GlobalMutexRegistry) + 1
 
 	newMutexWrapper := &kerneltypes.MutexWrapper{
-		Mutex:          sync.Mutex{},
-		ID:             newMutexID,
-		AssignedTID:    -1,
-		BlockedThreads: []*kerneltypes.TCB{},
+		Mutex:       sync.Mutex{},
+		ID:          newMutexID,
+		AssignedTID: -1,
+		BlockedTCBs: []*kerneltypes.TCB{},
 	}
 
 	kernelglobals.GlobalMutexRegistry[newMutexID] = newMutexWrapper
 
-	currentPCB.Mutex = append(currentPCB.Mutex, newMutexID)
+	currentPCB.CreatedMutexes = append(currentPCB.CreatedMutexes, newMutexID)
 
 	logger.Info("## Se creó el mutex <%d> para el proceso con PID <%d>", newMutexID, currentPCB.PID)
 
@@ -295,14 +295,14 @@ func MutexLock(args []string) error {
 	defer mutexWrapper.Mutex.Unlock()
 
 	if mutexWrapper.AssignedTID != -1 && mutexWrapper.AssignedTID != execTCB.TID {
-		mutexWrapper.BlockedThreads = append(mutexWrapper.BlockedThreads, &execTCB)
-		logger.Info("## El mutex <%d> ya está tomado. Bloqueando al TID <%d> del proceso con PID <%d>", mutexID, execTCB.TID, execTCB.ConectPCB.PID)
+		mutexWrapper.BlockedTCBs = append(mutexWrapper.BlockedTCBs, &execTCB)
+		logger.Info("## El mutex <%d> ya está tomado. Bloqueando al TID <%d> del proceso con PID <%d>", mutexID, execTCB.TID, execTCB.FatherPCB.PID)
 		return nil
 	}
 
 	mutexWrapper.AssignedTID = execTCB.TID
 	execTCB.Mutex = append(execTCB.Mutex, mutexID)
-	logger.Info("## El mutex <%d> ha sido asignado al TID <%d> del proceso con PID <%d>", mutexID, execTCB.TID, execTCB.ConectPCB.PID)
+	logger.Info("## El mutex <%d> ha sido asignado al TID <%d> del proceso con PID <%d>", mutexID, execTCB.TID, execTCB.FatherPCB.PID)
 	kernelglobals.ExecStateThread = execTCB
 
 	return nil
@@ -348,14 +348,14 @@ func MutexUnlock(args []string) error {
 	}
 	execTCB.Mutex = newMutexList
 
-	if len(mutexWrapper.BlockedThreads) > 0 {
-		nextThread := mutexWrapper.BlockedThreads[0]
-		mutexWrapper.BlockedThreads = mutexWrapper.BlockedThreads[1:]
+	if len(mutexWrapper.BlockedTCBs) > 0 {
+		nextThread := mutexWrapper.BlockedTCBs[0]
+		mutexWrapper.BlockedTCBs = mutexWrapper.BlockedTCBs[1:]
 
 		// Asignar el mutex al hilo desbloqueado
 		nextThread.Mutex = append(nextThread.Mutex, mutexID)
 		mutexWrapper.AssignedTID = nextThread.TID
-		logger.Info("## El mutex <%d> ha sido reasignado al TID <%d> del proceso con PID <%d>", mutexID, nextThread.TID, nextThread.ConectPCB.PID)
+		logger.Info("## El mutex <%d> ha sido reasignado al TID <%d> del proceso con PID <%d>", mutexID, nextThread.TID, nextThread.FatherPCB.PID)
 
 		kernelglobals.ReadyStateQueue.Add(nextThread)
 		kernelglobals.ExecStateThread = *nextThread

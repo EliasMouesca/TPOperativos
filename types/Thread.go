@@ -1,6 +1,9 @@
 package types
 
+type Tid int
+type Pid int
+
 type Thread struct {
-	Pid int `json:"pid"`
-	Tid int `json:"tid"`
+	PID Pid `json:"pid"`
+	TID Tid `json:"tid"`
 }
