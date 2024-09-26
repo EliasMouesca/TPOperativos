@@ -5,7 +5,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types"
 )
 
-// NewStateQueue Colas de New, Blocked y Exit usando el tipo Queue, quedaria cambiar donde se usan
+// NewStateQueue Colas de Null, Blocked y Exit usando el tipo Queue, quedaria cambiar donde se usan
 var NewStateQueue types.Queue[*kerneltypes.PCB]
 var BlockedStateQueue types.Queue[*kerneltypes.TCB]
 var ExitStateQueue types.Queue[*kerneltypes.TCB]

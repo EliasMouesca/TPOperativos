@@ -7,13 +7,13 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types"
 )
 
-// TODO: Arreglar
 type Fifo struct {
-	ready types.Queue[kerneltypes.TCB]
+	ready types.Queue[*kerneltypes.TCB]
 }
 
-func (f *Fifo) ThreadExists(tid int, pid int) (bool, error) {
+func (f *Fifo) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
 	for _, v := range f.ready.GetElements() {
+
 		if v.TID == tid && v.FatherPCB.PID == pid {
 			return true, nil
 		}
@@ -21,7 +21,7 @@ func (f *Fifo) ThreadExists(tid int, pid int) (bool, error) {
 	return false, errors.New("hilo no encontrado o no pertenece al PCB con el PID especificado")
 }
 
-func (f *Fifo) ThreadRemove(tid int, pid int) error {
+func (f *Fifo) ThreadRemove(tid types.Tid, pid types.Pid) error {
 	existe, err := f.ThreadExists(tid, pid)
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func (f *Fifo) ThreadRemove(tid int, pid int) error {
 
 // Planificar devuelve el próximo hilo a ejecutar o error en función del algoritmo FIFO
 // es una función que se bloquea si no hay procesos listos y se desbloquea sola si llegan a venir nuevos procesos listos
-func (f *Fifo) Planificar() (kerneltypes.TCB, error) {
+func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 	// Bloqueate hasta que alguien te mande algo por este channel -> quién manda por este channel? -> AddToReady()
 	// Entonces, bloqueate hasta que alguien agregue un hilo a ready.
 	<-kernelsync.PendingThreadsChannel
@@ -59,17 +59,17 @@ func (f *Fifo) Planificar() (kerneltypes.TCB, error) {
 	// Fifo lo único que hace para seleccionar procesos es tomar el primero que entró
 	nextTcb, err = f.ready.GetAndRemoveNext()
 	if err != nil {
-		return kerneltypes.TCB{}, errors.New("se quiso obtener un hilo y no habia ningun hilo en ready")
+		return nil, errors.New("se quiso obtener un hilo y no habia ningun hilo en ready")
 	}
 
 	// Retorná el hilo elegido
-	return *nextTcb, nil
+	return nextTcb, nil
 }
 
 // AddToReady Le avisa al STS (versión FIFO) que hay un nuevo proceso listo
-func (f *Fifo) AddToReady(tcb kerneltypes.TCB) error {
+func (f *Fifo) AddToReady(tcb *kerneltypes.TCB) error {
 	// Agregá el proceso a la cola fifo
-	f.ready.Add(&tcb)
+	f.ready.Add(tcb)
 
 	// Mandá mensaje por el canal, o sea, permití que una vuelta más de Planificar() ejecute
 	go func() {

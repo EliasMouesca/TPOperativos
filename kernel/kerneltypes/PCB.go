@@ -13,7 +13,7 @@ type PCB struct {
 	CreatedMutexes []*Mutex
 }
 
-func (a *PCB) New() *PCB {
+func (a *PCB) Null() *PCB {
 	return nil
 }
 

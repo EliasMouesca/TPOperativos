@@ -5,13 +5,13 @@ import (
 	"sync"
 )
 
-type Queueable[T any] interface {
-	New() T
+type Nulleable[T any] interface {
+	Null() T
 	Equal(T) bool
 }
 
 // Queue Cola de procesos o hilos
-type Queue[T Queueable[T]] struct {
+type Queue[T Nulleable[T]] struct {
 	elements []T
 	mutex    sync.Mutex
 	Priority int
@@ -31,7 +31,7 @@ func (c *Queue[T]) GetAndRemoveNext() (T, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if len(c.elements) == 0 {
-		return T.New(nil), errors.New("no hay elementos para quitar de la cola")
+		return T.Null(*new(T)), errors.New("no hay elementos para quitar de la cola")
 	}
 	nextThread := c.elements[0]
 	c.elements = c.elements[1:]

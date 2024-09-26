@@ -19,7 +19,7 @@ type TCB struct {
 	JoinedTCB *TCB
 }
 
-func (a *TCB) New() *TCB {
+func (a *TCB) Null() *TCB {
 	return nil
 }
 

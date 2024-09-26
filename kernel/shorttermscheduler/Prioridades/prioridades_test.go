@@ -9,6 +9,14 @@ import (
 )
 
 var prioridades *Prioridades
+var tcb1 kerneltypes.TCB
+var tcb2 kerneltypes.TCB
+var tcb3 kerneltypes.TCB
+var tcb4 kerneltypes.TCB
+var tcb5 kerneltypes.TCB
+var tcb6 kerneltypes.TCB
+var tcb7 kerneltypes.TCB
+var tcb8 kerneltypes.TCB
 
 func setup() {
 	logger.ConfigureLogger("test.log", "INFO")
@@ -19,26 +27,26 @@ func setup() {
 func TestPrioridades(t *testing.T) {
 	setup()
 
-	correctSlice := []kerneltypes.TCB{
-		kerneltypes.TCB{Prioridad: 0, TID: 1},
-		kerneltypes.TCB{Prioridad: 0, TID: 2},
-		kerneltypes.TCB{Prioridad: 1, TID: 3},
-		kerneltypes.TCB{Prioridad: 2, TID: 4},
-		kerneltypes.TCB{Prioridad: 3, TID: 5},
-		kerneltypes.TCB{Prioridad: 3, TID: 6},
-		kerneltypes.TCB{Prioridad: 4, TID: 7},
-		kerneltypes.TCB{Prioridad: 5, TID: 8},
+	correctSlice := []*kerneltypes.TCB{
+		{Prioridad: 0, TID: 1},
+		{Prioridad: 0, TID: 2},
+		{Prioridad: 1, TID: 3},
+		{Prioridad: 2, TID: 4},
+		{Prioridad: 3, TID: 5},
+		{Prioridad: 3, TID: 6},
+		{Prioridad: 4, TID: 7},
+		{Prioridad: 5, TID: 8},
 	}
 
-	testSlice := []kerneltypes.TCB{
-		kerneltypes.TCB{Prioridad: 5, TID: 8},
-		kerneltypes.TCB{Prioridad: 0, TID: 1},
-		kerneltypes.TCB{Prioridad: 1, TID: 3},
-		kerneltypes.TCB{Prioridad: 2, TID: 4},
-		kerneltypes.TCB{Prioridad: 3, TID: 5},
-		kerneltypes.TCB{Prioridad: 0, TID: 2},
-		kerneltypes.TCB{Prioridad: 4, TID: 7},
-		kerneltypes.TCB{Prioridad: 3, TID: 6},
+	testSlice := []*kerneltypes.TCB{
+		{Prioridad: 5, TID: 8},
+		{Prioridad: 0, TID: 1},
+		{Prioridad: 1, TID: 3},
+		{Prioridad: 2, TID: 4},
+		{Prioridad: 3, TID: 5},
+		{Prioridad: 0, TID: 2},
+		{Prioridad: 4, TID: 7},
+		{Prioridad: 3, TID: 6},
 	}
 
 	for _, v := range testSlice {
@@ -58,17 +66,16 @@ func TestPrioridades(t *testing.T) {
 // Test: si shuffleo la lista, sigue insertando por orden de fifo??
 func TestAddToReady(t *testing.T) {
 	setup()
-
-	correctSlice := []kerneltypes.TCB{
-		kerneltypes.TCB{Prioridad: 0, TID: 1},
-		kerneltypes.TCB{Prioridad: 1, TID: 2},
-		kerneltypes.TCB{Prioridad: 2, TID: 3},
-		kerneltypes.TCB{Prioridad: 3, TID: 4},
-		kerneltypes.TCB{Prioridad: 4, TID: 5},
-		kerneltypes.TCB{Prioridad: 5, TID: 6},
+	correctSlice := []*kerneltypes.TCB{
+		&kerneltypes.TCB{Prioridad: 0, TID: 1},
+		&kerneltypes.TCB{Prioridad: 1, TID: 2},
+		&kerneltypes.TCB{Prioridad: 2, TID: 3},
+		&kerneltypes.TCB{Prioridad: 3, TID: 4},
+		&kerneltypes.TCB{Prioridad: 4, TID: 5},
+		&kerneltypes.TCB{Prioridad: 5, TID: 6},
 	}
 
-	var testSlice []kerneltypes.TCB
+	var testSlice []*kerneltypes.TCB
 	testSlice = append(testSlice, correctSlice...)
 
 	copy(testSlice, correctSlice)
@@ -100,13 +107,13 @@ func TestAddToReady(t *testing.T) {
 func TestAddToReadyFIFO(t *testing.T) {
 	setup()
 
-	correctSlice := []kerneltypes.TCB{
-		kerneltypes.TCB{Prioridad: 0, TID: 1},
-		kerneltypes.TCB{Prioridad: 0, TID: 2},
-		kerneltypes.TCB{Prioridad: 1, TID: 3},
-		kerneltypes.TCB{Prioridad: 1, TID: 4},
-		kerneltypes.TCB{Prioridad: 2, TID: 5},
-		kerneltypes.TCB{Prioridad: 2, TID: 6},
+	correctSlice := []*kerneltypes.TCB{
+		&kerneltypes.TCB{Prioridad: 0, TID: 1},
+		&kerneltypes.TCB{Prioridad: 0, TID: 2},
+		&kerneltypes.TCB{Prioridad: 1, TID: 3},
+		&kerneltypes.TCB{Prioridad: 1, TID: 4},
+		&kerneltypes.TCB{Prioridad: 2, TID: 5},
+		&kerneltypes.TCB{Prioridad: 2, TID: 6},
 	}
 
 	for _, v := range correctSlice {

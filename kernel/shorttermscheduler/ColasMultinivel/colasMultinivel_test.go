@@ -7,31 +7,31 @@ import (
 )
 
 var colasMultinivel *ColasMultiNivel
-var tcbSliceTest []kerneltypes.TCB
+var tcbSliceTest []*kerneltypes.TCB
 
 func setup() {
 	logger.ConfigureLogger("test.log", "INFO")
 	colasMultinivel = &ColasMultiNivel{}
 
-	tcbSliceTest = []kerneltypes.TCB{
-		kerneltypes.TCB{Prioridad: 1, TID: 0},
-		kerneltypes.TCB{Prioridad: 0, TID: 1},
-		kerneltypes.TCB{Prioridad: 2, TID: 2},
-		kerneltypes.TCB{Prioridad: 1, TID: 3},
-		kerneltypes.TCB{Prioridad: 2, TID: 4},
-		kerneltypes.TCB{Prioridad: 0, TID: 5},
+	tcbSliceTest = []*kerneltypes.TCB{
+		&kerneltypes.TCB{Prioridad: 1, TID: 0},
+		&kerneltypes.TCB{Prioridad: 0, TID: 1},
+		&kerneltypes.TCB{Prioridad: 2, TID: 2},
+		&kerneltypes.TCB{Prioridad: 1, TID: 3},
+		&kerneltypes.TCB{Prioridad: 2, TID: 4},
+		&kerneltypes.TCB{Prioridad: 0, TID: 5},
 	}
 }
 
 func TestColasMultiNivel_Planificar(t *testing.T) {
 	setup()
-	correctSlice := []kerneltypes.TCB{
-		kerneltypes.TCB{Prioridad: 0, TID: 1},
-		kerneltypes.TCB{Prioridad: 0, TID: 5},
-		kerneltypes.TCB{Prioridad: 1, TID: 0},
-		kerneltypes.TCB{Prioridad: 1, TID: 3},
-		kerneltypes.TCB{Prioridad: 2, TID: 2},
-		kerneltypes.TCB{Prioridad: 2, TID: 4},
+	correctSlice := []*kerneltypes.TCB{
+		&kerneltypes.TCB{Prioridad: 0, TID: 1},
+		&kerneltypes.TCB{Prioridad: 0, TID: 5},
+		&kerneltypes.TCB{Prioridad: 1, TID: 0},
+		&kerneltypes.TCB{Prioridad: 1, TID: 3},
+		&kerneltypes.TCB{Prioridad: 2, TID: 2},
+		&kerneltypes.TCB{Prioridad: 2, TID: 4},
 	}
 	// Mando a Ready
 	for _, v := range tcbSliceTest {
@@ -91,7 +91,7 @@ func TestColasMultiNivel_AddNewQueue(t *testing.T) {
 		TID:       88,
 	}
 
-	colasMultinivel.AddToReady(tcb)
+	colasMultinivel.AddToReady(&tcb)
 
 	readyQueue := colasMultinivel.readyQueue
 	// Tiene una sola cola en el slice por eso esto anda

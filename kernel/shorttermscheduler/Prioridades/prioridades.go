@@ -10,12 +10,11 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
-// TODO: Arreglar
 type Prioridades struct {
-	readyThreads []kerneltypes.TCB
+	readyThreads []*kerneltypes.TCB
 }
 
-func (prioridades *Prioridades) ThreadExists(tid int, pid int) (bool, error) {
+func (prioridades *Prioridades) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
 	for _, v := range prioridades.readyThreads {
 		if v.TID == tid && v.FatherPCB.PID == pid {
 			return true, nil
@@ -25,7 +24,7 @@ func (prioridades *Prioridades) ThreadExists(tid int, pid int) (bool, error) {
 	return false, errors.New("hilo no encontrado en la cola de prioridades o no pertenece al PCB con PID especificado")
 }
 
-func (prioridades *Prioridades) ThreadRemove(tid int, pid int) error {
+func (prioridades *Prioridades) ThreadRemove(tid types.Tid, pid types.Pid) error {
 	existe, err := prioridades.ThreadExists(tid, pid)
 	if err != nil {
 		return err
@@ -46,7 +45,7 @@ func (prioridades *Prioridades) ThreadRemove(tid int, pid int) error {
 	return errors.New("el hilo con el TID especificado no se encontró en la cola de prioridades después de la verificación")
 }
 
-func (prioridades *Prioridades) Planificar() (kerneltypes.TCB, error) {
+func (prioridades *Prioridades) Planificar() (*kerneltypes.TCB, error) {
 	<-kernelsync.PendingThreadsChannel
 
 	selectedProces := prioridades.readyThreads[0]
@@ -57,13 +56,13 @@ func (prioridades *Prioridades) Planificar() (kerneltypes.TCB, error) {
 	return selectedProces, nil
 }
 
-func (prioridades *Prioridades) AddToReady(threadToAdd kerneltypes.TCB) error {
+func (prioridades *Prioridades) AddToReady(threadToAdd *kerneltypes.TCB) error {
 	logger.Trace("Adding thread to ready (Prioridades): %v", threadToAdd)
 
 	// Si es la primera vez que se llama a la función (la lista es nula), creala
 	if prioridades.readyThreads == nil {
 		logger.Trace("Creating slice of ready threads")
-		prioridades.readyThreads = make([]kerneltypes.TCB, 0)
+		prioridades.readyThreads = make([]*kerneltypes.TCB, 0)
 	}
 
 	inserted := false
@@ -87,17 +86,18 @@ func (prioridades *Prioridades) AddToReady(threadToAdd kerneltypes.TCB) error {
 		kernelsync.PendingThreadsChannel <- true
 	}()
 
-	// Si es necesario, desalojá la cpu
-	if threadToAdd.Prioridad < kernelglobals.ExecStateThread.Prioridad {
-		err := shorttermscheduler.CpuInterrupt(
-			types.Interruption{
-				Type: types.InterruptionEviction,
-			})
-		if err != nil {
-			return err
+	if kernelglobals.ExecStateThread != nil {
+		// Si es necesario, desalojá la cpu
+		if threadToAdd.Prioridad < kernelglobals.ExecStateThread.Prioridad {
+			err := shorttermscheduler.CpuInterrupt(
+				types.Interruption{
+					Type: types.InterruptionEviction,
+				})
+			if err != nil {
+				return err
+			}
 		}
 	}
-
 	logger.Trace("Slice left like this: %v", prioridades.readyThreads)
 
 	return nil
