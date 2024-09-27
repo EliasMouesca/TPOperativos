@@ -29,6 +29,18 @@ func planificadorLargoPlazo() {
 		ProcessToExit()
 	}()
 
+	kernelsync.WaitPlanificadorLP.Add(1)
+	go func() {
+		defer kernelsync.WaitPlanificadorLP.Done()
+		ThreadToReady()
+	}()
+
+	kernelsync.WaitPlanificadorLP.Add(1)
+	go func() {
+		defer kernelsync.WaitPlanificadorLP.Done()
+		ThreadToExit()
+	}()
+
 	kernelsync.WaitPlanificadorLP.Wait()
 }
 
@@ -49,20 +61,16 @@ func ProcessToReady() {
 		// Se crea un hilo porque tiene que esperar a que se libere espacio en memoria
 		// para mandar el siguiente proceso a Ready
 		logger.Debug("Preguntando a memoria si tiene espacio disponible")
-		kernelsync.WaitPlanificadorLP.Add(1)
-		go func() {
-			defer kernelsync.WaitPlanificadorLP.Done()
-			for {
-				err := sendMemoryRequest(request)
-				if err != nil {
-					logger.Debug("Error en la request de memoria sobre la creacion del proceso- %v", err)
-					<-kernelsync.InitProcess
-				} else {
-					logger.Debug("Hay espacio disponible en memoria")
-					break
-				}
+		for {
+			err := sendMemoryRequest(request)
+			if err != nil {
+				logger.Error("%v", err)
+				<-kernelsync.InitProcess
+			} else {
+				logger.Debug("Hay espacio disponible en memoria")
+				break
 			}
-		}()
+		}
 
 		// El if para preguntar si esta vacia la cola Null no hace falta,
 		// porque esta planificacion solo ocurre si se creo el proceso,
@@ -83,7 +91,7 @@ func ProcessToReady() {
 				}
 				break
 			}
-		}
+		} //Rami: No entiendo esto, hilo se crea cuando pasa a ready no en NEW
 
 		// Mandamos el hiloMain a Ready
 		kernelglobals.ShortTermScheduler.AddToReady(&mainThread)
@@ -94,32 +102,42 @@ func ProcessToReady() {
 func ProcessToExit() {
 	for {
 		PID := <-kernelsync.ChannelFinishprocess
-		pid := strconv.Itoa(PID)
+		pid := strconv.Itoa(int(PID))
 		request := types.RequestToMemory{
 			Type:      types.FinishProcess,
 			Arguments: []string{pid},
 		}
 		logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", PID)
-		kernelsync.Finishprocess.Add(1)
-		go func() {
-			defer kernelsync.Finishprocess.Done()
-			for {
-				err := sendMemoryRequest(request)
-				if err != nil {
-					logger.Error("Error en la request de memoria sobre la finalizacion del proceso - %v", err)
-				} else {
-					kernelsync.SemFinishprocess <- 0
-				}
+		for {
+			err := sendMemoryRequest(request)
+			if err != nil {
+				logger.Error("%v", err)
+			} else {
+				kernelsync.SemFinishprocess <- 0
 			}
-		}()
+		}
 	}
 }
 
 func ThreadToReady() {
-
+	for {
+		args := <-kernelsync.ChannelThreadCreate
+		fileName := args[0]
+		request := types.RequestToMemory{
+			Type:      types.CreateThread,
+			Arguments: []string{fileName},
+		}
+		logger.Debug("Informando a Memoria sobre la creacion de un hilo")
+		kernelsync.WaitPlanificadorLP.Add(1)
+		err := sendMemoryRequest(request)
+		if err != nil {
+			logger.Error("%v", err)
+		}
+		kernelsync.SemThreadCreate <- 0
+	}
 }
 
-func ThreadEnding() {
+func ThreadToExit() {
 	// Al momento de finalizar un hilo, el Kernel deberá informar a la Memoria
 	// la finalización del mismo y deberá mover al estado READY a todos los
 	// hilos que se encontraban bloqueados por ese TID. De esta manera, se
@@ -138,18 +156,14 @@ func ThreadEnding() {
 		logger.Info("## Iniciando finalización del TID <%d> del PCB con PID <%d>", tid, currentPCB.PID)
 
 		logger.Debug("Informando a Memoria sobre la finalización del hilo con TID %d", tid)
-		kernelsync.FinishThread.Add(1)
-		go func() {
-			defer kernelsync.FinishThread.Done()
-			for {
-				err := sendMemoryRequest(request)
-				if err != nil {
-					logger.Error("Error en la request de memoria sobre la finalizacion del hilo - %v", err)
-				} else {
-					kernelsync.SemFinishThread <- 0
-				}
+		for {
+			err := sendMemoryRequest(request)
+			if err != nil {
+				logger.Error("Error en la request de memoria sobre la finalizacion del hilo - %v", err)
+			} else {
+				kernelsync.SemFinishThread <- 0
 			}
-		}()
+		}
 
 		// Desbloquear hilos que estaban bloqueados esperando el término de este TID
 		moveBlockedThreadsByJoin(TID)
@@ -254,7 +268,7 @@ func sendMemoryRequest(request types.RequestToMemory) error {
 		return err
 	}
 
-	err = handleMemoryResponse(resp, request.Type)
+	err = handleMemoryResponseError(resp, request.Type)
 	if err != nil {
 		return err
 	}
@@ -262,7 +276,7 @@ func sendMemoryRequest(request types.RequestToMemory) error {
 }
 
 // esta funcion es auxiliar de sendMemoryRequest
-func handleMemoryResponse(response *http.Response, TypeRequest string) error {
+func handleMemoryResponseError(response *http.Response, TypeRequest string) error {
 	if response.StatusCode != http.StatusOK {
 		err := types.ErrorRequestType[TypeRequest]
 		return err

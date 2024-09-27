@@ -103,6 +103,7 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 func processFinish(w http.ResponseWriter, r *http.Request) {
 	// Cosa de largo plazo :)
 	// TODO: Volver a poner el hilo que vino de CPU en la cola ready
+	// Rami: What?
 
 	kernelsync.MutexCPU.Unlock()
 

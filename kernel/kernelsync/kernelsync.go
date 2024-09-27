@@ -26,5 +26,7 @@ var Finishprocess sync.WaitGroup
 var SemFinishprocess = make(chan any)
 
 var ChannelFinishThread = make(chan int)
-var FinishThread sync.WaitGroup
 var SemFinishThread = make(chan any)
+
+var ChannelThreadCreate = make(chan []string)
+var SemThreadCreate = make(chan any)

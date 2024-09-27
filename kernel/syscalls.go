@@ -43,6 +43,7 @@ func ProcessCreate(args []string) error {
 	processCreate.TIDs = []types.Tid{0}
 
 	// TODO: Crear el TCB!
+	// Rami: ?? el hilo se crea en ProcessToReady
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", processCreate.PID)
 
@@ -79,6 +80,7 @@ func ProcessExit(args []string) error {
 		}
 
 		// 2. Verificar y eliminar hilos en la cola de Blocked
+		// Rami: no deberia ser un if?
 		for !kernelglobals.BlockedStateQueue.IsEmpty() {
 			blockedTCB, err := kernelglobals.BlockedStateQueue.GetAndRemoveNext()
 			if err != nil {
@@ -107,7 +109,9 @@ func ThreadCreate(args []string) error {
 	// pseudocódigo que deberá ejecutar el hilo a crear y su prioridad. Al momento de crear el nuevo hilo,
 	// deberá generar el nuevo TCB con un TID autoincremental y poner al mismo en el estado READY.
 
-	//fileName := args[0]
+	kernelsync.ChannelThreadCreate <- args
+	<-kernelsync.SemThreadCreate
+
 	prioridad, err := strconv.Atoi(args[1])
 	if err != nil {
 		return fmt.Errorf("error al convertir la prioridad a entero: %v", err)
@@ -140,8 +144,8 @@ func ThreadJoin(args []string) error {
 	// no exista o ya haya finalizado, esta syscall no hace nada y el hilo que la invocó continuará su
 	// ejecución.
 
-	i, err := strconv.Atoi(args[0])
-	tidAFinalizar := types.Tid(i)
+	tid, err := strconv.Atoi(args[0])
+	tidAFinalizar := types.Tid(tid)
 
 	if err != nil {
 		return errors.New("error al convertir el TID a entero")
