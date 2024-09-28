@@ -42,9 +42,6 @@ func ProcessCreate(args []string) error {
 	processCreate.PID = types.Pid(PIDcount)
 	processCreate.TIDs = []types.Tid{0}
 
-	// TODO: Crear el TCB!
-	// Rami: ?? el hilo se crea en ProcessToReady
-
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", processCreate.PID)
 
 	kernelsync.ChannelProcessArguments <- args
@@ -135,6 +132,8 @@ func ThreadCreate(args []string) error {
 	}
 	logger.Info("## (<%d>:<%d>) Se crea un nuevo hilo - Estado: READY", currentPCB.PID, newTCB.TID)
 
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, newTCB)
+
 	return nil
 }
 
@@ -144,8 +143,8 @@ func ThreadJoin(args []string) error {
 	// no exista o ya haya finalizado, esta syscall no hace nada y el hilo que la invocó continuará su
 	// ejecución.
 
-	tid, err := strconv.Atoi(args[0])
-	tidAFinalizar := types.Tid(tid)
+	tidString, err := strconv.Atoi(args[0])
+	tidToJoin := types.Tid(tidString)
 
 	if err != nil {
 		return errors.New("error al convertir el TID a entero")
@@ -160,33 +159,37 @@ func ThreadJoin(args []string) error {
 		if err != nil {
 			return errors.New("error al obtener el siguiente TCB de ExitStateQueue")
 		}
-		if tcb.TID == tidAFinalizar && tcb.FatherPCB == currentPCB {
+		if tcb.TID == tidToJoin && tcb.FatherPCB == currentPCB {
 			finalizado = true
 		}
 		kernelglobals.ExitStateQueue.Add(tcb)
 	}
 
 	if finalizado {
-		logger.Info("## (<%d>:<%d>) TID <%d> ya ha finalizado. Continúa la ejecución.", currentPCB.PID, execTCB.TID, tidAFinalizar)
+		logger.Info("## TID <%d> ya ha finalizado. Continúa la ejecución de (<%v>:<%v>).", currentPCB.PID, execTCB.TID, tidToJoin)
 		return nil
 	}
 
 	tidExiste := false
 	for _, tid := range currentPCB.TIDs {
-		if tid == tidAFinalizar {
+		if tid == tidToJoin {
 			tidExiste = true
 			break
 		}
 	}
 
 	if !tidExiste {
-		logger.Info("## (<%d>:<%d>) TID <%d> no pertenece a la lista de TIDs del PCB con PID <%d>. Continúa la ejecución.", currentPCB.PID, execTCB.TID, tidAFinalizar, currentPCB.PID)
+		logger.Info("## (<%d>:<%d>) TID <%d> no pertenece a la lista de TIDs del PCB con PID <%d>. Continúa la ejecución.",
+			currentPCB.PID,
+			execTCB.TID,
+			tidToJoin,
+			currentPCB.PID)
 		return nil
 	}
 
-	for _, v := range kernelglobals.EveryTCBInTheKernel {
-		if v.TID == tidAFinalizar && v.FatherPCB.Equal(execTCB.FatherPCB) {
-			execTCB.JoinedTCB = &v
+	for _, tcbToJoin := range kernelglobals.EveryTCBInTheKernel {
+		if tcbToJoin.TID == tidToJoin && tcbToJoin.FatherPCB.Equal(execTCB.FatherPCB) {
+			execTCB.JoinedTCB = &tcbToJoin
 		}
 	}
 
@@ -194,7 +197,7 @@ func ThreadJoin(args []string) error {
 
 	kernelglobals.ExecStateThread = nil
 
-	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidAFinalizar)
+	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidToJoin)
 	return nil
 }
 
@@ -245,10 +248,8 @@ func ThreadExit(args []string) error {
 	// Se deberá indicar a la Memoria la finalización de dicho hilo.
 
 	execTCB := kernelglobals.ExecStateThread
-	currentPCB := execTCB.FatherPCB
 
-	logger.Info("## Finalizando el TID <%d> del PCB con PID <%d>", execTCB.TID, currentPCB.PID)
-	// falta la logica para avisarle a memoria que se finalizo el hilo
+	kernelsync.ChannelFinishThread <- 0
 
 	logger.Info("## Moviendo el TID <%d> al estado EXIT", execTCB.TID)
 	kernelglobals.ExitStateQueue.Add(execTCB)

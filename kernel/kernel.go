@@ -63,7 +63,7 @@ func main() {
 		logger.Fatal("ListenAndServe retornó error - %v", err)
 	}
 
-	go planificadorLargoPlazo()
+	planificadorLargoPlazo()
 	go planificadorCortoPlazo()
 }
 

@@ -22,7 +22,6 @@ var ChannelProcessArguments = make(chan []string)
 var InitProcess = make(chan any)
 
 var ChannelFinishprocess = make(chan types.Pid)
-var Finishprocess sync.WaitGroup
 var SemFinishprocess = make(chan any)
 
 var ChannelFinishThread = make(chan int)

@@ -16,35 +16,16 @@ import (
 func planificadorLargoPlazo() {
 	// En el enunciado en implementacion dice que hay que inicializar un proceso
 	// quiza hay que hacerlo aca o en kernel.go es lo mismo creo
+	go NewProcessToReady()
 
-	kernelsync.WaitPlanificadorLP.Add(1)
-	go func() {
-		defer kernelsync.WaitPlanificadorLP.Done()
-		ProcessToReady()
-	}()
+	go ProcessReadyToExit()
 
-	kernelsync.WaitPlanificadorLP.Add(1)
-	go func() {
-		defer kernelsync.WaitPlanificadorLP.Done()
-		ProcessToExit()
-	}()
+	go NewThreadToReady()
 
-	kernelsync.WaitPlanificadorLP.Add(1)
-	go func() {
-		defer kernelsync.WaitPlanificadorLP.Done()
-		ThreadToReady()
-	}()
-
-	kernelsync.WaitPlanificadorLP.Add(1)
-	go func() {
-		defer kernelsync.WaitPlanificadorLP.Done()
-		ThreadToExit()
-	}()
-
-	kernelsync.WaitPlanificadorLP.Wait()
+	go ThreadToExit()
 }
 
-func ProcessToReady() {
+func NewProcessToReady() {
 	for {
 		// Espera a que se cree un proceso y le mande sus argumentos,
 		// se van guardando los argumentos de cada proceso en el canal a medidad que se crean
@@ -82,24 +63,21 @@ func ProcessToReady() {
 
 		// busco al tcb con TID = 0 del pcb que se obtuvo de la cola de NEW
 		var mainThread kerneltypes.TCB
-		for _, tid := range pcb.TIDs {
-			if tid == 0 {
-				mainThread = kerneltypes.TCB{
-					TID:       tid,
-					Prioridad: prioridad,
-					FatherPCB: pcb,
-				}
-				break
-			}
-		} //Rami: No entiendo esto, hilo se crea cuando pasa a ready no en NEW
+		mainThread = kerneltypes.TCB{
+			TID:       0,
+			Prioridad: prioridad,
+			FatherPCB: pcb,
+		}
 
 		// Mandamos el hiloMain a Ready
 		kernelglobals.ShortTermScheduler.AddToReady(&mainThread)
 		logger.Info("Se agrego el hilo main a la cola Ready")
+
+		kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
 	}
 }
 
-func ProcessToExit() {
+func ProcessReadyToExit() {
 	for {
 		PID := <-kernelsync.ChannelFinishprocess
 		pid := strconv.Itoa(int(PID))
@@ -119,7 +97,7 @@ func ProcessToExit() {
 	}
 }
 
-func ThreadToReady() {
+func NewThreadToReady() {
 	for {
 		args := <-kernelsync.ChannelThreadCreate
 		fileName := args[0]
@@ -137,7 +115,7 @@ func ThreadToReady() {
 	}
 }
 
-func ThreadToExit() {
+func Thread aToExit() {
 	// Al momento de finalizar un hilo, el Kernel deberá informar a la Memoria
 	// la finalización del mismo y deberá mover al estado READY a todos los
 	// hilos que se encontraban bloqueados por ese TID. De esta manera, se
@@ -156,13 +134,9 @@ func ThreadToExit() {
 		logger.Info("## Iniciando finalización del TID <%d> del PCB con PID <%d>", tid, currentPCB.PID)
 
 		logger.Debug("Informando a Memoria sobre la finalización del hilo con TID %d", tid)
-		for {
-			err := sendMemoryRequest(request)
-			if err != nil {
-				logger.Error("Error en la request de memoria sobre la finalizacion del hilo - %v", err)
-			} else {
-				kernelsync.SemFinishThread <- 0
-			}
+		err := sendMemoryRequest(request)
+		if err != nil {
+			logger.Error("Error en la request de memoria sobre la finalizacion del hilo - %v", err)
 		}
 
 		// Desbloquear hilos que estaban bloqueados esperando el término de este TID
