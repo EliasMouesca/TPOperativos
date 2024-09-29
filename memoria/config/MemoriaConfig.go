@@ -1,4 +1,4 @@
-package main
+package config
 
 type MemoriaConfig struct {
 	SelfPort        int    `json:"self_port"`
@@ -19,6 +19,6 @@ type MemoriaConfig struct {
 }
 
 // TODO
-func (cfg MemoriaConfig) validate() error {
+func (cfg MemoriaConfig) Validate() error {
 	return nil
 }

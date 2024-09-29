@@ -3,21 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/sisoputnfrba/tp-golang/types"
+	cpu "github.com/sisoputnfrba/tp-golang/memoria/cpu_conection"
+	fileSystem "github.com/sisoputnfrba/tp-golang/memoria/fileSystem_conection"
+	kernel "github.com/sisoputnfrba/tp-golang/memoria/kernel_conection"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"os"
 )
 
 //TODO: Agregar el tiempo de espera para cada petición del CPU
-
-// GOBALES DE LA MEMORIA
-var config MemoriaConfig
-var execContext = make(map[types.Thread]types.ExecutionContext)
-var indexInstructionsLists = make(map[types.Thread][]string)
-var userMem = make([]byte, config.MemorySize)
-
-// ------------------------------------------------------------------------
 
 func init() {
 	loggerLevel := "INFO"
@@ -28,23 +23,23 @@ func init() {
 	}
 	logger.Debug("Logger creado")
 
-	// Load config
-	configData, err := os.ReadFile("config.json")
+	// Load Config
+	configData, err := os.ReadFile("Config.json")
 	if err != nil {
 		logger.Fatal("No se pudo leer el archivo de configuración - %v", err.Error())
 	}
 
-	err = json.Unmarshal(configData, &config)
+	err = json.Unmarshal(configData, &memoria_helpers.Config)
 	if err != nil {
 		logger.Fatal("No se pudo parsear el archivo de configuración - %v", err.Error())
 	}
 
-	if err = config.validate(); err != nil {
+	if err = memoria_helpers.Config.Validate(); err != nil {
 		logger.Fatal("La configuración no es válida - %v", err.Error())
 	}
 	logger.Debug("Configuración cargada exitosamente")
 
-	err = logger.SetLevel(config.LogLevel)
+	err = logger.SetLevel(memoria_helpers.Config.LogLevel)
 	if err != nil {
 		logger.Fatal("No se pudo leer el log-level - %v", err.Error())
 	}
@@ -55,22 +50,23 @@ func main() {
 	logger.Info("--- Comienzo ejecución MEMORIA ---")
 
 	// TRUE RESPONSE
-	http.HandleFunc("/", BadRequest)
-	http.HandleFunc("/memoria/getContext", getContext)
-	http.HandleFunc("/memoria/saveContext", saveContext)
-	// STUB FORMAT RESPONSE
-	http.HandleFunc("/memoria/getInstruction", getInstruction)
-	http.HandleFunc("/memoria/readMem", readMemory)
-	http.HandleFunc("/memoria/writeMem", writeMemory)
-	http.HandleFunc("/memoria/createProcess", createProcess)
-	http.HandleFunc("/memoria/finishProcess", finishProcess)
-	http.HandleFunc("/memoria/createThread", createThread)
-	http.HandleFunc("/memoria/finishThread", finishThread)
-	http.HandleFunc("/memoria/dump", dump)
-	// TODO: -----------------
-	// -----------------------
+	http.HandleFunc("/", memoria_helpers.BadRequest)
+	http.HandleFunc("/memoria/getContext", cpu.GetContext)
+	http.HandleFunc("/memoria/saveContext", cpu.SaveContext)
 
-	self := fmt.Sprintf("%v:%v", config.SelfAddress, config.SelfPort)
+	// STUB FORMAT RESPONSE
+	http.HandleFunc("/memoria/getInstruction", cpu.GetInstruction)
+
+	http.HandleFunc("/memoria/readMem", kernel.ReadMemory)
+	http.HandleFunc("/memoria/writeMem", kernel.WriteMemory)
+	http.HandleFunc("/memoria/createProcess", kernel.CreateProcess)
+	http.HandleFunc("/memoria/finishProcess", kernel.FinishProcess)
+	http.HandleFunc("/memoria/createThread", kernel.CreateThread)
+	http.HandleFunc("/memoria/finishThread", kernel.FinishThread)
+
+	http.HandleFunc("/memoria/dump", fileSystem.Dump)
+
+	self := fmt.Sprintf("%v:%v", memoria_helpers.Config.SelfAddress, memoria_helpers.Config.SelfPort)
 	logger.Info("Server activo en %v", self)
 	err := http.ListenAndServe(self, nil)
 	if err != nil {

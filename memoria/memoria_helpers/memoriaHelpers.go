@@ -1,4 +1,4 @@
-package main
+package memoria_helpers
 
 import (
 	"github.com/sisoputnfrba/tp-golang/types"
@@ -15,15 +15,15 @@ func BadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeMemoryPosta(dir int, data [4]byte) error {
+func WriteMemoryPosta(dir int, data [4]byte) error {
 	return nil
 }
 
-func readMemoryPosta(dir int) ([4]byte, error) {
+func ReadMemoryPosta(dir int) ([4]byte, error) {
 	var mordida [4]byte = [4]byte{byte(123), byte(255), byte(111), byte(222)}
 	return mordida, nil
 }
 
-func getInstructionPosta(tread types.Thread, pc int) (string, error) {
+func GetInstructionPosta(tread types.Thread, pc int) (string, error) {
 	return "SET AX 1", nil
 }
