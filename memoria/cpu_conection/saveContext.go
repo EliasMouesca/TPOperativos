@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func SaveContext(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +29,7 @@ func SaveContext(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		logger.Error("No se pudo leer el cuerpo del request")
-		memoria_helpers.BadRequest(w, r)
+		http.Error(w, "No se pudo leer el cuerpo del request", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
@@ -38,7 +39,7 @@ func SaveContext(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &contexto)
 	if err != nil {
 		logger.Error("No se pudo decodificar el cuerpo del request")
-		memoria_helpers.BadRequest(w, r)
+		http.Error(w, "No se decodificar el cuerpo del request", http.StatusBadRequest)
 		return
 	}
 
@@ -57,9 +58,11 @@ func SaveContext(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write([]byte("Contexto guardado exitosamente"))
 	if err != nil {
 		logger.Error("Error escribiendo el response - %v", err.Error())
-		memoria_helpers.BadRequest(w, r)
+		http.Error(w, "Error escribiendo el response", http.StatusInternalServerError)
+		return
 	}
 
 	// Log obligatorio
 	logger.Info("## Contexto Actualizado - (PID:TID) - (%v:%v)", pidS, tidS)
+	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
 }

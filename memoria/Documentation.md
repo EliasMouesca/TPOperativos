@@ -33,6 +33,9 @@ ejemplo URL: ".../memoria/getContext?pid=123?tid=123"
 
 
 ## Obtener siguiente linea de pseudocódigo a ejecutar (hay que checkearlo)
+Dudas:
+    1. 
+
 Funcionamiento:
     Devuelve un string (sin parsear) que corresponde al pc, del tid y pid (los tres pasados por parametros)
 Verbo: GET
@@ -41,6 +44,9 @@ Input:
 Output:
     1. string + StatusOK
     2. nil + StatusNotFound
+
+
+
 
 ## Leer memoria
 Funcionamiento:

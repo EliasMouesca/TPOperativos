@@ -20,10 +20,17 @@ func WriteMemoryPosta(dir int, data [4]byte) error {
 }
 
 func ReadMemoryPosta(dir int) ([4]byte, error) {
-	var mordida [4]byte = [4]byte{byte(123), byte(255), byte(111), byte(222)}
-	return mordida, nil
+	cuatro_mordidas := [4]byte{byte(123), byte(255), byte(111), byte(222)}
+	return cuatro_mordidas, nil
 }
 
-func GetInstructionPosta(tread types.Thread, pc int) (string, error) {
+func GetInstructionPosta(thread types.Thread, pc int) (string, error) {
+	/*
+		instruction, exists := InstructionList[thread]
+		if !exists {
+			return "", errors.New("Instruction Not Found")
+		}
+		return instruction, nil
+	*/
 	return "SET AX 1", nil
 }

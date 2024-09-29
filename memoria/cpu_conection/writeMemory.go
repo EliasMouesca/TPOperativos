@@ -1,4 +1,4 @@
-package kernel_conection
+package cpu_conection
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func WriteMemory(w http.ResponseWriter, r *http.Request) {
@@ -21,8 +22,10 @@ func WriteMemory(w http.ResponseWriter, r *http.Request) {
 	dirS := query.Get("dir")
 	tidS := query.Get("tid")
 	pidS := query.Get("pid")
+
 	// Log obligatorio
 	logger.Info("## Escritura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS)
+	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
 
 	dir, err := strconv.Atoi(dirS)
 	if err != nil {
@@ -43,14 +46,14 @@ func WriteMemory(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		logger.Error("No se pudo decodificar el cuerpo del request")
-		memoria_helpers.BadRequest(w, r)
+		http.Error(w, "No se pudo decodificar el cuerpo del request", http.StatusBadRequest)
 		return
 	}
 
 	err = memoria_helpers.WriteMemoryPosta(dir, data)
 	if err != nil {
 		logger.Error("Error al escribir en memoria de usuario")
-		memoria_helpers.BadRequest(w, r)
+		http.Error(w, "Error al escribir en memoria", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

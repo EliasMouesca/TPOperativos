@@ -56,9 +56,9 @@ func main() {
 
 	// STUB FORMAT RESPONSE
 	http.HandleFunc("/memoria/getInstruction", cpu.GetInstruction)
+	http.HandleFunc("/memoria/readMem", cpu.ReadMemory)
+	http.HandleFunc("/memoria/writeMem", cpu.WriteMemory)
 
-	http.HandleFunc("/memoria/readMem", kernel.ReadMemory)
-	http.HandleFunc("/memoria/writeMem", kernel.WriteMemory)
 	http.HandleFunc("/memoria/createProcess", kernel.CreateProcess)
 	http.HandleFunc("/memoria/finishProcess", kernel.FinishProcess)
 	http.HandleFunc("/memoria/createThread", kernel.CreateThread)

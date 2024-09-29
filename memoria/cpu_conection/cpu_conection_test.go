@@ -110,3 +110,7 @@ func TestExcecutionContext(t *testing.T) {
 	}
 
 }
+
+func TestGetInstruction(t *testing.T) {
+
+}

@@ -2,11 +2,12 @@ package cpu_conection
 
 import (
 	"encoding/json"
-	global "github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func GetContext(w http.ResponseWriter, r *http.Request) {
@@ -25,12 +26,17 @@ func GetContext(w http.ResponseWriter, r *http.Request) {
 
 	tid, err := strconv.Atoi(tidS)
 	pid, err := strconv.Atoi(pidS)
+	if err != nil {
+		logger.Error("No se pudo obtener los query params")
+		http.Error(w, "No se pudo obtener los query params", http.StatusBadRequest)
+		return
+	}
 	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
 
-	context, exists := global.ExecContext[thread]
+	context, exists := memoria_helpers.ExecContext[thread]
 	if !exists {
 		logger.Error("No se pudo encontrar el contexto")
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "No se pudo encontrar el contexto", http.StatusNotFound)
 		return
 	}
 
@@ -41,10 +47,11 @@ func GetContext(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(context)
 	if err != nil {
 		logger.Error("Error al escribir el response - %v", err.Error())
-		global.BadRequest(w, r)
+		http.Error(w, "Error al encontrar el contexto", http.StatusInternalServerError)
 		return
 	}
 
 	//log obligatorio
 	logger.Info("Contexto Solicitado - (PID:TID) - (%v,%v)", pidS, tidS)
+	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
 }

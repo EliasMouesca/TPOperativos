@@ -1,4 +1,4 @@
-package kernel_conection
+package cpu_conection
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func ReadMemory(w http.ResponseWriter, r *http.Request) {
@@ -24,17 +25,20 @@ func ReadMemory(w http.ResponseWriter, r *http.Request) {
 	// Que es el Tamaño????????
 	// Log obligatorio
 	logger.Info("## Lectura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS)
+	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
 
 	dir, err := strconv.Atoi(dirS)
 	if err != nil {
 		logger.Error("Dirección física mal formada: %v", dirS)
 		http.Error(w, "Dirección física mal formada", http.StatusNotFound)
+		return
 	}
 
 	data, err := memoria_helpers.ReadMemoryPosta(dir)
 	if err != nil {
 		logger.Error("Error al leer la dirección: %v", dir)
 		http.Error(w, "No se pudo leer la dirección de memoria", http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -42,7 +46,7 @@ func ReadMemory(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(data)
 	if err != nil {
 		logger.Error("Error al escribir el response - %v", err.Error())
-		memoria_helpers.BadRequest(w, r)
+		http.Error(w, "Error al escribir el response", http.StatusInternalServerError)
 		return
 	}
 }
