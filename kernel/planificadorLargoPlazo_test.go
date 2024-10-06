@@ -4,6 +4,8 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
+	"github.com/sisoputnfrba/tp-golang/types"
 	"testing"
 )
 
@@ -42,4 +44,79 @@ func TestProcessCreate(t *testing.T) {
 		}
 	}
 	logCurrentState("Estado Final")
+}
+
+func TestProcessExit(t *testing.T) {
+	// Inicializar variables globales
+	kernelglobals.EveryPCBInTheKernel = []kerneltypes.PCB{}
+	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
+	kernelglobals.NewStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.BlockedStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.ExitStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.ExecStateThread = nil
+
+	// Crear un PCB y agregarlo a EveryPCBInTheKernel
+	newPID := types.Pid(1)
+	pcb := kerneltypes.PCB{
+		PID:  newPID,
+		TIDs: []types.Tid{0, 1, 2, 3},
+	}
+	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, pcb)
+
+	// Obtener la referencia correcta del PCB desde EveryPCBInTheKernel
+	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+
+	// Crear 4 hilos asociados a este PCB, ahora utilizando la referencia correcta del PCB
+	mainThread := kerneltypes.TCB{TID: 0, Prioridad: 1, FatherPCB: fatherPCB}
+	readyThread := kerneltypes.TCB{TID: 1, Prioridad: 1, FatherPCB: fatherPCB}
+	blockedThread := kerneltypes.TCB{TID: 2, Prioridad: 1, FatherPCB: fatherPCB}
+	newThread := kerneltypes.TCB{TID: 3, Prioridad: 1, FatherPCB: fatherPCB}
+
+	// Agregar los hilos a EveryTCBInTheKernel
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread, readyThread, blockedThread, newThread)
+
+	// Obtener punteros correctos de cada hilo de EveryTCBInTheKernel
+	mainThreadPtr := &kernelglobals.EveryTCBInTheKernel[0]
+	readyThreadPtr := &kernelglobals.EveryTCBInTheKernel[1]
+	blockedThreadPtr := &kernelglobals.EveryTCBInTheKernel[2]
+	newThreadPtr := &kernelglobals.EveryTCBInTheKernel[3]
+
+	// Asignar el hilo principal como el hilo ejecutándose
+	kernelglobals.ExecStateThread = mainThreadPtr
+
+	// Agregar el hilo de Ready a ReadyStateQueue usando su puntero
+	kernelglobals.ShortTermScheduler = &Fifo.Fifo{
+		Ready: types.Queue[*kerneltypes.TCB]{},
+	}
+	kernelglobals.ShortTermScheduler.AddToReady(readyThreadPtr)
+
+	// Agregar el hilo de Blocked a BlockedStateQueue usando su puntero
+	kernelglobals.BlockedStateQueue.Add(blockedThreadPtr)
+
+	// Agregar el hilo de New a NewStateQueue usando su puntero
+	kernelglobals.NewStateQueue.Add(newThreadPtr)
+
+	logCurrentState("Estado Inicial")
+
+	// Llamar a la syscall ProcessExit
+	err := ProcessExit([]string{})
+	if err != nil {
+		t.Errorf("Error inesperado en ProcessExit: %v", err)
+	}
+
+	// Verificar que todos los hilos asociados al PCB fueron movidos a la cola ExitStateQueue
+	for _, tcb := range []*kerneltypes.TCB{mainThreadPtr, readyThreadPtr, blockedThreadPtr, newThreadPtr} {
+		hiloEncontrado := false
+		kernelglobals.ExitStateQueue.Do(func(exitTCB *kerneltypes.TCB) {
+			if exitTCB.TID == tcb.TID && exitTCB.FatherPCB.PID == pcb.PID {
+				hiloEncontrado = true
+			}
+		})
+
+		if !hiloEncontrado {
+			t.Errorf("El TID <%d> del PCB con PID <%d> no fue movido correctamente a ExitStateQueue", tcb.TID, pcb.PID)
+		}
+	}
+
+	logCurrentState("Estado luego de ProcessExit")
 }

@@ -19,28 +19,31 @@ func logCurrentState(context string) {
 	logger.Info("## -------- ESTADOS DE TCBs Y PCBs -------- ")
 	logger.Info(" - PCBs -")
 	for _, pcb := range kernelglobals.EveryPCBInTheKernel {
-		logger.Info("PCB PID: %d, TIDs: %v", pcb.PID, pcb.TIDs)
-		logger.Info("  Mutexes: ")
-		for _, mutex := range pcb.CreatedMutexes {
-			assignedTID := types.Tid(-1)
-			if mutex.AssignedTCB != nil {
-				assignedTID = mutex.AssignedTCB.TID
+		logger.Info("	(<%d:%v>), Mutexes: ", pcb.PID, pcb.TIDs)
+		if len(pcb.CreatedMutexes) == 0 {
+			logger.Info("  	No hay mutexes creados por este PCB")
+		} else {
+			for _, mutex := range pcb.CreatedMutexes {
+				assignedTID := types.Tid(-1)
+				if mutex.AssignedTCB != nil {
+					assignedTID = mutex.AssignedTCB.TID
+				}
+				logger.Info("	- %s : %d", mutex.Name, assignedTID)
 			}
-			logger.Info("    - %s : %d", mutex.Name, assignedTID)
 		}
 	}
 
 	// Mostrar estados de TCBs
 	logger.Info(" - TCBs -")
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
-		logger.Info("(<%d:%d>), Prioridad: %d", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad)
+		logger.Info("	(<%d:%d>), Prioridad: %d", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad)
 
 		if len(tcb.LockedMutexes) == 0 {
-			logger.Info("  No hay mutexes bloqueados por este TCB")
+			logger.Info("  	No hay mutexes bloqueados por este TCB")
 		} else {
-			logger.Info("  Mutexes locked por TCB:")
+			logger.Info("  	Mutexes locked por TCB:")
 			for _, lockedMutex := range tcb.LockedMutexes {
-				logger.Info("    - %s", lockedMutex.Name)
+				logger.Info("    	- %s", lockedMutex.Name)
 			}
 		}
 	}
@@ -48,7 +51,7 @@ func logCurrentState(context string) {
 	logger.Info("\n")
 
 	// Mostrar estados de las colas
-	logger.Info("## -------- ESTADOS DE COLAS -------- ")
+	logger.Info("## -------- ESTADOS DE COLAS Y TCB EJECUTANDO -------- ")
 
 	// Mostrar la cola de NewStateQueue
 	logger.Info("NewStateQueue: ")
@@ -67,16 +70,16 @@ func logCurrentState(context string) {
 	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		logger.Info("  (<%d:%d>)", tcb.FatherPCB.PID, tcb.TID)
 	})
-	logger.Info("\n")
 
 	// Validar que ExecStateThread no sea nil
 	if kernelglobals.ExecStateThread != nil {
-		logger.Info("Estado actual de ExecStateThread: PID <%d>, TID <%d>, LockedMutexes: ",
+		logger.Info("ExecStateThread:")
+		logger.Info("	(<%d:%d>), LockedMutexes: ",
 			kernelglobals.ExecStateThread.FatherPCB.PID,
 			kernelglobals.ExecStateThread.TID,
 		)
 		if len(kernelglobals.ExecStateThread.LockedMutexes) == 0 {
-			logger.Info("  No hay mutexes bloqueados por el hilo en ejecución")
+			logger.Info("  	No hay mutexes bloqueados por el hilo en ejecución")
 		} else {
 			for _, mutex := range kernelglobals.ExecStateThread.LockedMutexes {
 				logger.Info("	-%v", mutex.Name)
@@ -85,4 +88,5 @@ func logCurrentState(context string) {
 	} else {
 		logger.Info("No hay hilo en ejecución actualmente.")
 	}
+	logger.Info("\n")
 }
