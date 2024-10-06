@@ -87,19 +87,19 @@ func TestAddToReady(t *testing.T) {
 		prioridades.AddToReady(v)
 	}
 
-	if len(correctSlice) != len(prioridades.readyThreads) {
-		t.Errorf("No son del mismo tamaño\nCorrect slice: %v\nReceived Slice: %v\nTest slice: %v", correctSlice, prioridades.readyThreads, testSlice)
+	if len(correctSlice) != len(prioridades.ReadyThreads) {
+		t.Errorf("No son del mismo tamaño\nCorrect slice: %v\nReceived Slice: %v\nTest slice: %v", correctSlice, prioridades.ReadyThreads, testSlice)
 		return
 	}
 
 	for i := range correctSlice {
-		if correctSlice[i].TID != prioridades.readyThreads[i].TID {
-			t.Errorf("\nCorrect slice: %v\nReceived Slice: %v\nTest slice: %v", correctSlice, prioridades.readyThreads, testSlice)
+		if correctSlice[i].TID != prioridades.ReadyThreads[i].TID {
+			t.Errorf("\nCorrect slice: %v\nReceived Slice: %v\nTest slice: %v", correctSlice, prioridades.ReadyThreads, testSlice)
 			return
 		}
 	}
 
-	logger.Debug("\nCorrect slice: %v\nReceived Slice: %v\nTest slice: %v\n", correctSlice, prioridades.readyThreads, testSlice)
+	logger.Debug("\nCorrect slice: %v\nReceived Slice: %v\nTest slice: %v\n", correctSlice, prioridades.ReadyThreads, testSlice)
 
 }
 
@@ -120,17 +120,17 @@ func TestAddToReadyFIFO(t *testing.T) {
 		prioridades.AddToReady(v)
 	}
 
-	if len(correctSlice) != len(prioridades.readyThreads) {
-		t.Errorf("No son del mismo tamaño\nCorrect slice: %v\nReceived Slice: %v", correctSlice, prioridades.readyThreads)
+	if len(correctSlice) != len(prioridades.ReadyThreads) {
+		t.Errorf("No son del mismo tamaño\nCorrect slice: %v\nReceived Slice: %v", correctSlice, prioridades.ReadyThreads)
 		return
 	}
 
 	for i := range correctSlice {
-		if correctSlice[i].TID != prioridades.readyThreads[i].TID {
-			t.Errorf("\nCorrect slice: %v\nReceived Slice: %v", correctSlice, prioridades.readyThreads)
+		if correctSlice[i].TID != prioridades.ReadyThreads[i].TID {
+			t.Errorf("\nCorrect slice: %v\nReceived Slice: %v", correctSlice, prioridades.ReadyThreads)
 			return
 		}
 	}
 
-	logger.Debug("\nCorrect slice: %v\nReceived Slice: %v\n", correctSlice, prioridades.readyThreads)
+	logger.Debug("\nCorrect slice: %v\nReceived Slice: %v\n", correctSlice, prioridades.ReadyThreads)
 }

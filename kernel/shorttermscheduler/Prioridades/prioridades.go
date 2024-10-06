@@ -11,11 +11,11 @@ import (
 )
 
 type Prioridades struct {
-	readyThreads []*kerneltypes.TCB
+	ReadyThreads []*kerneltypes.TCB
 }
 
 func (prioridades *Prioridades) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
-	for _, v := range prioridades.readyThreads {
+	for _, v := range prioridades.ReadyThreads {
 		if v.TID == tid && v.FatherPCB.PID == pid {
 			return true, nil
 		}
@@ -34,9 +34,9 @@ func (prioridades *Prioridades) ThreadRemove(tid types.Tid, pid types.Pid) error
 		return errors.New("el hilo con el TID especificado no se encontró en la cola de prioridades o no pertenece al PCB con PID especificado")
 	}
 
-	for i, v := range prioridades.readyThreads {
+	for i, v := range prioridades.ReadyThreads {
 		if v.TID == tid && v.FatherPCB.PID == pid {
-			prioridades.readyThreads = append(prioridades.readyThreads[:i], prioridades.readyThreads[i+1:]...)
+			prioridades.ReadyThreads = append(prioridades.ReadyThreads[:i], prioridades.ReadyThreads[i+1:]...)
 			kernelglobals.ExitStateQueue.Add(v)
 			logger.Info("Hilo con TID <%d> del PCB con PID <%d> eliminado de la cola de prioridades", tid, pid)
 			return nil
@@ -49,10 +49,10 @@ func (prioridades *Prioridades) ThreadRemove(tid types.Tid, pid types.Pid) error
 func (prioridades *Prioridades) Planificar() (*kerneltypes.TCB, error) {
 	<-kernelsync.PendingThreadsChannel
 
-	selectedProces := prioridades.readyThreads[0]
+	selectedProces := prioridades.ReadyThreads[0]
 	// El proceso se quita de la cola, si por alguna razón el proceso vuelve de CPU sin terminar, debería "creárselo"
 	// de nuevo y agregarlo a la cola. TODO: Cómo rompe esto el tema del quantum??
-	prioridades.readyThreads = prioridades.readyThreads[1:]
+	prioridades.ReadyThreads = prioridades.ReadyThreads[1:]
 
 	return selectedProces, nil
 }
@@ -61,26 +61,26 @@ func (prioridades *Prioridades) AddToReady(threadToAdd *kerneltypes.TCB) error {
 	logger.Trace("Adding thread to ready (Prioridades): %v", threadToAdd)
 
 	// Si es la primera vez que se llama a la función (la lista es nula), creala
-	if prioridades.readyThreads == nil {
+	if prioridades.ReadyThreads == nil {
 		logger.Trace("Creating slice of ready threads")
-		prioridades.readyThreads = make([]*kerneltypes.TCB, 0)
+		prioridades.ReadyThreads = make([]*kerneltypes.TCB, 0)
 	}
 
 	inserted := false
 	// Por cada hilo que ya está en la lista
-	for i := range prioridades.readyThreads {
+	for i := range prioridades.ReadyThreads {
 		// Si la prioridad del hilo a agregar es mayor a lo que acabamos de leer
-		if threadToAdd.Prioridad < prioridades.readyThreads[i].Prioridad {
+		if threadToAdd.Prioridad < prioridades.ReadyThreads[i].Prioridad {
 			// Entonces, insertá el hilo en orden
-			prioridades.readyThreads = append(prioridades.readyThreads[:i+1], prioridades.readyThreads[i:]...)
-			prioridades.readyThreads[i] = threadToAdd
+			prioridades.ReadyThreads = append(prioridades.ReadyThreads[:i+1], prioridades.ReadyThreads[i:]...)
+			prioridades.ReadyThreads[i] = threadToAdd
 			inserted = true
 			break
 		}
 	}
 
 	if !inserted {
-		prioridades.readyThreads = append(prioridades.readyThreads, threadToAdd)
+		prioridades.ReadyThreads = append(prioridades.ReadyThreads, threadToAdd)
 	}
 
 	go func() {
@@ -99,7 +99,7 @@ func (prioridades *Prioridades) AddToReady(threadToAdd *kerneltypes.TCB) error {
 			}
 		}
 	}
-	logger.Trace("Slice left like this: %v", prioridades.readyThreads)
+	logger.Trace("Slice left like this: %v", prioridades.ReadyThreads)
 
 	return nil
 }

@@ -1,15 +1,11 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
-	"net/http"
 	"strconv"
 )
 
@@ -27,53 +23,55 @@ func planificadorLargoPlazo() {
 
 func NewProcessToReady() {
 	for {
-		// Espera a que se cree un proceso y le mande sus argumentos,
-		// se van guardando los argumentos de cada proceso en el canal a medidad que se crean
+		// Espera los argumentos del proceso desde el canal
 		args := <-kernelsync.ChannelProcessArguments
-		logger.Debug("Llegaron los argumentos de la syscall")
+		logger.Debug("Llegaron los argumentos de la syscall: %v", args)
 		fileName := args[0]
 		processSize := args[1]
 		prioridad, _ := strconv.Atoi(args[2])
 
+		// Crear el request para verificar si memoria tiene espacio
 		request := types.RequestToMemory{
 			Type:      types.CreateProcess,
 			Arguments: []string{fileName, processSize},
 		}
-		// Se crea un hilo porque tiene que esperar a que se libere espacio en memoria
-		// para mandar el siguiente proceso a Ready
+
 		logger.Debug("Preguntando a memoria si tiene espacio disponible")
+		// Loop hasta que memoria confirme que tiene espacio
 		for {
 			err := sendMemoryRequest(request)
 			if err != nil {
-				logger.Error("%v", err)
-				<-kernelsync.InitProcess
+				logger.Error("Error al enviar request a memoria: %v", err)
+				<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
 			} else {
 				logger.Debug("Hay espacio disponible en memoria")
 				break
 			}
 		}
 
-		// El if para preguntar si esta vacia la cola Null no hace falta,
-		// porque esta planificacion solo ocurre si se creo el proceso,
-		// el cual se envian sus argumentos atraves de ChannelProcessArguments
+		// Obtener el PCB desde la cola de NewStateQueue
 		pcb, err := kernelglobals.NewPCBStateQueue.GetAndRemoveNext()
 		if err != nil {
 			logger.Error("Error en la cola NEW - %v", err)
+			continue
 		}
 
-		// busco al tcb con TID = 0 del pcb que se obtuvo de la cola de NEW
-		var mainThread kerneltypes.TCB
-		mainThread = kerneltypes.TCB{
+		// Crear el hilo principal (mainThread) ahora que el proceso tiene espacio en memoria
+		mainThread := kerneltypes.TCB{
 			TID:       0,
 			Prioridad: prioridad,
 			FatherPCB: pcb,
 		}
 
-		// Mandamos el hiloMain a Ready
-		kernelglobals.ShortTermScheduler.AddToReady(&mainThread)
-		logger.Info("Se agrego el hilo main a la cola Ready")
-
+		// Agregar el mainThread a la lista de TCBs en el kernel
 		kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
+
+		// Obtener el puntero del hilo principal para encolarlo en Ready
+		mainThreadPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+
+		// Mover el mainThread a la cola de Ready
+		kernelglobals.ShortTermScheduler.AddToReady(mainThreadPtr)
+		logger.Info("Se agregó el hilo main (TID 0) del proceso PID <%d> a la cola Ready", pcb.PID)
 	}
 }
 
@@ -219,6 +217,13 @@ func releaseMutexes(tid int) {
 }*/
 
 func sendMemoryRequest(request types.RequestToMemory) error {
+	// Simulación de respuesta exitosa sin hacer la solicitud real a memoria
+	logger.Debug("Simulando respuesta exitosa de la memoria para request de tipo %s", request.Type)
+	return nil
+}
+
+/*
+func sendMemoryRequest(request types.RequestToMemory) error {
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
 
 	// Serializar mensaje
@@ -258,3 +263,4 @@ func handleMemoryResponseError(response *http.Response, TypeRequest string) erro
 	}
 	return nil
 }
+*/

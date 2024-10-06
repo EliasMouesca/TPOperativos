@@ -3,6 +3,9 @@ package main
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/ColasMultinivel"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Prioridades"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
@@ -58,6 +61,30 @@ func logCurrentState(context string) {
 	kernelglobals.NewStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		logger.Info("  (<%d:%d>)", tcb.FatherPCB.PID, tcb.TID)
 	})
+
+	// Verificar el tipo de planificador en uso y mostrar las colas de Ready adecuadamente
+	switch scheduler := kernelglobals.ShortTermScheduler.(type) {
+	case *Fifo.Fifo:
+		logger.Info("ReadyStateQueue FIFO: ")
+		scheduler.Ready.Do(func(tcb *kerneltypes.TCB) {
+			logger.Info("  (<%d:%d>)", tcb.FatherPCB.PID, tcb.TID)
+		})
+	case *Prioridades.Prioridades:
+		logger.Info("ReadyStateQueue PRIORIDADES: ")
+		for _, tcb := range scheduler.ReadyThreads {
+			logger.Info("  (<%d:%d>)", tcb.FatherPCB.PID, tcb.TID)
+		}
+	case *ColasMultinivel.ColasMultiNivel:
+		logger.Info("ReadyStateQueue MULTI NIVEL: ")
+		for i, queue := range scheduler.ReadyQueue {
+			logger.Info("Nivel %d:", i)
+			queue.Do(func(tcb *kerneltypes.TCB) {
+				logger.Info("  (<%d:%d>)", tcb.FatherPCB.PID, tcb.TID)
+			})
+		}
+	default:
+		logger.Warn("No se reconoce el tipo de planificador en uso.")
+	}
 
 	// Mostrar la cola de BlockedStateQueue
 	logger.Info("BlockedStateQueue: ")

@@ -11,11 +11,11 @@ import (
 )
 
 type ColasMultiNivel struct {
-	readyQueue []*types.Queue[*kerneltypes.TCB]
+	ReadyQueue []*types.Queue[*kerneltypes.TCB]
 }
 
 func (cmm *ColasMultiNivel) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
-	for _, queue := range cmm.readyQueue {
+	for _, queue := range cmm.ReadyQueue {
 		for _, tcb := range queue.GetElements() {
 			if tcb.TID == tid && tcb.FatherPCB.PID == pid {
 				return true, nil
@@ -31,7 +31,7 @@ func (cmm *ColasMultiNivel) ThreadRemove(tid types.Tid, pid types.Pid) error {
 		return errors.New("no se pudo eliminar el hilo con TID especificado o no pertenece al PCB con PID especificado")
 	}
 
-	for _, queue := range cmm.readyQueue {
+	for _, queue := range cmm.ReadyQueue {
 		queueSize := queue.Size()
 		for i := 0; i < queueSize; i++ {
 			r, err := queue.GetAndRemoveNext()
@@ -63,16 +63,16 @@ func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
 
 func (cmm *ColasMultiNivel) AddToReady(tcb *kerneltypes.TCB) error {
 	// Inicializo la cola si es la primera vez que se llama
-	if cmm.readyQueue == nil {
-		cmm.readyQueue = make([]*types.Queue[*kerneltypes.TCB], 0)
+	if cmm.ReadyQueue == nil {
+		cmm.ReadyQueue = make([]*types.Queue[*kerneltypes.TCB], 0)
 	}
 
 	inserted := false
-	for i := range cmm.readyQueue {
+	for i := range cmm.ReadyQueue {
 		// Verifico si ya existe una cola de la prioridad del hilo
-		if cmm.readyQueue[i].Priority == tcb.Prioridad {
+		if cmm.ReadyQueue[i].Priority == tcb.Prioridad {
 			// Si existe lo agrego de forma FIFO a la cola y salgo
-			cmm.readyQueue[i].Add(tcb)
+			cmm.ReadyQueue[i].Add(tcb)
 			inserted = true
 			break
 		}
@@ -101,26 +101,26 @@ func (cmm *ColasMultiNivel) addNewQueue(tcb *kerneltypes.TCB) error {
 
 	// Buscar la posición correcta para insertar la nueva cola
 	insertedAt := false
-	for i := range cmm.readyQueue {
-		if newQueue.Priority < cmm.readyQueue[i].Priority {
+	for i := range cmm.ReadyQueue {
+		if newQueue.Priority < cmm.ReadyQueue[i].Priority {
 			// Insertar la nueva cola en la posición `i` sin remover otros elementos
-			cmm.readyQueue = append(cmm.readyQueue[:i], append([]*types.Queue[*kerneltypes.TCB]{newQueue}, cmm.readyQueue[i:]...)...)
+			cmm.ReadyQueue = append(cmm.ReadyQueue[:i], append([]*types.Queue[*kerneltypes.TCB]{newQueue}, cmm.ReadyQueue[i:]...)...)
 			insertedAt = true
 			break
 		}
 	}
 	// Si la prioridad es la menor (número más alto), se agrega al final
 	if !insertedAt {
-		cmm.readyQueue = append(cmm.readyQueue, newQueue)
+		cmm.ReadyQueue = append(cmm.ReadyQueue, newQueue)
 	}
 
 	return nil
 }
 
 func (cmm *ColasMultiNivel) getNextTcb() (*kerneltypes.TCB, error) {
-	for i := range cmm.readyQueue {
-		if !cmm.readyQueue[i].IsEmpty() {
-			nextTcb, err := roundRobin(cmm.readyQueue[i])
+	for i := range cmm.ReadyQueue {
+		if !cmm.ReadyQueue[i].IsEmpty() {
+			nextTcb, err := roundRobin(cmm.ReadyQueue[i])
 			if err != nil {
 				return nil, err
 			}

@@ -73,7 +73,7 @@ func TestColasMultiNivel_AddToReady(t *testing.T) {
 		colasMultinivel.AddToReady(v)
 	}
 
-	for p, cola := range colasMultinivel.readyQueue {
+	for p, cola := range colasMultinivel.ReadyQueue {
 		for _, v := range correctQueue[p] {
 			tcb, _ := cola.GetAndRemoveNext()
 			if v.TID != tcb.TID {
@@ -93,7 +93,7 @@ func TestColasMultiNivel_AddNewQueue(t *testing.T) {
 
 	colasMultinivel.AddToReady(&tcb)
 
-	readyQueue := colasMultinivel.readyQueue
+	readyQueue := colasMultinivel.ReadyQueue
 	// Tiene una sola cola en el slice por eso esto anda
 	for _, queue := range readyQueue {
 		if queue.Priority != tcb.Prioridad {

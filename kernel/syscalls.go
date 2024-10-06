@@ -31,35 +31,24 @@ var syscallSet = map[int]syscallFunction{
 var PIDcount int = 0
 
 func ProcessCreate(args []string) error {
-	// Esta syscall recibirá 3 parámetros de la CPU, el primero será el nombre del archivo
-	// de pseudocódigo que deberá ejecutar el proceso, el segundo parámetro es el tamaño del proceso en
-	// Memoria y el tercer parámetro es la prioridad del hilo main (TID 0). El Kernel creará un nuevo PCB y
-	// un TCB asociado con TID 0 y lo dejará en estado NEW.
+	// Esta syscall recibirá 3 parámetros de la CPU: nombre del archivo, tamaño del proceso y prioridad del hilo main (TID 0).
+	// El Kernel creará un nuevo PCB y lo dejará en estado NEW.
 
-	// Se crea el PCB
+	// Se crea el PCB (sin crear el hilo principal aún)
 	var processCreate kerneltypes.PCB
 	PIDcount++
 	processCreate.PID = types.Pid(PIDcount)
-	processCreate.TIDs = []types.Tid{0}
+	processCreate.TIDs = []types.Tid{0} // Solo se conoce el TID 0 por ahora
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", processCreate.PID)
 
 	// Agregar el PCB a la lista de PCBs en el kernel
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, processCreate)
 
-	// Crear el TCB para el hilo principal (TID 0)
-	mainThread := kerneltypes.TCB{
-		TID:       0,
-		Prioridad: 0, // Aquí debes asignar la prioridad que viene en los argumentos, si corresponde
-		FatherPCB: &processCreate,
-	}
+	// Mandar el proceso a la cola de NewStateQueue (solo PCB, sin TCB)
+	kernelglobals.NewPCBStateQueue.Add(&kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1])
 
-	// Agregar el TCB a la lista de TCBs en el kernel
-	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
-	mainThreadPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
-	kernelglobals.NewStateQueue.Add(mainThreadPtr)
-
-	// Enviar los argumentos al canal para continuar con el procesamiento del proceso
+	// Enviar los argumentos al canal para que NewProcessToReady los procese
 	kernelsync.ChannelProcessArguments <- args
 
 	return nil
