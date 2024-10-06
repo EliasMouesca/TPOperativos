@@ -165,98 +165,97 @@ func TestThreadJoin(t *testing.T) {
 	}
 }
 
-/*
-
 func TestThreadCancel(t *testing.T) {
-	setup()
+	// Inicializar variables globales
+	kernelglobals.EveryPCBInTheKernel = []kerneltypes.PCB{}
+	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
+	kernelglobals.ExecStateThread = nil
+	kernelglobals.ExitStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.BlockedStateQueue = types.Queue[*kerneltypes.TCB]{}
 
-	// Crear un PCB y TCBs de prueba
-	pcb := kerneltypes.PCB{
-		PID:            0,
-		TIDs:           []int{0, 1, 2}, // El proceso tiene tres hilos TID 0, 1 y 2
-		CreatedMutexes: []int{},
+	// Inicializar el planificador con FIFO para facilitar la prueba
+	kernelglobals.ShortTermScheduler = &Fifo.Fifo{
+		Ready: types.Queue[*kerneltypes.TCB]{}, // Inicializa la cola FIFO
 	}
 
-	// Crear tres TCBs asociados al mismo PCB
-	tcb1 := kerneltypes.TCB{
-		TID:       0,
-		Prioridad: 0,
-		FatherPCB: &pcb,
+	// Crear un PCB y agregarlo a EveryPCBInTheKernel
+	newPID := types.Pid(1)
+	newPCB := kerneltypes.PCB{
+		PID:            newPID,
+		TIDs:           []types.Tid{},
+		CreatedMutexes: []kerneltypes.Mutex{},
 	}
-	tcb2 := kerneltypes.TCB{
-		TID:       1,
-		Prioridad: 0,
-		FatherPCB: &pcb,
+	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, newPCB)
+
+	// Asignar la referencia correcta del PCB guardado en EveryPCBInTheKernel
+	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+
+	// Crear dos TCBs, uno para el hilo actual y otro para el TID a cancelar
+	execTCB := kerneltypes.TCB{
+		TID:           0,         // Hilo actual
+		Prioridad:     1,         // Prioridad inicial
+		FatherPCB:     fatherPCB, // Asignar el PCB
+		LockedMutexes: []*kerneltypes.Mutex{},
+		JoinedTCB:     nil,
 	}
-	tcb3 := kerneltypes.TCB{
-		TID:       2,
-		Prioridad: 0,
-		FatherPCB: &pcb,
-	}
-
-	// Añadir los TCBs a la cola de Ready, simulando que están listos para ejecutarse
-	kernelglobals.ReadyStateQueue.Add(&tcb3)
-	kernelglobals.ReadyStateQueue.Add(&tcb2)
-
-	// Asignar el primer hilo como el hilo en ejecución
-	kernelglobals.ExecStateThread = tcb1
-
-	// Mostrar estado inicial del PCB antes de la syscall ThreadCancel
-	logPCBState("Estado inicial del PCB antes de la syscall ThreadCancel", &pcb)
-
-	// Preparar los argumentos para la syscall ThreadCancel (cancelar el hilo 1)
-	args := []string{"1"} // Se cancelará el TID 1
-	syscall := syscalls.Syscall{
-		Type:      syscalls.ThreadCancel,
-		Arguments: args,
+	cancelTCB := kerneltypes.TCB{
+		TID:           2, // Hilo a cancelar
+		Prioridad:     1,
+		FatherPCB:     fatherPCB, // Mismo PCB
+		LockedMutexes: []*kerneltypes.Mutex{},
+		JoinedTCB:     nil,
 	}
 
-	// Ejecutar la syscall ThreadCancel desde el hilo 0
-	err := ExecuteSyscall(syscall)
+	// Añadir el TCB del hilo actual a EveryTCBInTheKernel
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
+
+	// Inicializar el hilo actual en ejecución
+	kernelglobals.ExecStateThread = &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+
+	// Añadir el TCB del hilo a cancelar a la cola de Ready (simulando que está listo para ejecutarse)
+	kernelglobals.ShortTermScheduler.AddToReady(&cancelTCB)
+
+	// Añadir el TID del hilo actual y el hilo a cancelar al PCB
+	fatherPCB.TIDs = append(fatherPCB.TIDs, execTCB.TID)
+	fatherPCB.TIDs = append(fatherPCB.TIDs, cancelTCB.TID)
+
+	logCurrentState("Estado Inicial.")
+
+	// Argumentos de entrada para ThreadCancel (TID del hilo a cancelar)
+	args := []string{"2"} // El TID del hilo a cancelar
+
+	// Llamar a ThreadCancel
+	err := ThreadCancel(args)
 	if err != nil {
-		t.Fatalf("Error al ejecutar syscall THREAD_CANCEL: %v", err)
+		t.Errorf("Error inesperado en ThreadCancel: %v", err)
 	}
 
-	// Verificar que el hilo 1 ha sido movido a la cola de Exit
-	foundInExit := false
-	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb2.TID && tcb.FatherPCB == &pcb {
-			foundInExit = true
+	logCurrentState("Estado luego de llamar a ThreadCancel")
+
+	// Verificar que el hilo cancelado fue movido a la cola de ExitStateQueue
+	logger.Info("Recorriendo ExitStateQueue para ver si se agregó correctamente el TCB: %v.", cancelTCB.TID)
+	cancelled := false
+	queueSize := kernelglobals.ExitStateQueue.Size()
+	for i := 0; i < queueSize; i++ {
+		tcb, _ := kernelglobals.ExitStateQueue.GetAndRemoveNext()
+		if tcb.TID == cancelTCB.TID {
+			cancelled = true
+			logger.Info("Se encontró el TCB con TID %v en la cola ExitStateQueue.", cancelTCB.TID)
 		}
-	})
-
-	if !foundInExit {
-		t.Fatalf("El hilo con TID <%d> no se encontró en la cola de ExitStateQueue", tcb2.TID)
+		kernelglobals.ExitStateQueue.Add(tcb) // Volver a agregar a la cola
+	}
+	if !cancelled {
+		t.Errorf("El hilo cancelado no fue añadido a la ExitStateQueue correctamente")
 	}
 
-	// Verificar que el hilo 1 ha sido eliminado de ReadyState y BlockedState
-	foundInReady := false
-	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb2.TID && tcb.FatherPCB == &pcb {
-			foundInReady = true
-		}
-	})
-
-	if foundInReady {
-		t.Fatalf("El hilo con TID <%d> no debería estar en la cola de ReadyStateQueue después de ser cancelado", tcb2.TID)
+	// Verificar que el hilo ya no está en la cola de ready
+	exists, _ := kernelglobals.ShortTermScheduler.ThreadExists(cancelTCB.TID, fatherPCB.PID)
+	if exists {
+		t.Errorf("El hilo cancelado no fue removido de la cola de Ready")
 	}
-
-	foundInBlocked := false
-	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb2.TID && tcb.FatherPCB == &pcb {
-			foundInBlocked = true
-		}
-	})
-
-	if foundInBlocked {
-		t.Fatalf("El hilo con TID <%d> no debería estar en la cola de BlockedStateQueue después de ser cancelado", tcb2.TID)
-	}
-
-	// Mostrar el estado final del PCB después de ejecutar ThreadCancel
-	logPCBState("Estado final del PCB después de ejecutar ThreadCancel", &pcb)
-
-	t.Logf("El hilo con TID <%d> ha sido cancelado correctamente y movido al estado EXIT", tcb2.TID)
 }
+
+/*
 
 func TestThreadExit(t *testing.T) {
 	setup()

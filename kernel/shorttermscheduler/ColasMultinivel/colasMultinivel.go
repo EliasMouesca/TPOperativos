@@ -42,7 +42,7 @@ func (cmm *ColasMultiNivel) ThreadRemove(tid types.Tid, pid types.Pid) error {
 			if r.TID != tid || r.FatherPCB.PID != pid {
 				queue.Add(r)
 			} else {
-				return nil
+				kernelglobals.ExitStateQueue.Add(r)
 			}
 		}
 	}
