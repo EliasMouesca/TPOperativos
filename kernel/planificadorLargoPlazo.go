@@ -14,7 +14,7 @@ func planificadorLargoPlazo() {
 	// quiza hay que hacerlo aca o en kernel.go es lo mismo creo
 	go NewProcessToReady()
 
-	go ProcessReadyToExit()
+	go ProcessToExit()
 
 	go NewThreadToReady()
 
@@ -75,22 +75,23 @@ func NewProcessToReady() {
 	}
 }
 
-func ProcessReadyToExit() {
+func ProcessToExit() {
 	for {
+		// Recibir la señal de finalización de un proceso
 		PID := <-kernelsync.ChannelFinishprocess
-		pid := strconv.Itoa(int(PID))
+
+		// Simular la comunicación con memoria (puede ser mockeado o real)
+		pidStr := strconv.Itoa(int(PID))
 		request := types.RequestToMemory{
 			Type:      types.FinishProcess,
-			Arguments: []string{pid},
+			Arguments: []string{pidStr},
 		}
 		logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", PID)
-		for {
-			err := sendMemoryRequest(request)
-			if err != nil {
-				logger.Error("%v", err)
-			} else {
-				kernelsync.SemFinishprocess <- 0
-			}
+
+		// Simular el request a memoria (puede reemplazarse con la función real si está disponible)
+		err := sendMemoryRequest(request)
+		if err != nil {
+			logger.Error("Error en el request a memoria: %v", err)
 		}
 	}
 }
@@ -108,6 +109,7 @@ func NewThreadToReady() {
 		err := sendMemoryRequest(request)
 		if err != nil {
 			logger.Error("%v", err)
+
 		}
 		kernelsync.SemThreadCreate <- 0
 	}

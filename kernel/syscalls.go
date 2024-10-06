@@ -67,10 +67,6 @@ func ProcessExit(args []string) error {
 		return errors.New("el hilo que quiso eliminar el proceso no es el hilo main")
 	}
 
-	// Enviar la señal a la memoria sobre la finalización del proceso
-	//kernelsync.ChannelFinishprocess <- pcb.PID
-	//<-kernelsync.SemFinishprocess
-
 	// Eliminar todos los hilos del PCB de las colas de Ready
 	for _, tid := range pcb.TIDs {
 		// 1. Verificar y eliminar hilos de la cola de Ready
@@ -122,6 +118,10 @@ func ProcessExit(args []string) error {
 	// Finalmente, mover el hilo principal (ExecStateThread) a ExitStateQueue
 	kernelglobals.ExitStateQueue.Add(tcb)
 	kernelglobals.ExecStateThread = nil
+
+	// Enviar la señal a la memoria sobre la finalización del proceso
+	//kernelsync.ChannelFinishprocess <- pcb.PID
+	//<-kernelsync.SemFinishprocess
 
 	logger.Info("## Finaliza el proceso <%v>", pcb.PID)
 	//kernelsync.InitProcess <- 0
