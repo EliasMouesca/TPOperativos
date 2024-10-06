@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
@@ -16,22 +17,34 @@ func logCurrentState(context string) {
 
 	// Mostrar estados de PCBs
 	logger.Info("## -------- ESTADOS DE TCBs Y PCBs -------- ")
+	logger.Info(" - PCBs -")
 	for _, pcb := range kernelglobals.EveryPCBInTheKernel {
 		logger.Info("PCB PID: %d, TIDs: %v", pcb.PID, pcb.TIDs)
 		logger.Info("  Mutexes: ")
 		for _, mutex := range pcb.CreatedMutexes {
-			logger.Info("    - %s", mutex.Name)
+			assignedTID := types.Tid(-1)
+			if mutex.AssignedTCB != nil {
+				assignedTID = mutex.AssignedTCB.TID
+			}
+			logger.Info("    - %s : %d", mutex.Name, assignedTID)
 		}
 	}
 
 	// Mostrar estados de TCBs
+	logger.Info(" - TCBs -")
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
 		logger.Info("(<%d:%d>), Prioridad: %d", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad)
-		logger.Info("  Mutexes locked por TCB:")
-		for _, lockedMutex := range tcb.LockedMutexes {
-			logger.Info("    - %s", lockedMutex.Name)
+
+		if len(tcb.LockedMutexes) == 0 {
+			logger.Info("  No hay mutexes bloqueados por este TCB")
+		} else {
+			logger.Info("  Mutexes locked por TCB:")
+			for _, lockedMutex := range tcb.LockedMutexes {
+				logger.Info("    - %s", lockedMutex.Name)
+			}
 		}
 	}
+
 	logger.Info("\n")
 
 	// Mostrar estados de las colas
@@ -56,8 +69,12 @@ func logCurrentState(context string) {
 			kernelglobals.ExecStateThread.FatherPCB.PID,
 			kernelglobals.ExecStateThread.TID,
 		)
-		for _, mutex := range kernelglobals.ExecStateThread.LockedMutexes {
-			logger.Info("	-%v", mutex.Name)
+		if len(kernelglobals.ExecStateThread.LockedMutexes) == 0 {
+			logger.Info("  No hay mutexes bloqueados por el hilo en ejecución")
+		} else {
+			for _, mutex := range kernelglobals.ExecStateThread.LockedMutexes {
+				logger.Info("	-%v", mutex.Name)
+			}
 		}
 	} else {
 		logger.Info("No hay hilo en ejecución actualmente.")

@@ -322,67 +322,61 @@ func MutexLock(args []string) error {
 }
 
 func MutexUnlock(args []string) error {
-	// Se deberá verificar primero que exista el mutex solicitado y esté
-	// tomado por el hilo que realizó la syscall. En caso de que
-	// corresponda, se deberá desbloquear al primer hilo de la cola de
-	// bloqueados de ese mutex y le asignará el mutex al hilo recién
-	// desbloqueado. Una vez hecho esto, se devuelve la ejecución al hilo
-	// que realizó la syscall MUTEX_UNLOCK. En caso de que el hilo que
-	// realiza la syscall no tenga asignado el mutex, no realizará
-	// ningún desbloqueo.
-
 	mutexName := args[0]
 	execTCB := kernelglobals.ExecStateThread
 	execPCB := execTCB.FatherPCB
 
-	// TODO: Organizar, for del if del if del if del for del if
 	encontrado := false
-	for _, mutex := range execPCB.CreatedMutexes {
+	for i := range execPCB.CreatedMutexes {
+		mutex := &execPCB.CreatedMutexes[i]
+
 		if mutex.Name == mutexName {
+			logger.Info("Se ha encontrado el mutex que se desea realizar UnLock.")
 			encontrado = true
-			// Si no está asignado..
+
 			if mutex.AssignedTCB == nil {
 				logger.Info("## El hilo actual (TID <%d>) no tiene asignado el mutex <%s>. No se realizará ningún desbloqueo.", execTCB.TID, mutexName)
 				return errors.New("el mutex no está asignado a ningún hilo")
-			} else {
-				if !mutex.AssignedTCB.Equal(execTCB) {
-					logger.Debug("Un hilo trató de liberar un mutex que no le fue asignado")
-				} else {
-					logger.Debug("Liberando mutex <%v> del hilo <%v> del proceso <%v>",
-						mutexName, execTCB.TID, execPCB.PID)
-					mutex.AssignedTCB = nil
-					mutexExistsInTcb := false
-					for _, mutexB := range execTCB.LockedMutexes {
-						if mutex.Equal(mutexB) {
-							mutexExistsInTcb = true
+			}
 
-							if len(mutex.BlockedTCBs) > 0 {
-								nextTcb := mutex.BlockedTCBs[0]
-								mutex.BlockedTCBs = mutex.BlockedTCBs[1:]
+			if mutex.AssignedTCB.TID != execTCB.TID {
+				logger.Debug("Un hilo trató de liberar un mutex que no le fue asignado")
+				return nil
+			}
 
-								// TODO: Puede darse que nextTcb.LockedMutexes sea null?
-								nextTcb.LockedMutexes = append(nextTcb.LockedMutexes, &mutex)
-								mutex.AssignedTCB = nextTcb
+			logger.Info("Liberando mutex <%v> del hilo <%v> del proceso <%v>", mutexName, execTCB.TID, execPCB.PID)
+			mutex.AssignedTCB = nil
 
-								err := kernelglobals.ShortTermScheduler.AddToReady(nextTcb)
-								if err != nil {
-									return err
-								}
+			// Remover el mutex de la lista LockedMutexes del hilo actual de manera segura
+			for i, lockedMutex := range execTCB.LockedMutexes {
+				if lockedMutex.Equal(mutex) {
+					logger.Info("Removiendo mutex <%s> de la lista LockedMutexes del TCB <%d>", mutexName, execTCB.TID)
+					// Eliminar el mutex correctamente de la lista
+					execTCB.LockedMutexes = append(execTCB.LockedMutexes[:i], execTCB.LockedMutexes[i+1:]...)
+					break
+				}
+			}
 
-							} else {
-								mutex.AssignedTCB = nil
-							}
+			// Si hay hilos bloqueados en este mutex, desbloquear el primero
+			if len(mutex.BlockedTCBs) > 0 {
+				nextTcb := mutex.BlockedTCBs[0]
+				mutex.BlockedTCBs = mutex.BlockedTCBs[1:]
 
-						}
-					}
+				// Asegurarse de que la lista LockedMutexes esté inicializada
+				if nextTcb.LockedMutexes == nil {
+					nextTcb.LockedMutexes = []*kerneltypes.Mutex{}
+				}
 
-					if !mutexExistsInTcb {
-						logger.Error("El mutex apuntaba a un TCB que lo lockeó y el TCB no sabía que tenía asignado ese mutex!!! Esto no debería pasar nunca")
-					}
+				nextTcb.LockedMutexes = append(nextTcb.LockedMutexes, mutex)
+				mutex.AssignedTCB = nextTcb
 
-				} // End if mutex tiene asignado este hilo
+				err := kernelglobals.ShortTermScheduler.AddToReady(nextTcb)
+				if err != nil {
+					return err
+				}
+			}
 
-			} // End else el mutex tiene un hilo que lo lockear
+			return nil
 		}
 	}
 

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"testing"
 )
@@ -180,137 +181,108 @@ func TestMutexLock(t *testing.T) {
 
 	logCurrentState("Estado Final")
 }
-
-/*
 func TestMutexUnlock(t *testing.T) {
-	setup()
+	// Inicializar variables globales
+	kernelglobals.EveryPCBInTheKernel = []kerneltypes.PCB{}
+	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
+	kernelglobals.ExecStateThread = nil
+	kernelglobals.BlockedStateQueue = types.Queue[*kerneltypes.TCB]{}
 
-	// Crear un PCB y TCB de prueba
-	pcb := kerneltypes.PCB{
-		PID:            0,
-		TIDs:           []int{0, 1, 2}, // Hilos con TID 0, 1 y 2
-		CreatedMutexes: []int{},
+	// Inicializar el planificador con FIFO para facilitar la prueba
+	kernelglobals.ShortTermScheduler = &Fifo.Fifo{
+		Ready: types.Queue[*kerneltypes.TCB]{}, // Inicializa la cola FIFO
 	}
 
-	// Crear tres TCBs asociados al mismo PCB
-	tcb1 := kerneltypes.TCB{
-		TID:       0,
-		Prioridad: 0,
-		FatherPCB: &pcb,
+	// Crear un PCB y agregarlo a EveryPCBInTheKernel
+	newPID := types.Pid(1)
+	newPCB := kerneltypes.PCB{
+		PID:            newPID,
+		TIDs:           []types.Tid{},
+		CreatedMutexes: []kerneltypes.Mutex{},
 	}
-	tcb2 := kerneltypes.TCB{
-		TID:       1,
-		Prioridad: 0,
-		FatherPCB: &pcb,
+	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, newPCB)
+
+	// Asignar la referencia correcta del PCB guardado en EveryPCBInTheKernel
+	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+
+	// Crear un TCB para el hilo actual que bloqueará el mutex
+	execTCB := kerneltypes.TCB{
+		TID:           0,                      // Hilo actual
+		Prioridad:     1,                      // Prioridad inicial
+		FatherPCB:     fatherPCB,              // Asignar el PCB
+		LockedMutexes: []*kerneltypes.Mutex{}, // Inicializar lista de mutexes
+		JoinedTCB:     nil,
 	}
-	tcb3 := kerneltypes.TCB{
-		TID:       2,
-		Prioridad: 0,
-		FatherPCB: &pcb,
+	// Añadir el TCB del hilo actual a EveryTCBInTheKernel
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
+	// Inicializar el hilo actual en ejecución
+	kernelglobals.ExecStateThread = &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	fatherPCB.TIDs = append(fatherPCB.TIDs, execTCB.TID)
+
+	// Crear un mutex y bloquearlo por el hilo actual
+	mutex := kerneltypes.Mutex{
+		Name:        "mutex_1",
+		AssignedTCB: kernelglobals.ExecStateThread,
+		BlockedTCBs: []*kerneltypes.TCB{},
 	}
+	// Añadir el mutex a la lista de CreatedMutexes del PCB
+	fatherPCB.CreatedMutexes = append(fatherPCB.CreatedMutexes, mutex)
 
-	// Simulamos que el primer hilo (tcb1) es el que está en ejecución
-	kernelglobals.ExecStateThread = tcb1
+	// Obtener el puntero al mutex real en CreatedMutexes
+	mutexPtr := &fatherPCB.CreatedMutexes[0]
 
-	// Log inicial del estado
-	logCurrentState("Estado inicial antes de cualquier syscall")
+	// Añadir el mutex al LockedMutexes del hilo
+	kernelglobals.ExecStateThread.LockedMutexes = append(kernelglobals.ExecStateThread.LockedMutexes, mutexPtr)
 
-	// Primero, creamos un mutex para usarlo en la prueba
-	argsCreate := []string{}
-	syscallCreate := syscalls.Syscall{
-		Type:      syscalls.MutexCreate,
-		Arguments: argsCreate,
+	// Crear un segundo TCB que estará bloqueado esperando el mutex
+	blockedTCB := kerneltypes.TCB{
+		TID:           1,                      // Segundo hilo
+		Prioridad:     1,                      // Prioridad inicial
+		FatherPCB:     fatherPCB,              // Mismo PCB
+		LockedMutexes: []*kerneltypes.Mutex{}, // Inicializar lista de mutexes
+		JoinedTCB:     nil,
 	}
+	// Añadir el segundo TCB a la lista de BlockedTCBs del mutex
+	mutexPtr.BlockedTCBs = append(mutexPtr.BlockedTCBs, &blockedTCB)
 
-	err := ExecuteSyscall(syscallCreate)
+	// Añadir el segundo TCB a EveryTCBInTheKernel y actualizar la lista de TIDs del PCB
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, blockedTCB)
+	fatherPCB.TIDs = append(fatherPCB.TIDs, blockedTCB.TID)
+
+	logCurrentState("Estado Inicial")
+
+	// Argumentos de entrada para MutexUnlock (nombre del mutex)
+	args := []string{"mutex_1"}
+
+	// Llamar a MutexUnlock con el mutex bloqueado por el hilo actual
+	err := MutexUnlock(args)
 	if err != nil {
-		t.Fatalf("Error al ejecutar syscall MUTEX_CREATE: %v", err)
-	}
-	logCurrentState("Después de crear el mutex")
-
-	// Obtener el ID del mutex recién creado
-	mutexID := len(pcb.CreatedMutexes)
-
-	// Ahora intentamos que el primer hilo (tcb1) tome el mutex
-	argsLock1 := []string{fmt.Sprintf("%d", mutexID)}
-	syscallLock1 := syscalls.Syscall{
-		Type:      syscalls.MutexLock,
-		Arguments: argsLock1,
+		t.Errorf("Error inesperado en MutexUnlock: %v", err)
 	}
 
-	err = ExecuteSyscall(syscallLock1)
+	// Verificar que el mutex ha sido asignado al segundo hilo (blockedTCB)
+	if mutexPtr.AssignedTCB == nil || mutexPtr.AssignedTCB.TID != blockedTCB.TID {
+		t.Errorf("El mutex no fue reasignado correctamente al segundo hilo bloqueado")
+	}
+
+	// Verificar que el segundo hilo tiene el mutex en su lista de LockedMutexes
+	if len(blockedTCB.LockedMutexes) != 1 || blockedTCB.LockedMutexes[0].Name != "mutex_1" {
+		t.Errorf("El segundo hilo no tiene el mutex bloqueado correctamente")
+	}
+
+	// Verificar que el hilo actual ya no tiene el mutex en su lista de LockedMutexes
+	if len(kernelglobals.ExecStateThread.LockedMutexes) != 0 {
+		t.Errorf("El hilo actual no liberó correctamente el mutex")
+	}
+
+	logCurrentState("Estado luego de llamar a MutexUnlock")
+
+	// Verificar que el segundo hilo fue movido a la cola de Ready
+	exists, err := kernelglobals.ShortTermScheduler.ThreadExists(blockedTCB.TID, fatherPCB.PID)
 	if err != nil {
-		t.Fatalf("Error al ejecutar syscall MUTEX_LOCK (primer hilo): %v", err)
+		t.Errorf("Error al verificar la existencia del TCB en la cola de Ready: %v", err)
 	}
-	logCurrentState("Después de que TID 0 toma el mutex")
-
-	// Ahora intentamos que el segundo hilo (tcb2) tome el mismo mutex y se bloquee
-	kernelglobals.ExecStateThread = tcb2
-
-	argsLock2 := []string{fmt.Sprintf("%d", mutexID)}
-	syscallLock2 := syscalls.Syscall{
-		Type:      syscalls.MutexLock,
-		Arguments: argsLock2,
-	}
-
-	err = ExecuteSyscall(syscallLock2)
-	if err != nil {
-		t.Fatalf("Error al ejecutar syscall MUTEX_LOCK (segundo hilo): %v", err)
-	}
-	logCurrentState("Después de que TID 1 intenta tomar el mutex y se bloquea")
-
-	// Verificar que el segundo hilo (tcb2) está bloqueado
-	mutexWrapper, exists := kernelglobals.GlobalMutexRegistry[mutexID]
 	if !exists {
-		t.Fatalf("No se encontró el mutex con ID <%d> en el registro global", mutexID)
+		t.Errorf("El segundo hilo no fue añadido a la cola de Ready correctamente")
 	}
-	if len(mutexWrapper.BlockedTCBs) != 1 {
-		t.Fatalf("Se esperaba 1 hilo bloqueado en el mutex con ID <%d>, pero se encontraron %d", mutexID, len(mutexWrapper.BlockedTCBs))
-	}
-
-	// Ahora intentamos desbloquear el mutex con el primer hilo (tcb1)
-	kernelglobals.ExecStateThread = tcb1
-
-	argsUnlock := []string{fmt.Sprintf("%d", mutexID)}
-	syscallUnlock := syscalls.Syscall{
-		Type:      syscalls.MutexUnlock,
-		Arguments: argsUnlock,
-	}
-
-	err = ExecuteSyscall(syscallUnlock)
-	if err != nil {
-		t.Fatalf("Error al ejecutar syscall MUTEX_UNLOCK: %v", err)
-	}
-	logCurrentState("Después de que TID 0 libera el mutex")
-
-	// Verificar que el mutex ha sido reasignado al segundo hilo (tcb2)
-	if mutexWrapper.AssignedTID != tcb2.TID {
-		t.Fatalf("El mutex con ID <%d> no fue reasignado al TID <%d> como se esperaba", mutexID, tcb2.TID)
-	}
-
-	// Ahora intentamos que el tercer hilo (tcb3) tome el mismo mutex y se bloquee
-	kernelglobals.ExecStateThread = tcb3
-
-	argsLock3 := []string{fmt.Sprintf("%d", mutexID)}
-	syscallLock3 := syscalls.Syscall{
-		Type:      syscalls.MutexLock,
-		Arguments: argsLock3,
-	}
-
-	err = ExecuteSyscall(syscallLock3)
-	if err != nil {
-		t.Fatalf("Error al ejecutar syscall MUTEX_LOCK (tercer hilo): %v", err)
-	}
-	logCurrentState("Después de que TID 2 intenta tomar el mutex y se bloquea")
-
-	// Verificar que el tercer hilo (tcb3) está bloqueado
-	if len(mutexWrapper.BlockedTCBs) != 1 {
-		t.Fatalf("Se esperaba 1 hilo bloqueado en el mutex con ID <%d>, pero se encontraron %d", mutexID, len(mutexWrapper.BlockedTCBs))
-	}
-
-	// Verificar el estado final de ExecStateThread
-	logCurrentState("Estado final después de las pruebas de MutexUnlock")
-
-	t.Logf("El tercer hilo con TID <%d> se bloqueó correctamente al intentar tomar el mutex con ID <%d>", tcb3.TID, mutexID)
 }
-*/
