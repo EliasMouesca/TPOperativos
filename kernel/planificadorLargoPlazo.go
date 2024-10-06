@@ -56,7 +56,7 @@ func NewProcessToReady() {
 		// El if para preguntar si esta vacia la cola Null no hace falta,
 		// porque esta planificacion solo ocurre si se creo el proceso,
 		// el cual se envian sus argumentos atraves de ChannelProcessArguments
-		pcb, err := kernelglobals.NewStateQueue.GetAndRemoveNext()
+		pcb, err := kernelglobals.NewPCBStateQueue.GetAndRemoveNext()
 		if err != nil {
 			logger.Error("Error en la cola NEW - %v", err)
 		}

@@ -50,6 +50,12 @@ func logCurrentState(context string) {
 	// Mostrar estados de las colas
 	logger.Info("## -------- ESTADOS DE COLAS -------- ")
 
+	// Mostrar la cola de NewStateQueue
+	logger.Info("NewStateQueue: ")
+	kernelglobals.NewStateQueue.Do(func(tcb *kerneltypes.TCB) {
+		logger.Info("  (<%d:%d>)", tcb.FatherPCB.PID, tcb.TID)
+	})
+
 	// Mostrar la cola de BlockedStateQueue
 	logger.Info("BlockedStateQueue: ")
 	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {

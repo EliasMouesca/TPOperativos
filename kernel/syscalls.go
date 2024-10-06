@@ -44,6 +44,22 @@ func ProcessCreate(args []string) error {
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", processCreate.PID)
 
+	// Agregar el PCB a la lista de PCBs en el kernel
+	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, processCreate)
+
+	// Crear el TCB para el hilo principal (TID 0)
+	mainThread := kerneltypes.TCB{
+		TID:       0,
+		Prioridad: 0, // Aquí debes asignar la prioridad que viene en los argumentos, si corresponde
+		FatherPCB: &processCreate,
+	}
+
+	// Agregar el TCB a la lista de TCBs en el kernel
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
+	mainThreadPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	kernelglobals.NewStateQueue.Add(mainThreadPtr)
+
+	// Enviar los argumentos al canal para continuar con el procesamiento del proceso
 	kernelsync.ChannelProcessArguments <- args
 
 	return nil
