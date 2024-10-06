@@ -255,64 +255,71 @@ func TestThreadCancel(t *testing.T) {
 	}
 }
 
-/*
-
 func TestThreadExit(t *testing.T) {
-	setup()
+	// Inicializar variables globales
+	kernelglobals.EveryPCBInTheKernel = []kerneltypes.PCB{}
+	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
+	kernelglobals.ExecStateThread = nil
+	kernelglobals.ExitStateQueue = types.Queue[*kerneltypes.TCB]{}
 
-	// Crear un PCB y TCB de prueba
-	pcb := kerneltypes.PCB{
-		PID:            0,
-		TIDs:           []int{0}, // Hilos con TID 0 y 1
-		CreatedMutexes: []int{},
+	// Crear un PCB y agregarlo a EveryPCBInTheKernel
+	newPID := types.Pid(1)
+	newPCB := kerneltypes.PCB{
+		PID:            newPID,
+		TIDs:           []types.Tid{},
+		CreatedMutexes: []kerneltypes.Mutex{},
+	}
+	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, newPCB)
+
+	// Asignar la referencia correcta del PCB guardado en EveryPCBInTheKernel
+	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+
+	// Crear un TCB para el hilo actual
+	execTCB := kerneltypes.TCB{
+		TID:           0,         // Hilo actual
+		Prioridad:     1,         // Prioridad inicial
+		FatherPCB:     fatherPCB, // Asignar el PCB
+		LockedMutexes: []*kerneltypes.Mutex{},
+		JoinedTCB:     nil,
 	}
 
-	// Crear dos TCBs asociados al mismo PCB
-	tcb1 := kerneltypes.TCB{
-		TID:       0,
-		Prioridad: 0,
-		FatherPCB: &pcb,
-	}
+	// Añadir el TCB del hilo actual a EveryTCBInTheKernel
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
 
-	// Simulamos que el primer hilo (tcb1) es el que está en ejecución
-	kernelglobals.ExecStateThread = tcb1
+	// Inicializar el hilo actual en ejecución
+	kernelglobals.ExecStateThread = &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
 
-	// Verificamos el estado inicial del hilo en ejecución
-	logCurrentState("Estado inicial antes de la syscall ThreadExit")
+	// Añadir el TID del hilo actual al PCB
+	fatherPCB.TIDs = append(fatherPCB.TIDs, execTCB.TID)
 
-	// Llamar a la syscall ThreadExit con el hilo actual
-	args := []string{}
-	syscall := syscalls.Syscall{
-		Type:      syscalls.ThreadExit,
-		Arguments: args,
-	}
+	logCurrentState("Estado Inicial.")
 
-	err := ExecuteSyscall(syscall)
+	// Llamar a ThreadExit (el hilo actual se auto-finaliza)
+	err := ThreadExit([]string{})
 	if err != nil {
-		t.Fatalf("Error al ejecutar syscall THREAD_EXIT: %v", err)
+		t.Errorf("Error inesperado en ThreadExit: %v", err)
 	}
 
-	// Verificar que el hilo en ejecución ha sido movido a la cola de Exit
-	// Comprobar si FatherPCB es nil antes de acceder a él
-	if kernelglobals.ExecStateThread.TID != -1 {
-		t.Fatalf("El ExecStateThread no se ha vaciado correctamente, se esperaba un TCB vacío, pero se encontró TID <%d> y PID <%d>", kernelglobals.ExecStateThread.TID, kernelglobals.ExecStateThread.FatherPCB.PID)
-	}
+	logCurrentState("Estado luego de llamar a ThreadExit")
 
-	// Verificar que el TCB se encuentra en la cola de ExitState
-	foundInExit := false
-	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		if tcb.TID == tcb1.TID && tcb.FatherPCB == &pcb {
-			foundInExit = true
+	// Verificar que el hilo actual fue movido a la cola de ExitStateQueue
+	logger.Info("Recorriendo ExitStateQueue para ver si se agregó correctamente el TCB: %v.", execTCB.TID)
+	exited := false
+	queueSize := kernelglobals.ExitStateQueue.Size()
+	for i := 0; i < queueSize; i++ {
+		tcb, _ := kernelglobals.ExitStateQueue.GetAndRemoveNext()
+		if tcb.TID == execTCB.TID {
+			exited = true
+			logger.Info("Se encontró el TCB con TID %v en la cola ExitStateQueue.", execTCB.TID)
 		}
-	})
-
-	if !foundInExit {
-		t.Fatalf("El TCB del hilo con TID <%d> no se encontró en la cola de ExitStateQueue", tcb1.TID)
+		kernelglobals.ExitStateQueue.Add(tcb) // Volver a agregar a la cola
+	}
+	if !exited {
+		t.Errorf("El hilo actual no fue añadido a la ExitStateQueue correctamente")
 	}
 
-	// Mostrar el estado final después de la syscall
-	logCurrentState("Estado final después de la syscall ThreadExit")
-
-	t.Logf("El hilo con TID <%d> se ha movido correctamente al estado EXIT", tcb1.TID)
+	// Verificar que ExecStateThread ahora es nil
+	if kernelglobals.ExecStateThread != nil {
+		t.Errorf("ExecStateThread debería ser nil, pero no lo es")
+	}
 }
-*/

@@ -257,7 +257,7 @@ func ThreadExit(args []string) error {
 
 	execTCB := kernelglobals.ExecStateThread
 
-	kernelsync.ChannelFinishThread <- 0
+	//kernelsync.ChannelFinishThread <- 0
 
 	logger.Info("## Moviendo el TID <%d> al estado EXIT", execTCB.TID)
 	kernelglobals.ExitStateQueue.Add(execTCB)
