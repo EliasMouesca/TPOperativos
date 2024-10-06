@@ -296,18 +296,20 @@ func MutexLock(args []string) error {
 	execPCB := execTCB.FatherPCB
 
 	encontrado := false
-	for _, mutex := range execPCB.CreatedMutexes {
+	for i := range execPCB.CreatedMutexes {
+		mutex := &execPCB.CreatedMutexes[i]
 		if mutex.Name == mutexName {
 			encontrado = true
 			if mutex.AssignedTCB == nil {
-				logger.Info("## El mutex <%v> ha sido asignado al TID <%d> del proceso con PID <%d>",
-					mutexName, execTCB.TID, execTCB.FatherPCB.PID)
+				logger.Info("## El mutex <%v> ha sido asignado al TID <%d> del proceso con PID <%d>", mutexName, execTCB.TID, execTCB.FatherPCB.PID)
 				mutex.AssignedTCB = execTCB
-				execTCB.LockedMutexes = append(execTCB.LockedMutexes, &mutex)
+				execTCB.LockedMutexes = append(execTCB.LockedMutexes, mutex)
+				logger.Info("AssignedTCB del Mutex %s: %v", mutexName, mutex.AssignedTCB)
+				logger.Info("LockedMutexes del TCB %v: %v", execTCB, execTCB.LockedMutexes)
 			} else {
-				logger.Info("## El mutex <%v> ya está tomado. Bloqueando al TID <%d> del proceso con PID <%d>",
-					mutexName, execTCB.TID, execTCB.FatherPCB.PID)
+				logger.Info("## El mutex <%v> ya está tomado. Bloqueando al TID <%d> del proceso con PID <%d>", mutexName, execTCB.TID, execTCB.FatherPCB.PID)
 				mutex.BlockedTCBs = append(mutex.BlockedTCBs, execTCB)
+				kernelglobals.BlockedStateQueue.Add(execTCB)
 			}
 		}
 	}
