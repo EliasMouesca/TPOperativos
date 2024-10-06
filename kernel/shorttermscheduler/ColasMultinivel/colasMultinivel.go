@@ -2,6 +2,7 @@ package ColasMultinivel
 
 import (
 	"errors"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler"
@@ -130,9 +131,10 @@ func (cmm *ColasMultiNivel) getNextTcb() (*kerneltypes.TCB, error) {
 }
 
 func roundRobin(queue *types.Queue[*kerneltypes.TCB]) (*kerneltypes.TCB, error) {
-
 	go func() {
 		<-kernelsync.QuantumChannel
+		pid := kernelglobals.ExecStateThread.FatherPCB.PID
+		tid := kernelglobals.ExecStateThread.TID
 		err := shorttermscheduler.CpuInterrupt(
 			types.Interruption{
 				Type: types.InterruptionEndOfQuantum,
@@ -141,8 +143,8 @@ func roundRobin(queue *types.Queue[*kerneltypes.TCB]) (*kerneltypes.TCB, error) 
 			logger.Error("Failed to interrupt the CPU (end of quantum) - %v", err)
 			return
 		}
+		logger.Info("(PID:%d TID:%d) - Desalojado por fin de quantum", pid, tid)
 	}()
-
 	selectedTCB, err := queue.GetAndRemoveNext()
 	return selectedTCB, err
 }
