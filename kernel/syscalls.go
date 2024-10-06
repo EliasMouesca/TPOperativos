@@ -106,8 +106,8 @@ func ThreadCreate(args []string) error {
 	// pseudocódigo que deberá ejecutar el hilo a crear y su prioridad. Al momento de crear el nuevo hilo,
 	// deberá generar el nuevo TCB con un TID autoincremental y poner al mismo en el estado READY.
 
-	kernelsync.ChannelThreadCreate <- args
-	<-kernelsync.SemThreadCreate
+	//kernelsync.ChannelThreadCreate <- args
+	//<-kernelsync.SemThreadCreate
 
 	prioridad, err := strconv.Atoi(args[1])
 	if err != nil {
@@ -125,14 +125,21 @@ func ThreadCreate(args []string) error {
 		FatherPCB: currentPCB,
 	}
 
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, newTCB)
+	logger.Info("Nuevo <%v:%v> agregado a la lista de EveryTCBInTheKernel. ", newTCB.FatherPCB.PID, newTCB.TID)
 	currentPCB.TIDs = append(currentPCB.TIDs, newTID)
-	err = kernelglobals.ShortTermScheduler.AddToReady(&newTCB)
+	logger.Info("El TID: %v fue agregado a la lista de TIDs del PCB: %v. ", newTCB.TID, newTCB.FatherPCB.PID)
+
+	if kernelglobals.ShortTermScheduler == nil {
+		logger.Error("ShortTermScheduler no está inicializado.")
+		return fmt.Errorf("ShortTermScheduler no inicializado")
+	}
+
+	err = kernelglobals.ShortTermScheduler.AddToReady(&kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1])
+	logger.Info("## (<%d>:<%d>) Se crea un nuevo hilo - Estado: READY", newTCB.FatherPCB.PID, newTCB.TID)
 	if err != nil {
 		return fmt.Errorf("error al agregar el TCB a la cola de Ready: %v", err)
 	}
-	logger.Info("## (<%d>:<%d>) Se crea un nuevo hilo - Estado: READY", currentPCB.PID, newTCB.TID)
-
-	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, newTCB)
 
 	return nil
 }
@@ -190,6 +197,7 @@ func ThreadJoin(args []string) error {
 	for _, tcbToJoin := range kernelglobals.EveryTCBInTheKernel {
 		if tcbToJoin.TID == tidToJoin && tcbToJoin.FatherPCB.Equal(execTCB.FatherPCB) {
 			execTCB.JoinedTCB = &tcbToJoin
+			logger.Info("Estado del atributo JoinedTCB del TCB que llamo a ThreadJoin luego de ejecutar: %v", execTCB.JoinedTCB)
 		}
 	}
 
@@ -267,7 +275,7 @@ func MutexCreate(args []string) error {
 	execTCB := kernelglobals.ExecStateThread
 	currentPCB := execTCB.FatherPCB
 
-	newMutex := &kerneltypes.Mutex{
+	newMutex := kerneltypes.Mutex{
 		Name:        args[0],
 		AssignedTCB: nil,
 		BlockedTCBs: []*kerneltypes.TCB{},
@@ -295,7 +303,7 @@ func MutexLock(args []string) error {
 				logger.Info("## El mutex <%v> ha sido asignado al TID <%d> del proceso con PID <%d>",
 					mutexName, execTCB.TID, execTCB.FatherPCB.PID)
 				mutex.AssignedTCB = execTCB
-				execTCB.LockedMutexes = append(execTCB.LockedMutexes, mutex)
+				execTCB.LockedMutexes = append(execTCB.LockedMutexes, &mutex)
 			} else {
 				logger.Info("## El mutex <%v> ya está tomado. Bloqueando al TID <%d> del proceso con PID <%d>",
 					mutexName, execTCB.TID, execTCB.FatherPCB.PID)
@@ -332,7 +340,7 @@ func MutexUnlock(args []string) error {
 			encontrado = true
 			// Si no está asignado..
 			if mutex.AssignedTCB == nil {
-				logger.Info("## El hilo actual (TID <%d>) no tiene asignado el mutex <%d>. No se realizará ningún desbloqueo.", execTCB.TID, mutexName)
+				logger.Info("## El hilo actual (TID <%d>) no tiene asignado el mutex <%s>. No se realizará ningún desbloqueo.", execTCB.TID, mutexName)
 				return errors.New("el mutex no está asignado a ningún hilo")
 			} else {
 				if !mutex.AssignedTCB.Equal(execTCB) {
@@ -351,7 +359,7 @@ func MutexUnlock(args []string) error {
 								mutex.BlockedTCBs = mutex.BlockedTCBs[1:]
 
 								// TODO: Puede darse que nextTcb.LockedMutexes sea null?
-								nextTcb.LockedMutexes = append(nextTcb.LockedMutexes, mutex)
+								nextTcb.LockedMutexes = append(nextTcb.LockedMutexes, &mutex)
 								mutex.AssignedTCB = nextTcb
 
 								err := kernelglobals.ShortTermScheduler.AddToReady(nextTcb)

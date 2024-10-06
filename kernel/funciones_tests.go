@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
-	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
@@ -12,42 +11,65 @@ func setup() {
 
 // Función auxiliar para registrar el estado actual de ExecStateThread y de los hilos bloqueados
 func logCurrentState(context string) {
-	logger.Info("### %s ###", context)
-	logger.Info("Estado actual de ExecStateThread: PID <%d>, TID <%d>, CreatedMutexes: %v",
-		kernelglobals.ExecStateThread.FatherPCB.PID,
-		kernelglobals.ExecStateThread.TID,
-		kernelglobals.ExecStateThread.LockedMutexes,
-	)
-	// Estado de ReadyStateQueue
-	logger.Info("Estado actual de ReadyStateQueue:")
-	kernelglobals.ReadyStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		logger.Info("  TID <%d> del PCB con PID <%d>, Prioridad <%d>, Mutexes: %v",
-			tcb.TID, tcb.FatherPCB.PID, tcb.Prioridad, tcb.LockedMutexes)
-	})
+	logger.Info("\n### %s ###", context)
 
-	// Estado de BlockedStateQueue
-	logger.Info("Estado actual de BlockedStateQueue:")
-	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		logger.Info("  TID <%d> del PCB con PID <%d>, Prioridad <%d>, Mutexes: %v",
-			tcb.TID, tcb.FatherPCB.PID, tcb.Prioridad, tcb.LockedMutexes)
-	})
+	logger.Info("## -------- ESTADOS DE TCBs Y PCBs -------- ")
+	logger.Info("Estado actual de EveryPCBInTheKernel: %v", kernelglobals.EveryPCBInTheKernel)
+	logger.Info("Estado actual de EveryTCBInTheKernel: %v \n", kernelglobals.EveryTCBInTheKernel)
 
-	// Estado de ExitStateQueue
-	logger.Info("Estado actual de ExitStateQueue:")
-	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
-		logger.Info("  TID <%d> del PCB con PID <%d>",
-			tcb.TID, tcb.FatherPCB.PID)
-	})
+	logger.Info("## -------- ESTADOS DE COLAS -------- ")
+	logger.Info("Estado actual de BlockedStateQueue: %v", kernelglobals.BlockedStateQueue)
+	logger.Info("Estado actual de ExitStateQueue: %v \n", kernelglobals.ExitStateQueue)
 
-	for mutexID, mutexWrapper := range kernelglobals.GlobalMutexRegistry {
-		logger.Info("Estado del CreatedMutexes ID <%d>: AssignedTID <%d>, BlockedTCBs: [", mutexID, mutexWrapper.AssignedTID)
-		for _, blockedTCB := range mutexWrapper.BlockedTCBs {
-			logger.Info("  TID <%d> del PCB con PID <%d>", blockedTCB.TID, blockedTCB.FatherPCB.PID)
-		}
-		logger.Info("]")
+	// Validar que ExecStateThread no sea nil
+	if kernelglobals.ExecStateThread != nil {
+		logger.Info("Estado actual de ExecStateThread: PID <%d>, TID <%d>, CreatedMutexes: %v",
+			kernelglobals.ExecStateThread.FatherPCB.PID,
+			kernelglobals.ExecStateThread.TID,
+			kernelglobals.ExecStateThread.LockedMutexes,
+		)
+	} else {
+		logger.Info("No hay hilo en ejecución actualmente.")
 	}
+	/*
+		// Verificar existencia de hilos en la cola de ready
+		for _, tcb := range kernelglobals.EveryTCBInTheKernel {
+			exists, err := kernelglobals.ShortTermScheduler.ThreadExists(tcb.TID, tcb.FatherPCB.PID)
+			if err != nil {
+				logger.Error("Error al verificar existencia del TCB en la cola de Ready: %v", err)
+				continue
+			}
+			if exists {
+				logger.Info("  TID <%d> del PCB con PID <%d>, Prioridad <%d>, Mutexes: %v",
+					tcb.TID, tcb.FatherPCB.PID, tcb.Prioridad, tcb.LockedMutexes)
+			}
+		}
+
+		// Estado de BlockedStateQueue
+		logger.Info("Estado actual de BlockedStateQueue:")
+		kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
+			logger.Info("  TID <%d> del PCB con PID <%d>, Prioridad <%d>, Mutexes: %v",
+				tcb.TID, tcb.FatherPCB.PID, tcb.Prioridad, tcb.LockedMutexes)
+		})
+
+		// Estado de ExitStateQueue
+		logger.Info("Estado actual de ExitStateQueue:")
+		kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
+			logger.Info("  TID <%d> del PCB con PID <%d>",
+				tcb.TID, tcb.FatherPCB.PID)
+		})
+
+		// Información sobre los mutexes en GlobalMutexRegistry
+		for mutexID, mutexWrapper := range kernelglobals.ExecStateThread.FatherPCB.CreatedMutexes {
+			logger.Info("Estado del Mutex ID <%v>: AssignedTID <%v>, BlockedTCBs: [", mutexID, mutexWrapper.AssignedTCB)
+			for _, blockedTCB := range mutexWrapper.BlockedTCBs {
+				logger.Info("  TID <%d> del PCB con PID <%d>", blockedTCB.TID, blockedTCB.FatherPCB.PID)
+			}
+			logger.Info("]")
+		}*/
 }
 
+/*
 // Función auxiliar para registrar el estado actual de un PCB
 func logPCBState(context string, pcb *kerneltypes.PCB) {
 	logger.Info("### %s ###", context)
@@ -74,3 +96,4 @@ func logPCBState(context string, pcb *kerneltypes.PCB) {
 	// Mostrar información de los mutexes asociados al PCB
 	logger.Info("	Mutexes asociados al PCB con PID <%d>: %v", pcb.PID, pcb.CreatedMutexes)
 }
+*/

@@ -115,7 +115,7 @@ func NewThreadToReady() {
 	}
 }
 
-func Thread aToExit() {
+func ThreadToExit() {
 	// Al momento de finalizar un hilo, el Kernel deberá informar a la Memoria
 	// la finalización del mismo y deberá mover al estado READY a todos los
 	// hilos que se encontraban bloqueados por ese TID. De esta manera, se
@@ -131,19 +131,19 @@ func Thread aToExit() {
 			Arguments: []string{tid},
 		}
 
-		logger.Info("## Iniciando finalización del TID <%d> del PCB con PID <%d>", tid, currentPCB.PID)
+		logger.Info("## Iniciando finalización del TID <%v> del PCB con PID <%d>", tid, currentPCB.PID)
 
-		logger.Debug("Informando a Memoria sobre la finalización del hilo con TID %d", tid)
+		logger.Debug("Informando a Memoria sobre la finalización del hilo con TID %v", tid)
 		err := sendMemoryRequest(request)
 		if err != nil {
 			logger.Error("Error en la request de memoria sobre la finalizacion del hilo - %v", err)
 		}
 
 		// Desbloquear hilos que estaban bloqueados esperando el término de este TID
-		moveBlockedThreadsByJoin(TID)
+		//moveBlockedThreadsByJoin(TID)
 
 		// Liberar los mutexes que tenía el hilo que se está finalizando
-		releaseMutexes(TID)
+		//releaseMutexes(TID)
 
 		// Mover el hilo actual a ExitStateQueue
 		kernelglobals.ExitStateQueue.Add(execTCB)
@@ -156,6 +156,7 @@ func Thread aToExit() {
 	}
 }
 
+/*
 func moveBlockedThreadsByJoin(tidFinalizado int) {
 	// Obtener el tamaño inicial de la cola de bloqueados
 	blockedQueueSize := kernelglobals.BlockedStateQueue.Size()
@@ -215,7 +216,7 @@ func releaseMutexes(tid int) {
 
 		mutexWrapper.Mutex.Unlock()
 	}
-}
+}*/
 
 func sendMemoryRequest(request types.RequestToMemory) error {
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")

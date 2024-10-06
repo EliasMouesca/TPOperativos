@@ -8,11 +8,11 @@ import (
 )
 
 type Fifo struct {
-	ready types.Queue[*kerneltypes.TCB]
+	Ready types.Queue[*kerneltypes.TCB]
 }
 
 func (f *Fifo) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
-	for _, v := range f.ready.GetElements() {
+	for _, v := range f.Ready.GetElements() {
 
 		if v.TID == tid && v.FatherPCB.PID == pid {
 			return true, nil
@@ -28,16 +28,16 @@ func (f *Fifo) ThreadRemove(tid types.Tid, pid types.Pid) error {
 	}
 
 	if existe {
-		queueSize := f.ready.Size()
+		queueSize := f.Ready.Size()
 		for i := 0; i < queueSize; i++ {
-			v, err := f.ready.GetAndRemoveNext()
+			v, err := f.Ready.GetAndRemoveNext()
 			if err != nil {
 				return err
 			}
 
 			// Volver a agregar el TCB solo si no coincide con el tid y pid
 			if v.TID != tid || v.FatherPCB.PID != pid {
-				f.ready.Add(v)
+				f.Ready.Add(v)
 			}
 		}
 		return nil
@@ -57,7 +57,7 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 	var err error
 
 	// Fifo lo único que hace para seleccionar procesos es tomar el primero que entró
-	nextTcb, err = f.ready.GetAndRemoveNext()
+	nextTcb, err = f.Ready.GetAndRemoveNext()
 	if err != nil {
 		return nil, errors.New("se quiso obtener un hilo y no habia ningun hilo en ready")
 	}
@@ -69,7 +69,7 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 // AddToReady Le avisa al STS (versión FIFO) que hay un nuevo proceso listo
 func (f *Fifo) AddToReady(tcb *kerneltypes.TCB) error {
 	// Agregá el proceso a la cola fifo
-	f.ready.Add(tcb)
+	f.Ready.Add(tcb)
 
 	// Mandá mensaje por el canal, o sea, permití que una vuelta más de Planificar() ejecute
 	go func() {

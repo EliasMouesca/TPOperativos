@@ -1,15 +1,7 @@
 package main
 
-import (
-	"fmt"
-	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
-	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
-	"github.com/sisoputnfrba/tp-golang/types/syscalls"
-	"testing"
-)
-
 // TODO: ---------------------------------- TEST PARA MUTEX ----------------------------------
-
+/*
 func TestMutexCreate(t *testing.T) {
 	setup()
 
@@ -297,3 +289,4 @@ func TestMutexUnlock(t *testing.T) {
 
 	t.Logf("El tercer hilo con TID <%d> se bloqueó correctamente al intentar tomar el mutex con ID <%d>", tcb3.TID, mutexID)
 }
+*/

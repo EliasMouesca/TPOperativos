@@ -10,7 +10,7 @@ type PCB struct {
 	TIDs []types.Tid
 
 	// Lista de los mutex creados para el proceso
-	CreatedMutexes []*Mutex
+	CreatedMutexes []Mutex
 }
 
 func (a *PCB) Null() *PCB {
