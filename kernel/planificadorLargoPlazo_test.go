@@ -150,3 +150,70 @@ func TestProcessToExit(t *testing.T) {
 
 	logCurrentState("Estado final después de ProcessToExit")
 }
+
+func TestNewThreadToReady(t *testing.T) {
+	// Inicializar variables globales
+	kernelglobals.EveryPCBInTheKernel = []kerneltypes.PCB{}
+	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
+	kernelglobals.NewStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.BlockedStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.ExitStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.ShortTermScheduler = &Fifo.Fifo{
+		Ready: types.Queue[*kerneltypes.TCB]{}, // Inicializa la cola Ready
+	}
+
+	// Crear un PCB y agregarlo a EveryPCBInTheKernel
+	newPID := types.Pid(1)
+	pcb := kerneltypes.PCB{
+		PID:  newPID,
+		TIDs: []types.Tid{0}, // Iniciar con TID 0
+	}
+	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, pcb)
+	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+
+	// Crear el TCB principal y asignarlo como hilo en ejecución
+	mainThread := kerneltypes.TCB{TID: 0, Prioridad: 1, FatherPCB: fatherPCB}
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
+	mainThreadPtr := &kernelglobals.EveryTCBInTheKernel[0]
+	kernelglobals.ExecStateThread = mainThreadPtr
+
+	// Inicializar el canal de creación de hilos y sincronización
+	kernelsync.ChannelThreadCreate = make(chan []string, 1)
+
+	logCurrentState("Estado Inicial")
+
+	// Crear un nuevo hilo utilizando la syscall ThreadCreate
+	args := []string{"test_file_thread", "1"} // Nombre de archivo y prioridad
+	err := ThreadCreate(args)
+	if err != nil {
+		t.Errorf("Error inesperado en ThreadCreate: %v", err)
+	}
+
+	logCurrentState("Estado antes de Planificar")
+
+	// Ejecutar la función del planificador en un goroutine (simulando comportamiento concurrente)
+	go NewThreadToReady()
+
+	// Esperar para asegurar que el hilo haya sido procesado
+	time.Sleep(100 * time.Millisecond)
+
+	// Verificar que el TCB creado fue movido a la cola Ready
+	existsInReady, _ := kernelglobals.ShortTermScheduler.ThreadExists(1, pcb.PID)
+	if !existsInReady {
+		t.Errorf("El TID <1> del PCB con PID <%d> no fue movido correctamente a ReadyStateQueue", pcb.PID)
+	} else {
+		logger.Info("## (<%v:%v>) fue movido a la cola de READY.", pcb.PID, 1)
+	}
+
+	// Verificar que el TCB fue agregado a EveryTCBInTheKernel
+	if len(kernelglobals.EveryTCBInTheKernel) != 2 {
+		t.Errorf("No se agregó correctamente el TCB a EveryTCBInTheKernel")
+	}
+
+	// Verificar que el TCB ya no esté en la cola NewStateQueue
+	if !kernelglobals.NewStateQueue.IsEmpty() {
+		t.Errorf("El TID <1> del PCB con PID <%d> aún se encuentra en la cola NewStateQueue", pcb.PID)
+	}
+
+	logCurrentState("Estado Final luego de mover el hilo a Ready")
+}

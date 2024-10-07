@@ -98,20 +98,41 @@ func ProcessToExit() {
 
 func NewThreadToReady() {
 	for {
+		// Recibir los argumentos a través del canal
 		args := <-kernelsync.ChannelThreadCreate
 		fileName := args[0]
+
+		// Tomar el siguiente TCB de la cola NewStateQueue
+		newTCB, err := kernelglobals.NewStateQueue.GetAndRemoveNext()
+		if err != nil {
+			logger.Error("Error al obtener el siguiente TCB de NewStateQueue: %v", err)
+			continue
+		}
+
+		// Informar a memoria sobre la creación del hilo
 		request := types.RequestToMemory{
 			Type:      types.CreateThread,
 			Arguments: []string{fileName},
 		}
-		logger.Debug("Informando a Memoria sobre la creacion de un hilo")
-		kernelsync.WaitPlanificadorLP.Add(1)
-		err := sendMemoryRequest(request)
-		if err != nil {
-			logger.Error("%v", err)
+		logger.Debug("Informando a Memoria sobre la creación de un hilo")
 
+		// Enviar la solicitud a memoria
+		err = sendMemoryRequest(request)
+		if err != nil {
+			logger.Error("Error en el request a memoria: %v", err)
+			continue
 		}
-		kernelsync.SemThreadCreate <- 0
+
+		// Una vez confirmada la creación, agregar el TCB a la cola de Ready
+		err = kernelglobals.ShortTermScheduler.AddToReady(newTCB)
+		if err != nil {
+			logger.Error("Error al agregar el TCB a la cola de Ready: %v", err)
+			continue
+		}
+		logger.Info("## (<%d>:<%d>) Se movió el hilo de NEW a READY", newTCB.FatherPCB.PID, newTCB.TID)
+
+		// Notificar que se completó la creación del hilo
+		//kernelsync.SemThreadCreate <- 0
 	}
 }
 
