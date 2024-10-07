@@ -143,7 +143,7 @@ func initProcess(fileName, processSize string) {
 	logger.Info("Inicializando el proceso inicial con archivo: %s, tamaño: %s", fileName, processSize)
 
 	// Crear los argumentos para la syscall ProcessCreate
-	args := []string{fileName, processSize}
+	args := []string{fileName, processSize, "0"}
 	logger.Info("Archivo y tamanio guardados.")
 
 	// Enviar la syscall ProcessCreate para que el kernel la maneje
