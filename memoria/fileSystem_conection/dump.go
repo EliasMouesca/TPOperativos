@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func Dump(w http.ResponseWriter, r *http.Request) {
+func DumpMemory(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		logger.Error("Metodo no permitido")
 		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)

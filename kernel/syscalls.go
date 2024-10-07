@@ -26,6 +26,8 @@ var syscallSet = map[int]syscallFunction{
 	syscalls.MutexCreate:   MutexCreate,
 	syscalls.MutexLock:     MutexLock,
 	syscalls.MutexUnlock:   MutexUnlock,
+	syscalls.DumpMemory:    DumpMemory,
+	syscalls.IO:            IO,
 }
 
 var PIDcount int = 0
@@ -421,5 +423,103 @@ func MutexUnlock(args []string) error {
 		return errors.New(fmt.Sprintf("No se encontró el mutex <%v>", mutexName))
 	}
 
+	return nil
+}
+
+func DumpMemory(args []string) error {
+	// Obtener el thread ejecutándose
+	execTCB := kernelglobals.ExecStateThread
+	if execTCB == nil {
+		return fmt.Errorf("no hay un hilo en ejecución")
+	}
+	pcb := execTCB.FatherPCB
+
+	pid := strconv.Itoa(int(execTCB.FatherPCB.PID))
+	tid := strconv.Itoa(int(execTCB.TID))
+
+	// Mover el hilo actual a la cola de bloqueados antes de hacer el request a memoria
+	logger.Info("Moviendo el hilo a la cola de bloqueados (PID: %v, TID: %v)", pid, tid)
+	kernelglobals.ExecStateThread = nil
+	kernelglobals.BlockedStateQueue.Add(execTCB)
+
+	// Crear el request para la memoria
+	request := types.RequestToMemory{
+		Type:      types.MemoryDump,
+		Arguments: []string{pid, tid},
+	}
+
+	// Enviar request a memoria
+	err := sendMemoryRequest(request)
+	if err != nil {
+		logger.Error("Error en el request a memoria para DumpMemory - %v", err)
+
+		// Mover el proceso a estado EXIT en caso de error
+		kernelglobals.BlockedStateQueue.Remove(execTCB) // Quitar de la cola de bloqueados
+		kernelglobals.ExitStateQueue.Add(execTCB)
+
+		// Eliminar todos los hilos del PCB de las colas de Ready
+		for _, tid := range pcb.TIDs {
+			// 1. Verificar y eliminar hilos de la cola de Ready
+			existsInReady, _ := kernelglobals.ShortTermScheduler.ThreadExists(tid, pcb.PID)
+			if existsInReady {
+				err := kernelglobals.ShortTermScheduler.ThreadRemove(tid, pcb.PID)
+				if err != nil {
+					logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
+				} else {
+					logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de las colas de Ready y se movió a ExitStateQueue", tid, pcb.PID)
+				}
+			}
+
+			// 2. Verificar y eliminar hilos en la cola de Blocked
+			for !kernelglobals.BlockedStateQueue.IsEmpty() {
+				blockedTCB, err := kernelglobals.BlockedStateQueue.GetAndRemoveNext()
+				if err != nil {
+					logger.Error("Error al obtener el siguiente TCB de BlockedStateQueue - %v", err)
+					break
+				}
+				// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
+				if blockedTCB.FatherPCB.PID == pcb.PID {
+					kernelglobals.ExitStateQueue.Add(blockedTCB)
+					logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de BlockedStateQueue y se movió a ExitStateQueue", blockedTCB.TID, pcb.PID)
+				} else {
+					// Si no es, se vuelve a insertar en la cola de bloqueados
+					kernelglobals.BlockedStateQueue.Add(blockedTCB)
+				}
+			}
+
+			// 3. Verificar y eliminar hilos en la cola de New
+			for !kernelglobals.NewStateQueue.IsEmpty() {
+				newTCB, err := kernelglobals.NewStateQueue.GetAndRemoveNext()
+				if err != nil {
+					logger.Error("Error al obtener el siguiente TCB de NewStateQueue - %v", err)
+					break
+				}
+				// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
+				if newTCB.FatherPCB.PID == pcb.PID {
+					kernelglobals.ExitStateQueue.Add(newTCB)
+					logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de NewStateQueue y se movió a ExitStateQueue", newTCB.TID, pcb.PID)
+				} else {
+					// Si no es, se vuelve a insertar en la cola de new
+					kernelglobals.NewStateQueue.Add(newTCB)
+				}
+			}
+		}
+
+		// Limpiar el hilo en ejecución
+		kernelglobals.ExecStateThread = nil
+		logger.Info("El proceso con PID <%v> y TID <%v> fue movido a EXIT por error en DumpMemory", pid, tid)
+
+		return err
+	}
+
+	// Si la operación fue exitosa, mover el hilo de bloqueados a la cola de READY
+	kernelglobals.BlockedStateQueue.Remove(execTCB)      // Quitar de la cola de bloqueados
+	kernelglobals.ShortTermScheduler.AddToReady(execTCB) // Mover a READY
+	logger.Info("DumpMemory completado exitosamente, moviendo hilo a READY (PID: %v, TID: %v)", pid, tid)
+
+	return nil
+}
+
+func IO(args []string) error {
 	return nil
 }

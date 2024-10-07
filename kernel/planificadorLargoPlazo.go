@@ -23,6 +23,7 @@ func planificadorLargoPlazo() {
 	go ProcessToExit()
 	go NewThreadToReady()
 	go ThreadToExit()
+
 }
 
 func NewProcessToReady() {
@@ -283,14 +284,6 @@ func releaseMutexes(tid int) {
 		}
 	}
 }
-
-/*
-func sendMemoryRequest(request types.RequestToMemory) error {
-	// Simulación de respuesta exitosa sin hacer la solicitud real a memoria
-	logger.Debug("Simulando respuesta exitosa de la memoria para request de tipo %s", request.Type)
-	return nil
-}
-*/
 
 func sendMemoryRequest(request types.RequestToMemory) error {
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")

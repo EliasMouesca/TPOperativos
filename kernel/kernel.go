@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
-	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -53,17 +52,26 @@ func init() {
 func main() {
 	logger.Info("-- Comenzó la ejecución del kernel --")
 
+	//TODO: PARA INICIALIZAR EL KERNEL HAY QUE PONER EN CONSOL:
+	// go run .\kernel.go .\planificadorLargoPlazo.go .\syscalls.go
+
+	// Capturar los argumentos pasados al kernel por consola
+	if len(os.Args) < 3 {
+		logger.Fatal("Se requieren al menos dos argumentos: archivo de pseudocódigo y tamaño del proceso.")
+	}
+	fileName := os.Args[1]    // Primer argumento: nombre del archivo de pseudocódigo
+	processSize := os.Args[2] // Segundo argumento: tamaño del proceso
+
+	// Crear el primer proceso
+	logger.Info("Creando el primer proceso inicial (archivo: %s, tamaño: %s)", fileName, processSize)
+	initProcess(fileName, processSize)
+
 	go planificadorLargoPlazo()
 	//go planificadorCortoPlazo()
-
-	// Implementacion GOD
-	// Inicializar un proceso sin que CPU mande nada
-	// PROCESS_CREATE(// fileName, processSize, TID)
 
 	// Listen and serve
 	http.HandleFunc("/kernel/syscall", syscallRecieve)
 	http.HandleFunc("/", badRequest)
-	http.HandleFunc("POST kernel/process/finished", processFinish)
 
 	url := fmt.Sprintf("%s:%d", kernelglobals.Config.SelfAddress, kernelglobals.Config.SelfPort)
 	logger.Info("Server activo en %s", url)
@@ -94,26 +102,14 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	kernelsync.WaitPlanificadorLP.Add(1)
-	go func() {
-		defer kernelsync.WaitPlanificadorLP.Done()
-		err = ExecuteSyscall(syscall) // map a la libreria de syscalls
-		if err != nil {
-			// Por alguna razón esto rompe cuando quiero compilar
-			logger.Error("Error al ejecutar la syscall: %v - %v", syscalls.SyscallNames[syscall.Type], err)
-			w.WriteHeader(http.StatusInternalServerError)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-	}()
-}
-
-func processFinish(w http.ResponseWriter, r *http.Request) {
-	// Cosa de largo plazo :)
-	// TODO: Volver a poner el hilo que vino de CPU en la cola ready
-	// Rami: What?
-
-	//TODO: ESTO NO VA, YA ESTA EN EL PLANI DE LARGO PLAZO - tobi
+	err = ExecuteSyscall(syscall) // map a la libreria de syscalls
+	if err != nil {
+		// Por alguna razón esto rompe cuando quiero compilar
+		logger.Error("Error al ejecutar la syscall: %v - %v", syscalls.SyscallNames[syscall.Type], err)
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
 
 }
 
@@ -123,16 +119,44 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 		return errors.New("la syscall pedida no es una syscall que el kernel entienda")
 	}
 
-	logger.Info("## (<%v>:<%v>) - Solicitó syscall: <%v>",
-		kernelglobals.ExecStateThread.FatherPCB.PID,
-		kernelglobals.ExecStateThread.TID,
-		syscalls.SyscallNames[syscall.Type],
-	)
-
-	err := syscallFunc(syscall.Arguments)
-	if err != nil {
-		return err
+	// Verificar si hay un thread en ejecución
+	if kernelglobals.ExecStateThread != nil {
+		logger.Info("## (<%v>:<%v>) - Solicitó syscall: <%v>",
+			kernelglobals.ExecStateThread.FatherPCB.PID,
+			kernelglobals.ExecStateThread.TID,
+			syscalls.SyscallNames[syscall.Type],
+		)
+	} else {
+		logger.Info("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
 	}
 
+	go func() {
+		err := syscallFunc(syscall.Arguments)
+		if err != nil {
+			logger.Error("La syscall devolvio un error - %v", err)
+		}
+	}()
 	return nil
+}
+
+func initProcess(fileName, processSize string) {
+	logger.Info("Inicializando el proceso inicial con archivo: %s, tamaño: %s", fileName, processSize)
+
+	// Crear los argumentos para la syscall ProcessCreate
+	args := []string{fileName, processSize}
+	logger.Info("Archivo y tamanio guardados.")
+
+	// Enviar la syscall ProcessCreate para que el kernel la maneje
+	syscall := syscalls.Syscall{
+		Type:      syscalls.ProcessCreate, // Tipo de syscall
+		Arguments: args,                   // Argumentos del proceso (archivo y tamaño)
+	}
+
+	// Ejecutar la syscall
+	err := ExecuteSyscall(syscall)
+	if err != nil {
+		logger.Fatal("Error al ejecutar la syscall ProcessCreate: %v", err)
+	}
+
+	logger.Info("Proceso inicial creado correctamente.")
 }

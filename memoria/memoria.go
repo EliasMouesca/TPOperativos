@@ -64,7 +64,7 @@ func main() {
 	http.HandleFunc("/memoria/createThread", kernel.CreateThread)
 	http.HandleFunc("/memoria/finishThread", kernel.FinishThread)
 
-	http.HandleFunc("/memoria/dump", fileSystem.Dump)
+	http.HandleFunc("/memoria/memoryDump", fileSystem.DumpMemory)
 
 	self := fmt.Sprintf("%v:%v", memoria_helpers.Config.SelfAddress, memoria_helpers.Config.SelfPort)
 	logger.Info("Server activo en %v", self)
