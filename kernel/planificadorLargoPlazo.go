@@ -33,9 +33,11 @@ func NewProcessToReady() {
 		fileName := args[0]
 		processSize := args[1]
 		prioridad, _ := strconv.Atoi(args[2])
+		pid, _ := strconv.Atoi(args[3])
 
 		// Crear el request para verificar si memoria tiene espacio
 		request := types.RequestToMemory{
+			Thread:    types.Thread{PID: types.Pid(pid)},
 			Type:      types.CreateProcess,
 			Arguments: []string{fileName, processSize},
 		}
@@ -46,7 +48,7 @@ func NewProcessToReady() {
 			err := sendMemoryRequest(request)
 			if err != nil {
 				logger.Error("Error al enviar request a memoria: %v", err)
-				//<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
+				<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
 			} else {
 				logger.Debug("Hay espacio disponible en memoria")
 				break
@@ -85,10 +87,10 @@ func ProcessToExit() {
 		PID := <-kernelsync.ChannelFinishprocess
 
 		// Simular la comunicación con memoria (puede ser mockeado o real)
-		pidStr := strconv.Itoa(int(PID))
 		request := types.RequestToMemory{
+			Thread:    types.Thread{PID: PID},
 			Type:      types.FinishProcess,
-			Arguments: []string{pidStr},
+			Arguments: []string{},
 		}
 		logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", PID)
 
@@ -97,6 +99,7 @@ func ProcessToExit() {
 		if err != nil {
 			logger.Error("Error en el request a memoria: %v", err)
 		}
+		kernelsync.InitProcess <- 0
 	}
 }
 
@@ -115,6 +118,7 @@ func NewThreadToReady() {
 
 		// Informar a memoria sobre la creación del hilo
 		request := types.RequestToMemory{
+			Thread:    types.Thread{PID: newTCB.FatherPCB.PID, TID: newTCB.TID},
 			Type:      types.CreateThread,
 			Arguments: []string{fileName},
 		}
@@ -136,7 +140,7 @@ func NewThreadToReady() {
 		logger.Info("## (<%d>:<%d>) Se movió el hilo de NEW a READY", newTCB.FatherPCB.PID, newTCB.TID)
 
 		// Notificar que se completó la creación del hilo
-		//kernelsync.SemThreadCreate <- 0
+		// kernelsync.SemThreadCreate <- 0
 	}
 }
 
@@ -179,10 +183,10 @@ func ThreadToExit() {
 		}
 
 		// Informar a memoria sobre la finalización del hilo
-		tidStr := strconv.Itoa(tid)
 		request := types.RequestToMemory{
+			Thread:    types.Thread{PID: execTCB.FatherPCB.PID, TID: execTCB.TID},
 			Type:      types.FinishThread,
-			Arguments: []string{tidStr},
+			Arguments: []string{},
 		}
 		err = sendMemoryRequest(request)
 		if err != nil {

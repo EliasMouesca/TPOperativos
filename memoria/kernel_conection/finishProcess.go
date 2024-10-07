@@ -14,6 +14,7 @@ func FinishProcess(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Request recibida de: %v", r.RemoteAddr)
 
 	query := r.URL.Query()
+	//TODO: rami: El kernel no te pasa el size
 	sizeS := query.Get("size")
 	pidS := query.Get("ptd")
 

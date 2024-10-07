@@ -48,6 +48,10 @@ func ProcessCreate(args []string) error {
 	// Mandar el proceso a la cola de NewStateQueue (solo PCB, sin TCB)
 	kernelglobals.NewPCBStateQueue.Add(&kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1])
 
+	//Agrego el PID a args, para despues pasarselo a memoria
+	pidStr := strconv.Itoa(int(processCreate.PID))
+	args = append(args, pidStr)
+
 	// Enviar los argumentos al canal para que NewProcessToReady los procese
 	kernelsync.ChannelProcessArguments <- args
 
@@ -120,11 +124,9 @@ func ProcessExit(args []string) error {
 	kernelglobals.ExecStateThread = nil
 
 	// Enviar la señal a la memoria sobre la finalización del proceso
-	//kernelsync.ChannelFinishprocess <- pcb.PID
-	//<-kernelsync.SemFinishprocess
+	kernelsync.ChannelFinishprocess <- pcb.PID
 
 	logger.Info("## Finaliza el proceso <%v>", pcb.PID)
-	//kernelsync.InitProcess <- 0
 
 	return nil
 }

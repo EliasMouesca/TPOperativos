@@ -6,8 +6,6 @@ import "errors"
 // de las request que le envia el Planificador de Largo Plazo
 // a memoria
 
-// TODO: tipo de direcciones a memoria
-
 // la direccion en la cual esta la handleFunc de memoria
 // por ejemplo: http.HandleFunc("/kernel/createProcess", createProcess)
 const (
@@ -19,6 +17,7 @@ const (
 )
 
 type RequestToMemory struct {
+	Thread    Thread
 	Type      string   `json:"type"`
 	Arguments []string `json:"arguments"`
 }
