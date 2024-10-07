@@ -24,8 +24,9 @@ var InitProcess = make(chan any)
 var ChannelFinishprocess = make(chan types.Pid)
 var SemFinishprocess = make(chan any)
 
-var ChannelFinishThread = make(chan int)
-var SemFinishThread = make(chan any)
+var ChannelFinishThread = make(chan []string, 1)
+var SemFinishThread = make(chan struct{}, 1)
+var SemMovedFinishThreads = make(chan struct{}, 1)
 
 var ChannelThreadCreate = make(chan []string)
 var SemThreadCreate = make(chan any)

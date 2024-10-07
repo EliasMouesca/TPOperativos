@@ -289,7 +289,10 @@ func ThreadExit(args []string) error {
 
 	execTCB := kernelglobals.ExecStateThread
 
-	//kernelsync.ChannelFinishThread <- 0
+	kernelsync.ChannelFinishThread <- []string{strconv.Itoa(int(execTCB.TID)), strconv.Itoa(int(execTCB.FatherPCB.PID))}
+
+	kernelsync.SemFinishThread <- struct{}{}
+	<-kernelsync.SemMovedFinishThreads
 
 	logger.Info("## Moviendo el TID <%d> al estado EXIT", execTCB.TID)
 	kernelglobals.ExitStateQueue.Add(execTCB)

@@ -217,3 +217,122 @@ func TestNewThreadToReady(t *testing.T) {
 
 	logCurrentState("Estado Final luego de mover el hilo a Ready")
 }
+
+func TestThreadExitAndToExit(t *testing.T) {
+	// Inicializar variables globales
+	kernelglobals.EveryPCBInTheKernel = []kerneltypes.PCB{}
+	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
+	kernelglobals.NewStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.BlockedStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.ExitStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.ShortTermScheduler = &Fifo.Fifo{
+		Ready: types.Queue[*kerneltypes.TCB]{}, // Inicializa la cola de Ready
+	}
+
+	// Crear un PCB
+	newPID := types.Pid(1)
+	pcb := kerneltypes.PCB{
+		PID:  newPID,
+		TIDs: []types.Tid{0, 1, 2}, // El TCB principal y dos threads adicionales
+	}
+	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, pcb)
+	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+
+	// Crear TCB principal (execTCB)
+	execTCB := kerneltypes.TCB{TID: 0, Prioridad: 1, FatherPCB: fatherPCB}
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
+	execTCBPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	kernelglobals.ExecStateThread = execTCBPtr
+
+	// Crear mutex y asignarlo al execTCB
+	mutex := kerneltypes.Mutex{Name: "testMutex", AssignedTCB: execTCBPtr}
+	fatherPCB.CreatedMutexes = append(fatherPCB.CreatedMutexes, mutex)
+	execTCBPtr.LockedMutexes = append(execTCBPtr.LockedMutexes, &fatherPCB.CreatedMutexes[0])
+
+	// Crear TCB bloqueado por THREAD_JOIN
+	joinTCB := kerneltypes.TCB{
+		TID:       1,
+		Prioridad: 1,
+		FatherPCB: fatherPCB,
+		JoinedTCB: execTCBPtr, // Bloqueado esperando que execTCB termine
+	}
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, joinTCB)
+	joinTCBPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	kernelglobals.BlockedStateQueue.Add(joinTCBPtr)
+
+	// Crear TCB bloqueado por mutex
+	mutexBlockedTCB := kerneltypes.TCB{
+		TID:       2,
+		Prioridad: 1,
+		FatherPCB: fatherPCB,
+	}
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mutexBlockedTCB)
+	mutexBlockedTCBPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	mutex.BlockedTCBs = append(mutex.BlockedTCBs, mutexBlockedTCBPtr)
+
+	// Asignar mutex al PCB
+	for i := range kernelglobals.EveryPCBInTheKernel {
+		if kernelglobals.EveryPCBInTheKernel[i].PID == fatherPCB.PID {
+			kernelglobals.EveryPCBInTheKernel[i].CreatedMutexes[0] = mutex
+		}
+	}
+
+	kernelglobals.BlockedStateQueue.Add(mutexBlockedTCBPtr)
+
+	// Inicializar canal
+	kernelsync.ChannelFinishThread = make(chan []string)
+	kernelsync.SemFinishThread = make(chan struct{})
+	kernelsync.SemMovedFinishThreads = make(chan struct{})
+
+	logCurrentState("Estado Inicial")
+
+	go func() {
+		ThreadToExit()
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Ejecutar ThreadExit en un goroutine (simulando que el hilo finaliza)
+	ThreadExit([]string{})
+
+	// Verificar que los TCBs fueron movidos a ExitStateQueue y desbloquearon correctamente
+	time.Sleep(100 * time.Millisecond) // Simular tiempo para la ejecución concurrente
+
+	logCurrentState("Estado despues de Planificar")
+
+	foundExecTCBInExit := false
+	foundJoinTCBInReady := false
+	foundMutexBlockedTCBInReady := false
+
+	// Verificar el TCB finalizado en ExitStateQueue
+	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
+		if tcb.TID == execTCBPtr.TID {
+			foundExecTCBInExit = true
+		}
+	})
+
+	// Verificar que el hilo bloqueado por THREAD_JOIN fue movido a Ready
+	kernelglobals.ShortTermScheduler.(*Fifo.Fifo).Ready.Do(func(tcb *kerneltypes.TCB) {
+		if tcb.TID == joinTCBPtr.TID {
+			foundJoinTCBInReady = true
+		}
+	})
+
+	// Verificar que el hilo bloqueado por mutex fue movido a Ready
+	kernelglobals.ShortTermScheduler.(*Fifo.Fifo).Ready.Do(func(tcb *kerneltypes.TCB) {
+		if tcb.TID == mutexBlockedTCBPtr.TID {
+			foundMutexBlockedTCBInReady = true
+		}
+	})
+
+	// Verificaciones finales
+	if !foundExecTCBInExit {
+		t.Errorf("El TID <%d> del PCB <%d> no fue movido correctamente a ExitStateQueue", execTCBPtr.TID, fatherPCB.PID)
+	}
+	if !foundJoinTCBInReady {
+		t.Errorf("El TID <%d> del PCB <%d> bloqueado por THREAD_JOIN no fue movido correctamente a ReadyStateQueue", joinTCBPtr.TID, fatherPCB.PID)
+	}
+	if !foundMutexBlockedTCBInReady {
+		t.Errorf("El TID <%d> del PCB <%d> bloqueado por mutex no fue movido correctamente a ReadyStateQueue", mutexBlockedTCBPtr.TID, fatherPCB.PID)
+	}
+}
