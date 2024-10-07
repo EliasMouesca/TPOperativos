@@ -20,10 +20,6 @@ func TestNewProcessToReady(t *testing.T) {
 		Ready: types.Queue[*kerneltypes.TCB]{}, // Inicializa la cola Ready
 	}
 
-	// Configurar la dirección y puerto de la memoria real
-	kernelglobals.Config.MemoryAddress = "localhost" // O IP real
-	kernelglobals.Config.MemoryPort = 8080           // El puerto real de memoria
-
 	// Crear el PCB y agregarlo a la cola NewPCBStateQueue
 	PIDcount++
 	processCreate := kerneltypes.PCB{

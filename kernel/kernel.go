@@ -32,20 +32,29 @@ func init() {
 		logger.Fatal("No se pudo parsear el archivo de configuración - %v", err.Error())
 	}
 
+	// Agregar logs para verificar los valores cargados
+	logger.Info("Configuración cargada: SelfPort=%d, MemoryPort=%d, CpuPort=%d",
+		kernelglobals.Config.SelfPort,
+		kernelglobals.Config.MemoryPort,
+		kernelglobals.Config.CpuPort)
+
 	if err = kernelglobals.Config.Validate(); err != nil {
 		logger.Fatal("La configuración no es válida - %v", err.Error())
 	}
-	logger.Debug("Configuración cargada exitosamente")
 
 	err = logger.SetLevel(kernelglobals.Config.LogLevel)
 	if err != nil {
 		logger.Fatal("No se pudo leer el log-level - %v", err.Error())
 	}
 
+	logger.Info("Configuración cargada exitosamente")
 }
 
 func main() {
 	logger.Info("-- Comenzó la ejecución del kernel --")
+
+	go planificadorLargoPlazo()
+	//go planificadorCortoPlazo()
 
 	// Implementacion GOD
 	// Inicializar un proceso sin que CPU mande nada
@@ -63,8 +72,6 @@ func main() {
 		logger.Fatal("ListenAndServe retornó error - %v", err)
 	}
 
-	planificadorLargoPlazo()
-	go planificadorCortoPlazo()
 }
 
 func badRequest(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +101,7 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			// Por alguna razón esto rompe cuando quiero compilar
 			logger.Error("Error al ejecutar la syscall: %v - %v", syscalls.SyscallNames[syscall.Type], err)
+			w.WriteHeader(http.StatusInternalServerError)
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
@@ -105,7 +113,7 @@ func processFinish(w http.ResponseWriter, r *http.Request) {
 	// TODO: Volver a poner el hilo que vino de CPU en la cola ready
 	// Rami: What?
 
-	kernelsync.MutexCPU.Unlock()
+	//TODO: ESTO NO VA, YA ESTA EN EL PLANI DE LARGO PLAZO - tobi
 
 }
 

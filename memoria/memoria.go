@@ -24,7 +24,7 @@ func init() {
 	logger.Debug("Logger creado")
 
 	// Load Config
-	configData, err := os.ReadFile("Config.json")
+	configData, err := os.ReadFile("config/Config.json")
 	if err != nil {
 		logger.Fatal("No se pudo leer el archivo de configuración - %v", err.Error())
 	}

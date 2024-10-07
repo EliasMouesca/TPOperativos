@@ -1,23 +1,27 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"net/http"
 	"strconv"
 )
 
 func planificadorLargoPlazo() {
 	// En el enunciado en implementacion dice que hay que inicializar un proceso
 	// quiza hay que hacerlo aca o en kernel.go es lo mismo creo
+
+	logger.Info("Iniciando el planificador de largo plazo")
+
 	go NewProcessToReady()
-
 	go ProcessToExit()
-
 	go NewThreadToReady()
-
 	go ThreadToExit()
 }
 
@@ -42,7 +46,7 @@ func NewProcessToReady() {
 			err := sendMemoryRequest(request)
 			if err != nil {
 				logger.Error("Error al enviar request a memoria: %v", err)
-				<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
+				//<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
 			} else {
 				logger.Debug("Hay espacio disponible en memoria")
 				break
@@ -276,13 +280,14 @@ func releaseMutexes(tid int) {
 	}
 }
 
+/*
 func sendMemoryRequest(request types.RequestToMemory) error {
 	// Simulación de respuesta exitosa sin hacer la solicitud real a memoria
 	logger.Debug("Simulando respuesta exitosa de la memoria para request de tipo %s", request.Type)
 	return nil
 }
+*/
 
-/*
 func sendMemoryRequest(request types.RequestToMemory) error {
 	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
 
@@ -292,9 +297,11 @@ func sendMemoryRequest(request types.RequestToMemory) error {
 		return err
 	}
 
+	logger.Info("CONTENIDO DE REQUEST A MEMORIA:\n	-Type: %v\n	-Arguments: %v", request.Type, request.Arguments)
+
 	// Hacer request a memoria
 	memoria := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/memoria/"+request.Type, kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort)
+	url := fmt.Sprintf("http://%s:%d/memoria/%s", kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort, request.Type)
 	logger.Debug("Enviando request a memoria")
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonRequest))
 	if err != nil {
@@ -323,4 +330,3 @@ func handleMemoryResponseError(response *http.Response, TypeRequest string) erro
 	}
 	return nil
 }
-*/
