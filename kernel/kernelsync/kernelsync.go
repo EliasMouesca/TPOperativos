@@ -33,3 +33,4 @@ var ChannelThreadCreate = make(chan []string)
 var SemThreadCreate = make(chan any)
 
 var ChannelIO = make(chan *kerneltypes.TCB)
+var SemIo = make(chan int)

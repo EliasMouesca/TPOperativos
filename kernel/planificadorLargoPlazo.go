@@ -23,6 +23,7 @@ func planificadorLargoPlazo() {
 	go ProcessToExit()
 	go NewThreadToReady()
 	go ThreadToExit()
+	go UnlockIO()
 }
 
 func NewProcessToReady() {
@@ -281,6 +282,22 @@ func releaseMutexes(tid int) {
 			// Actualizar el mutex en el PCB
 			pcb.CreatedMutexes[i] = mutex
 		}
+	}
+}
+
+func UnlockIO() {
+	for {
+		tcbBlock := <-kernelsync.ChannelIO
+
+		kernelsync.MutexPlanificadorLP.Lock()
+		err := kernelglobals.BlockedStateQueue.Remove(tcbBlock)
+		kernelsync.MutexPlanificadorLP.Unlock()
+
+		if err != nil {
+			logger.Error("No se pudo remover el tcb de la BlockQueue - %v", err)
+		}
+		logger.Info("Desbloqueando el hilo %v", tcbBlock.TID)
+		kernelsync.SemIo <- 0
 	}
 }
 

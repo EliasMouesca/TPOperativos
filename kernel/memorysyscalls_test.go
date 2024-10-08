@@ -343,34 +343,34 @@ func TestDumpMemory_Error_MultipleThreads(t *testing.T) {
 
 func TestIO(t *testing.T) {
 	setup2()
-	tcb0 := kerneltypes.TCB{TID: 0}
-	kernelglobals.ExecStateThread = &tcb0
 
-	args1 := []string{"100"}
-	args2 := []string{"500"}
+	pcbs := make([]kerneltypes.PCB, 0)
+	tcbChannels := make(chan *kerneltypes.TCB, 5) // Canal para almacenar TCBs
 
-	tcb1 := kerneltypes.TCB{TID: 1}
-	tcb2 := kerneltypes.TCB{TID: 2}
+	// Inicializa varios PCBs y TCBs
+	for i := 0; i < 5; i++ {
+		pcb := kerneltypes.PCB{PID: types.Pid(i)}
+		pcbs = append(pcbs, pcb)
+		tcb := kerneltypes.TCB{TID: types.Tid(i), FatherPCB: &pcb}
+		tcbChannels <- &tcb
+	}
 
-	defer kernelsync.WaitPlanificadorLP.Add(1)
-	go func() {
-		defer kernelsync.WaitPlanificadorLP.Done()
-		err := IO(args1)
-		if err != nil {
-			t.Errorf("%v", err)
-		}
-	}()
+	close(tcbChannels)
 
-	kernelglobals.ExecStateThread = &tcb1
-	kernelsync.WaitPlanificadorLP.Add(1)
-	go func() {
-		defer kernelsync.WaitPlanificadorLP.Done()
-		err := IO(args2)
-		if err != nil {
-			t.Errorf("%v", err)
-		}
-	}()
-	kernelglobals.ExecStateThread = &tcb2
+	go UnlockIO()
+
+	for tcb := range tcbChannels {
+		kernelsync.WaitPlanificadorLP.Add(1) // Aumentar el contador del WaitGroup
+		go func(tcb *kerneltypes.TCB) {
+			defer kernelsync.WaitPlanificadorLP.Done() // Decrementar al final
+			kernelglobals.ExecStateThread = tcb
+			args := []string{"100"} // Tiempo de bloqueo
+			err := IO(args)
+			if err != nil {
+				t.Errorf("Error en TCB %v: %v", tcb.TID, err)
+			}
+		}(tcb)
+	}
 
 	kernelsync.WaitPlanificadorLP.Wait()
 }
