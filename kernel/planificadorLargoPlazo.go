@@ -296,7 +296,7 @@ func UnlockIO() {
 		if err != nil {
 			logger.Error("No se pudo remover el tcb de la BlockQueue - %v", err)
 		}
-		logger.Info("Desbloqueando el hilo %v", tcbBlock.TID)
+		logger.Info("Desbloqueando (<%v>:<%v>)", tcbBlock.FatherPCB.PID, tcbBlock.TID)
 		kernelsync.SemIo <- 0
 	}
 }

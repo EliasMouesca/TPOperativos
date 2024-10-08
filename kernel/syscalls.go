@@ -527,10 +527,9 @@ func IO(args []string) error {
 
 	kernelsync.MutexPlanificadorLP.Lock()
 	kernelglobals.BlockedStateQueue.Add(execTCB)
-	kernelsync.MutexPlanificadorLP.Unlock()
-
 	// Canal FIFO
-	logger.Info("Bloqueando el hilo %v de duracion %v", execTCB.TID, threadBlockedTime)
+	logger.Info("## (<%v>:<%v>) - Bloqueado por: <IO>", execTCB.FatherPCB.PID, execTCB.TID)
+	kernelsync.MutexPlanificadorLP.Unlock()
 
 	kernelsync.ChannelIO <- execTCB
 

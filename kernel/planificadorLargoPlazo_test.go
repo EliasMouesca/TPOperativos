@@ -332,3 +332,41 @@ func TestThreadExitAndToExit(t *testing.T) {
 		t.Errorf("El TID <%d> del PCB <%d> bloqueado por mutex no fue movido correctamente a ReadyStateQueue", mutexBlockedTCBPtr.TID, fatherPCB.PID)
 	}
 }
+
+func setup2() {
+	logger.ConfigureLogger("test.log", "INFO")
+}
+
+func TestIO(t *testing.T) {
+	setup2()
+
+	pcbs := make([]kerneltypes.PCB, 0)
+	tcbChannels := make(chan *kerneltypes.TCB, 10) // Canal para almacenar TCBs
+
+	// Inicializa varios PCBs y TCBs
+	for i := 0; i < 10; i++ {
+		pcb := kerneltypes.PCB{PID: types.Pid(i)}
+		pcbs = append(pcbs, pcb)
+		tcb := kerneltypes.TCB{TID: types.Tid(i), FatherPCB: &pcb}
+		tcbChannels <- &tcb
+	}
+
+	close(tcbChannels)
+
+	go UnlockIO()
+
+	for tcb := range tcbChannels {
+		kernelsync.WaitPlanificadorLP.Add(1) // Aumentar el contador del WaitGroup
+		go func(tcb *kerneltypes.TCB) {
+			defer kernelsync.WaitPlanificadorLP.Done() // Decrementar al final
+			kernelglobals.ExecStateThread = tcb
+			args := []string{"100"} // Tiempo de bloqueo
+			err := IO(args)
+			if err != nil {
+				t.Errorf("Error en TCB %v: %v", tcb.TID, err)
+			}
+		}(tcb)
+	}
+
+	kernelsync.WaitPlanificadorLP.Wait()
+}

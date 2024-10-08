@@ -2,17 +2,11 @@ package main
 
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
-	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
 	"github.com/sisoputnfrba/tp-golang/types"
-	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"testing"
 )
-
-func setup2() {
-	logger.ConfigureLogger("test.log", "INFO")
-}
 
 func TestDumpMemory_Success(t *testing.T) {
 	// Inicializar variables globales
@@ -339,38 +333,4 @@ func TestDumpMemory_Error_MultipleThreads(t *testing.T) {
 	}
 
 	logCurrentState("Estado Final con múltiples hilos")
-}
-
-func TestIO(t *testing.T) {
-	setup2()
-
-	pcbs := make([]kerneltypes.PCB, 0)
-	tcbChannels := make(chan *kerneltypes.TCB, 5) // Canal para almacenar TCBs
-
-	// Inicializa varios PCBs y TCBs
-	for i := 0; i < 5; i++ {
-		pcb := kerneltypes.PCB{PID: types.Pid(i)}
-		pcbs = append(pcbs, pcb)
-		tcb := kerneltypes.TCB{TID: types.Tid(i), FatherPCB: &pcb}
-		tcbChannels <- &tcb
-	}
-
-	close(tcbChannels)
-
-	go UnlockIO()
-
-	for tcb := range tcbChannels {
-		kernelsync.WaitPlanificadorLP.Add(1) // Aumentar el contador del WaitGroup
-		go func(tcb *kerneltypes.TCB) {
-			defer kernelsync.WaitPlanificadorLP.Done() // Decrementar al final
-			kernelglobals.ExecStateThread = tcb
-			args := []string{"100"} // Tiempo de bloqueo
-			err := IO(args)
-			if err != nil {
-				t.Errorf("Error en TCB %v: %v", tcb.TID, err)
-			}
-		}(tcb)
-	}
-
-	kernelsync.WaitPlanificadorLP.Wait()
 }
