@@ -297,6 +297,11 @@ func UnlockIO() {
 			logger.Error("No se pudo remover el tcb de la BlockQueue - %v", err)
 		}
 		logger.Info("Desbloqueando (<%v>:<%v>)", tcbBlock.FatherPCB.PID, tcbBlock.TID)
+		// lo vuelvo a poner en ready, si no se pierde la referencia a ese tcb y nunca se vuelve a planificar
+		err = kernelglobals.ShortTermScheduler.AddToReady(tcbBlock)
+		if err != nil {
+			logger.Error("No se pudo mover el tcb a la cola Ready. - %v", err)
+		}
 		kernelsync.SemIo <- 0
 	}
 }
