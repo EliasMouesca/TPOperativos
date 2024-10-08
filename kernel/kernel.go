@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -130,12 +131,15 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 		logger.Info("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
 	}
 
+	kernelsync.WaitPlanificadorLP.Add(1)
 	go func() {
+		defer kernelsync.WaitPlanificadorLP.Done()
 		err := syscallFunc(syscall.Arguments)
 		if err != nil {
 			logger.Error("La syscall devolvio un error - %v", err)
 		}
 	}()
+	kernelsync.WaitPlanificadorLP.Wait()
 	return nil
 }
 

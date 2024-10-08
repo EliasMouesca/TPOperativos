@@ -10,6 +10,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"strconv"
+	"time"
 )
 
 type syscallFunction func(args []string) error
@@ -521,5 +522,28 @@ func DumpMemory(args []string) error {
 }
 
 func IO(args []string) error {
+	kernelsync.MutexPlanificadorLP.Lock()
+	threadBlockedTime, _ := strconv.Atoi(args[0])
+	execTCB := kernelglobals.ExecStateThread
+
+	for kernelglobals.ExecStateThread == nil {
+	}
+	kernelglobals.BlockedStateQueue.Add(execTCB)
+
+	// Canal FIFO
+	logger.Info("Bloqueando el hilo %v de duracion %v", execTCB.TID, threadBlockedTime)
+	kernelsync.MutexPlanificadorLP.Unlock()
+
+	kernelsync.ChannelIO <- execTCB
+
+	time.Sleep(time.Duration(threadBlockedTime) * time.Millisecond)
+
+	tcbBlock := <-kernelsync.ChannelIO
+	err := kernelglobals.BlockedStateQueue.Remove(tcbBlock)
+	if err != nil {
+		logger.Error("No se pudo remover el tcb de la BlockQueue - %v", err)
+	}
+	logger.Info("Desbloqueando el hilo %v", tcbBlock)
+
 	return nil
 }

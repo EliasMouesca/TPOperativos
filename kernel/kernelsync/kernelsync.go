@@ -1,6 +1,7 @@
 package kernelsync
 
 import (
+	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"sync"
 )
@@ -30,3 +31,5 @@ var SemMovedFinishThreads = make(chan struct{}, 1)
 
 var ChannelThreadCreate = make(chan []string)
 var SemThreadCreate = make(chan any)
+
+var ChannelIO = make(chan *kerneltypes.TCB)

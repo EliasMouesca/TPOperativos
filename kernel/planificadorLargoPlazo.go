@@ -23,7 +23,6 @@ func planificadorLargoPlazo() {
 	go ProcessToExit()
 	go NewThreadToReady()
 	go ThreadToExit()
-
 }
 
 func NewProcessToReady() {

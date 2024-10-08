@@ -2,11 +2,17 @@ package main
 
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
 	"github.com/sisoputnfrba/tp-golang/types"
+	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"testing"
 )
+
+func setup2() {
+	logger.ConfigureLogger("test.log", "INFO")
+}
 
 func TestDumpMemory_Success(t *testing.T) {
 	// Inicializar variables globales
@@ -333,4 +339,38 @@ func TestDumpMemory_Error_MultipleThreads(t *testing.T) {
 	}
 
 	logCurrentState("Estado Final con múltiples hilos")
+}
+
+func TestIO(t *testing.T) {
+	setup2()
+	tcb0 := kerneltypes.TCB{TID: 0}
+	kernelglobals.ExecStateThread = &tcb0
+
+	args1 := []string{"100"}
+	args2 := []string{"500"}
+
+	tcb1 := kerneltypes.TCB{TID: 1}
+	tcb2 := kerneltypes.TCB{TID: 2}
+
+	defer kernelsync.WaitPlanificadorLP.Add(1)
+	go func() {
+		defer kernelsync.WaitPlanificadorLP.Done()
+		err := IO(args1)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+	}()
+
+	kernelglobals.ExecStateThread = &tcb1
+	kernelsync.WaitPlanificadorLP.Add(1)
+	go func() {
+		defer kernelsync.WaitPlanificadorLP.Done()
+		err := IO(args2)
+		if err != nil {
+			t.Errorf("%v", err)
+		}
+	}()
+	kernelglobals.ExecStateThread = &tcb2
+
+	kernelsync.WaitPlanificadorLP.Wait()
 }
