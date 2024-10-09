@@ -140,10 +140,11 @@ func TestThreadJoin(t *testing.T) {
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
 
 	// Inicializar el hilo actual en ejecución
-	kernelglobals.ExecStateThread = buscarTCBPorTID(2, fatherPCB.PID)
+	kernelglobals.ExecStateThread = buscarTCBPorTID(0, fatherPCB.PID)
 
 	// Añadir el TCB del hilo a joinear a EveryTCBInTheKernel
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, joinedTCB)
+	kernelglobals.ShortTermScheduler.AddToReady(buscarTCBPorTID(2, fatherPCB.PID))
 
 	fatherPCB.TIDs = append(fatherPCB.TIDs, execTCB.TID)
 	fatherPCB.TIDs = append(fatherPCB.TIDs, joinedTCB.TID)

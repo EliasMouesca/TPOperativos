@@ -39,7 +39,11 @@ func logCurrentState(context string) {
 	// Mostrar estados de TCBs
 	logger.Info(" - TCBs -")
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
-		logger.Info("	(<%d:%d>), Prioridad: %d", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad)
+		if tcb.JoinedTCB == nil {
+			logger.Info("    (<%d:%d>), Prioridad: %d, JoinedTCB: nil", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad)
+		} else {
+			logger.Info("    (<%d:%d>), Prioridad: %d, JoinedTCB: %d", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad, tcb.JoinedTCB.TID)
+		}
 
 		if len(tcb.LockedMutexes) == 0 {
 			logger.Info("  	No hay mutexes bloqueados por este TCB")
