@@ -322,6 +322,11 @@ func TestThreadExit(t *testing.T) {
 
 	logCurrentState("Estado Inicial.")
 
+	//Envio al canal com que le dio signal, ya que como estamos testeando solo la syscall y no el planificador, se quedaria en deadlock...
+	go func() {
+		kernelsync.ThreadExitComplete <- struct{}{}
+	}()
+
 	// Llamar a ThreadExit (el hilo actual se auto-finaliza)
 	err := ThreadExit([]string{})
 	if err != nil {
