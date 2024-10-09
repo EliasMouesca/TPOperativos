@@ -5,8 +5,17 @@ import (
 	"encoding/json"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
+)
+
+var (
+	processCounter int
+	threadCounter  int
+	mutexCounter   int
+	mutexNames     = []string{"mutex_A", "mutex_B", "mutex_C", "mutex_D"}
+	mu             sync.Mutex
 )
 
 func sendSyscallRequest(t *testing.T, syscall syscalls.Syscall) {
@@ -29,33 +38,39 @@ func sendSyscallRequest(t *testing.T, syscall syscalls.Syscall) {
 	}
 }
 
-// Test para crear 4 procesos
+// Test para crear un proceso
 func TestProcessCreateKERNEL(t *testing.T) {
-	// Esperar un tiempo para asegurarse de que el servidor kernel esté activo
 	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 2; i++ {
-		syscall := syscalls.Syscall{
-			Type:      syscalls.ProcessCreate,
-			Arguments: []string{"test_process", "1024", "1"},
-		}
-		sendSyscallRequest(t, syscall)
-		t.Logf("ProcessCreate syscall #%d enviado correctamente.", i+1)
+	// Usar un mutex para asegurar que el contador se incremente correctamente entre ejecuciones paralelas
+	mu.Lock()
+	processCounter++
+	processName := "test_process_" + string(rune(processCounter))
+	mu.Unlock()
+
+	syscall := syscalls.Syscall{
+		Type:      syscalls.ProcessCreate,
+		Arguments: []string{processName, "1024", "1"},
 	}
+	sendSyscallRequest(t, syscall)
+	t.Logf("ProcessCreate syscall para proceso %s enviado correctamente.", processName)
 }
 
-// Test para crear 5 hilos para el proceso del hilo en ejecución
+// Test para crear un hilo para el proceso del hilo en ejecución
 func TestThreadCreateKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 5; i++ {
-		syscall := syscalls.Syscall{
-			Type:      syscalls.ThreadCreate,
-			Arguments: []string{"thread_code", "1"}, // Cambia los argumentos según el pseudocódigo y la prioridad del hilo
-		}
-		sendSyscallRequest(t, syscall)
-		t.Logf("ThreadCreate syscall #%d enviado correctamente.", i+1)
+	mu.Lock()
+	threadCounter++
+	threadName := "thread_code_" + string(rune(threadCounter))
+	mu.Unlock()
+
+	syscall := syscalls.Syscall{
+		Type:      syscalls.ThreadCreate,
+		Arguments: []string{threadName, "1"}, // Cambia los argumentos según el pseudocódigo y la prioridad del hilo
 	}
+	sendSyscallRequest(t, syscall)
+	t.Logf("ThreadCreate syscall enviado correctamente para %s.", threadName)
 }
 
 // Test para cancelar un hilo
@@ -70,57 +85,70 @@ func TestThreadCancelKERNEL(t *testing.T) {
 	t.Log("ThreadCancel syscall enviado correctamente.")
 }
 
-// Test para crear 4 mutex
+// Test para crear un mutex
 func TestMutexCreateKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 4; i++ {
-		mutexName := "mutex_" + string(rune('A'+i)) // Mutex_A, Mutex_B, etc.
-		syscall := syscalls.Syscall{
-			Type:      syscalls.MutexCreate,
-			Arguments: []string{mutexName},
-		}
-		sendSyscallRequest(t, syscall)
-		t.Logf("MutexCreate syscall #%d enviado correctamente (Nombre: %s).", i+1, mutexName)
+	mu.Lock()
+	mutexName := mutexNames[mutexCounter%len(mutexNames)] // Usar el nombre basado en el contador
+	mutexCounter++
+	mu.Unlock()
+
+	syscall := syscalls.Syscall{
+		Type:      syscalls.MutexCreate,
+		Arguments: []string{mutexName},
 	}
+	sendSyscallRequest(t, syscall)
+	t.Logf("MutexCreate syscall enviado correctamente (Nombre: %s).", mutexName)
 }
 
-// Test para hacer lock a 2 mutex
+// Test para hacer lock a un mutex
 func TestMutexLockKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 2; i++ {
-		mutexName := "mutex_" + string(rune('A'+i)) // Bloquear Mutex_A, Mutex_B
-		syscall := syscalls.Syscall{
-			Type:      syscalls.MutexLock,
-			Arguments: []string{mutexName},
-		}
-		sendSyscallRequest(t, syscall)
-		t.Logf("MutexLock syscall #%d enviado correctamente (Nombre: %s).", i+1, mutexName)
+	mu.Lock()
+	mutexName := mutexNames[mutexCounter%len(mutexNames)]
+	mutexCounter++
+	mu.Unlock()
+
+	syscall := syscalls.Syscall{
+		Type:      syscalls.MutexLock,
+		Arguments: []string{mutexName},
 	}
+	sendSyscallRequest(t, syscall)
+	t.Logf("MutexLock syscall enviado correctamente (Nombre: %s).", mutexName)
 }
 
 // Test para desbloquear un mutex
 func TestMutexUnlockKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
+	mu.Lock()
+	mutexName := mutexNames[mutexCounter%len(mutexNames)]
+	mutexCounter++
+	mu.Unlock()
+
 	syscall := syscalls.Syscall{
 		Type:      syscalls.MutexUnlock,
-		Arguments: []string{"mutex_A"}, // Desbloquear Mutex_A
+		Arguments: []string{mutexName}, // Desbloquear el mutex que se eligió
 	}
 	sendSyscallRequest(t, syscall)
-	t.Log("MutexUnlock syscall enviado correctamente (Nombre: mutex_A).")
+	t.Logf("MutexUnlock syscall enviado correctamente (Nombre: %s).", mutexName)
 }
 
 // Test para finalizar un proceso (ProcessExit)
 func TestProcessExitKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	// Supongamos que queremos finalizar el proceso con PID 1
+	// Suponiendo que queremos finalizar el proceso más reciente (PID basado en el processCounter)
+	mu.Lock()
+	pid := processCounter
+	mu.Unlock()
+
 	syscall := syscalls.Syscall{
 		Type:      syscalls.ProcessExit,
-		Arguments: []string{"1"}, // PID del proceso a finalizar
+		Arguments: []string{string(rune(pid))}, // PID del proceso a finalizar
 	}
 	sendSyscallRequest(t, syscall)
-	t.Log("ProcessExit syscall enviado correctamente para el proceso con PID 1.")
+	t.Logf("ProcessExit syscall enviado correctamente para el proceso con PID %d.", pid)
 }
