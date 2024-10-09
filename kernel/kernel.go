@@ -66,8 +66,8 @@ func init() {
 func main() {
 	logger.Info("-- Comenzó la ejecución del kernel --")
 
-	//TODO: PARA INICIALIZAR EL KERNEL HAY QUE PONER EN CONSOL:
-	// go run .\kernel.go .\planificadorLargoPlazo.go .\syscalls.go
+	//TODO: PARA INICIALIZAR EL KERNEL HAY QUE PONER EN CONSOLA:
+	// go run . file_name 123
 
 	// Capturar los argumentos pasados al kernel por consola
 	if len(os.Args) < 3 {

@@ -30,7 +30,6 @@ func NewProcessToReady() {
 	for {
 		// Espera los argumentos del proceso desde el canal
 		args := <-kernelsync.ChannelProcessArguments
-		logger.Info("Llegaron los argumentos de la syscall: %v", args)
 		fileName := args[0]
 		processSize := args[1]
 		prioridad, _ := strconv.Atoi(args[2])
@@ -43,7 +42,6 @@ func NewProcessToReady() {
 			Arguments: []string{fileName, processSize},
 		}
 
-		logger.Debug("Preguntando a memoria si tiene espacio disponible")
 		// Loop hasta que memoria confirme que tiene espacio
 		for {
 			err := sendMemoryRequest(request)
@@ -311,8 +309,6 @@ func sendMemoryRequest(request types.RequestToMemory) error {
 	if err != nil {
 		return err
 	}
-
-	logger.Info("CONTENIDO DE REQUEST A MEMORIA:\n	-Type: %v\n	-Arguments: %v", request.Type, request.Arguments)
 
 	// Hacer request a memoria
 	memoria := &http.Client{}
