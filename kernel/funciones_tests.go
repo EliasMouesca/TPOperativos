@@ -12,7 +12,18 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
-// Función auxiliar para registrar el estado actual de ExecStateThread y de los hilos bloqueados
+// ANSI escape codes for colors
+const (
+	Reset   = "\033[0m"
+	Red     = "\033[31m"
+	Green   = "\033[32m"
+	Yellow  = "\033[33m"
+	Blue    = "\033[34m"
+	Magenta = "\033[35m"
+	Cyan    = "\033[36m"
+	Bold    = "\033[1m"
+)
+
 func logCurrentState(context string) {
 	// Crear un buffer para acumular todo el log
 	var logBuffer bytes.Buffer
@@ -20,8 +31,8 @@ func logCurrentState(context string) {
 	logBuffer.WriteString(fmt.Sprintf("\n### %s ###\n", context))
 
 	// Mostrar estados de PCBs
-	logBuffer.WriteString("## -------- ESTADOS DE TCBs Y PCBs -------- \n")
-	logBuffer.WriteString(" - PCBs -\n")
+	logBuffer.WriteString(fmt.Sprintf("%s## -------- ESTADOS DE TCBs Y PCBs -------- %s\n", Cyan, Reset))
+	logBuffer.WriteString(fmt.Sprintf("%s - PCBs -%s\n", Yellow, Reset))
 	for _, pcb := range kernelglobals.EveryPCBInTheKernel {
 		logBuffer.WriteString(fmt.Sprintf("	(<%d:%v>), Mutexes: \n", pcb.PID, pcb.TIDs))
 		if len(pcb.CreatedMutexes) == 0 {
@@ -38,7 +49,7 @@ func logCurrentState(context string) {
 	}
 
 	// Mostrar estados de TCBs
-	logBuffer.WriteString(" - TCBs -\n")
+	logBuffer.WriteString(fmt.Sprintf("%s - TCBs -%s\n", Yellow, Reset))
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
 		if tcb.JoinedTCB == nil {
 			logBuffer.WriteString(fmt.Sprintf("    (<%d:%d>), Prioridad: %d, JoinedTCB: nil\n", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad))
@@ -59,10 +70,10 @@ func logCurrentState(context string) {
 	logBuffer.WriteString("\n")
 
 	// Mostrar estados de las colas
-	logBuffer.WriteString("## -------- ESTADOS DE COLAS Y TCB EJECUTANDO -------- \n")
+	logBuffer.WriteString(fmt.Sprintf("%s## -------- ESTADOS DE COLAS Y TCB EJECUTANDO -------- %s\n", Cyan, Reset))
 
 	// Mostrar la cola de NewStateQueue
-	logBuffer.WriteString("NewStateQueue: \n")
+	logBuffer.WriteString(fmt.Sprintf("%sNewStateQueue:%s\n", Green, Reset))
 	kernelglobals.NewStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		logBuffer.WriteString(fmt.Sprintf("  (<%d:%d>)\n", tcb.FatherPCB.PID, tcb.TID))
 	})
@@ -70,17 +81,17 @@ func logCurrentState(context string) {
 	// Mostrar la cola de Ready según el planificador
 	switch scheduler := kernelglobals.ShortTermScheduler.(type) {
 	case *Fifo.Fifo:
-		logBuffer.WriteString("ReadyStateQueue FIFO: \n")
+		logBuffer.WriteString(fmt.Sprintf("%sReadyStateQueue FIFO:%s\n", Green, Reset))
 		scheduler.Ready.Do(func(tcb *kerneltypes.TCB) {
 			logBuffer.WriteString(fmt.Sprintf("  (<%d:%d>)\n", tcb.FatherPCB.PID, tcb.TID))
 		})
 	case *Prioridades.Prioridades:
-		logBuffer.WriteString("ReadyStateQueue PRIORIDADES: \n")
+		logBuffer.WriteString(fmt.Sprintf("%sReadyStateQueue PRIORIDADES:%s\n", Green, Reset))
 		for _, tcb := range scheduler.ReadyThreads {
 			logBuffer.WriteString(fmt.Sprintf("  (<%d:%d>)\n", tcb.FatherPCB.PID, tcb.TID))
 		}
 	case *ColasMultinivel.ColasMultiNivel:
-		logBuffer.WriteString("ReadyStateQueue MULTI NIVEL: \n")
+		logBuffer.WriteString(fmt.Sprintf("%sReadyStateQueue MULTI NIVEL:%s\n", Green, Reset))
 		for i, queue := range scheduler.ReadyQueue {
 			logBuffer.WriteString(fmt.Sprintf("Nivel %d:\n", i))
 			queue.Do(func(tcb *kerneltypes.TCB) {
@@ -92,20 +103,20 @@ func logCurrentState(context string) {
 	}
 
 	// Mostrar la cola de BlockedStateQueue
-	logBuffer.WriteString("BlockedStateQueue: \n")
+	logBuffer.WriteString(fmt.Sprintf("%sBlockedStateQueue:%s\n", Green, Reset))
 	kernelglobals.BlockedStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		logBuffer.WriteString(fmt.Sprintf("  (<%d:%d>)\n", tcb.FatherPCB.PID, tcb.TID))
 	})
 
 	// Mostrar la cola de ExitStateQueue
-	logBuffer.WriteString("ExitStateQueue: \n")
+	logBuffer.WriteString(fmt.Sprintf("%sExitStateQueue:%s\n", Green, Reset))
 	kernelglobals.ExitStateQueue.Do(func(tcb *kerneltypes.TCB) {
 		logBuffer.WriteString(fmt.Sprintf("  (<%d:%d>)\n", tcb.FatherPCB.PID, tcb.TID))
 	})
 
 	// Mostrar el hilo en ejecución
 	if kernelglobals.ExecStateThread != nil {
-		logBuffer.WriteString("ExecStateThread:\n")
+		logBuffer.WriteString(fmt.Sprintf("%sExecStateThread:%s\n", Green, Reset))
 		logBuffer.WriteString(fmt.Sprintf("	(<%d:%d>), LockedMutexes: \n",
 			kernelglobals.ExecStateThread.FatherPCB.PID,
 			kernelglobals.ExecStateThread.TID,
