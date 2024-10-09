@@ -231,7 +231,7 @@ func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
 func mutexCreateInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.MutexCreate, "Syscall: crear mutex", arguments),
+		syscalls.New(syscalls.MutexCreate, arguments),
 	); err != nil {
 		return err
 	}
@@ -242,7 +242,7 @@ func mutexCreateInstruction(context *types.ExecutionContext, arguments []string)
 func processExitInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.ProcessExit, "Syscall: detener proceso", arguments),
+		syscalls.New(syscalls.ProcessExit, arguments),
 	); err != nil {
 		return err
 	}
@@ -253,7 +253,7 @@ func processExitInstruction(context *types.ExecutionContext, arguments []string)
 func threadExitInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.ThreadExit, "Syscall: thread exit", arguments),
+		syscalls.New(syscalls.ThreadExit, arguments),
 	); err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func threadExitInstruction(context *types.ExecutionContext, arguments []string) 
 func mutexLockInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.MutexLock, "Syscall: lockear mutex", arguments),
+		syscalls.New(syscalls.MutexLock, arguments),
 	); err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ func mutexLockInstruction(context *types.ExecutionContext, arguments []string) e
 func mutexUnlockInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.MutexUnlock, "Syscall: desbloquear mutex", arguments),
+		syscalls.New(syscalls.MutexUnlock, arguments),
 	); err != nil {
 		return err
 	}
@@ -288,7 +288,7 @@ func mutexUnlockInstruction(context *types.ExecutionContext, arguments []string)
 func threadCancelInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.ThreadCancel, "Syscall: cancelar hilo", arguments),
+		syscalls.New(syscalls.ThreadCancel, arguments),
 	); err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ func threadCancelInstruction(context *types.ExecutionContext, arguments []string
 func threadCreateInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.ThreadCreate, "Syscall: crear hilo", arguments),
+		syscalls.New(syscalls.ThreadCreate, arguments),
 	); err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func threadCreateInstruction(context *types.ExecutionContext, arguments []string
 func threadJoinInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.ThreadJoin, "Syscall: joinear thread", arguments),
+		syscalls.New(syscalls.ThreadJoin, arguments),
 	); err != nil {
 		return err
 	}
@@ -323,7 +323,7 @@ func threadJoinInstruction(context *types.ExecutionContext, arguments []string) 
 func processCreateInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.ProcessCreate, "Syscall: crear proceso", arguments),
+		syscalls.New(syscalls.ProcessCreate, arguments),
 	); err != nil {
 		return err
 	}
@@ -334,7 +334,7 @@ func processCreateInstruction(context *types.ExecutionContext, arguments []strin
 func ioInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.IO, "Syscall: I/O", arguments),
+		syscalls.New(syscalls.IO, arguments),
 	); err != nil {
 		return err
 	}
@@ -346,7 +346,7 @@ func ioInstruction(context *types.ExecutionContext, arguments []string) error {
 func dumpMemoryInstruction(context *types.ExecutionContext, arguments []string) error {
 	if err := doSyscall(
 		*context,
-		syscalls.New(syscalls.DumpMemory, "Syscall: dump memory", arguments),
+		syscalls.New(syscalls.DumpMemory, arguments),
 	); err != nil {
 		return err
 	}
