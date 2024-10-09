@@ -42,6 +42,7 @@ func ProcessCreate(args []string) error {
 	PIDcount++
 	processCreate.PID = types.Pid(PIDcount)
 	processCreate.TIDs = []types.Tid{0} // Solo se conoce el TID 0 por ahora
+	processCreate.CreatedMutexes = []kerneltypes.Mutex{}
 
 	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", processCreate.PID)
 
@@ -333,6 +334,14 @@ func MutexCreate(args []string) error {
 
 	currentPCB.CreatedMutexes = append(currentPCB.CreatedMutexes, newMutex)
 
+	// Ahora buscar el PCB en la lista de EveryPCBInTheKernel y actualizarlo
+	for i, pcb := range kernelglobals.EveryPCBInTheKernel {
+		if pcb.PID == currentPCB.PID {
+			kernelglobals.EveryPCBInTheKernel[i] = *currentPCB
+			break
+		}
+	}
+
 	logger.Info("## Se creó el mutex <%v> para el proceso con PID <%d>", newMutex.Name, currentPCB.PID)
 
 	return nil
@@ -351,11 +360,9 @@ func MutexLock(args []string) error {
 		if mutex.Name == mutexName {
 			encontrado = true
 			if mutex.AssignedTCB == nil {
-				logger.Info("## El mutex <%v> ha sido asignado al TID <%d> del proceso con PID <%d>", mutexName, execTCB.TID, execTCB.FatherPCB.PID)
+				logger.Info("## El mutex <%v> ha sido asignado a (<%d:%d>)", mutexName, execTCB.FatherPCB.PID, execTCB.TID)
 				mutex.AssignedTCB = execTCB
 				execTCB.LockedMutexes = append(execTCB.LockedMutexes, mutex)
-				logger.Info("AssignedTCB del Mutex %s: %v", mutexName, mutex.AssignedTCB)
-				logger.Info("LockedMutexes del TCB %v: %v", execTCB, execTCB.LockedMutexes)
 			} else {
 				logger.Info("## El mutex <%v> ya está tomado. Bloqueando al TID <%d> del proceso con PID <%d>", mutexName, execTCB.TID, execTCB.FatherPCB.PID)
 				mutex.BlockedTCBs = append(mutex.BlockedTCBs, execTCB)

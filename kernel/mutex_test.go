@@ -26,7 +26,7 @@ func TestMutexCreate(t *testing.T) {
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, newPCB)
 
 	// Asignar la referencia correcta del PCB guardado en EveryPCBInTheKernel
-	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+	fatherPCB := buscarPCBPorPID(newPID)
 
 	// Crear un TCB para el hilo actual
 	execTCB := kerneltypes.TCB{

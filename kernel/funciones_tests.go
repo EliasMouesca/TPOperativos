@@ -43,7 +43,11 @@ func logCurrentState(context string) {
 				if mutex.AssignedTCB != nil {
 					assignedTID = mutex.AssignedTCB.TID
 				}
-				logBuffer.WriteString(fmt.Sprintf("	- %s : %d\n", mutex.Name, assignedTID))
+				if assignedTID == -1 {
+					logBuffer.WriteString(fmt.Sprintf("	- %s : nil\n", mutex.Name))
+				} else {
+					logBuffer.WriteString(fmt.Sprintf("	- %s : (<%v:%d>)\n", mutex.Name, pcb.PID, assignedTID))
+				}
 			}
 		}
 	}

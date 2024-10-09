@@ -105,7 +105,7 @@ func log(level int, format string, args ...interface{}) {
 	levelString := levelTags[level]
 	formattedMessage := fmt.Sprintf(format, args...)
 
-	stringToPrint := fmt.Sprintf("%s [ %s ] %s\n", formattedTime, levelString, formattedMessage)
+	stringToPrint := fmt.Sprintf("\033[90m%s\033[0m [ %s ] %s\n", formattedTime, levelString, formattedMessage)
 
 	_, err := LogWriter.Write([]byte(stringToPrint))
 	if err != nil {
