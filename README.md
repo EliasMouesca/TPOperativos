@@ -1,3 +1,27 @@
+# DinOS
+```
+           |~|				
+		   | |				
+    	  _---_				
+		 /   o \			
+		(  ,___/			
+	   /   /      ,        __   ___	
+	  |   |      _|       |  | |	 
+	  |   |     / | °  _  |  | \--\	
+	  |   |     \_; | | | \__; ___;	
+	  |   |				
+	  |   |     			
+	  |    \,,-~~~~~~~-,,_.		
+	  |                    \_		
+	  (                      \		
+	   (|  |            |  |  \_	
+		|  |~--,_____,-~|  |_   \	
+		|  |  |       | |  | :   \__  	
+		/__|\_|       /_|__|  '-____~)	
+```
+> Dinosaurios con sombreros!
+>                   - anónimo
+
 ## Checkpoint
 
 Para cada checkpoint de control obligatorio, se debe crear un tag en el
