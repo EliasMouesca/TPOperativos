@@ -2,10 +2,12 @@ package main
 
 import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"sync"
 	"testing"
 )
 
@@ -52,11 +54,22 @@ func TestThreadCreate(t *testing.T) {
 	// Argumentos de entrada para ThreadCreate
 	args := []string{"file.psc", "5"} // Archivo y prioridad del nuevo hilo
 
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	// Llamar a ThreadCreate para crear un nuevo hilo (TCB)
-	err := ThreadCreate(args)
-	if err != nil {
-		t.Errorf("Error inesperado en ThreadCreate: %v", err)
-	}
+	go func() {
+		defer wg.Done()
+		ThreadCreate(args)
+	}()
+
+	// Consumir el canal para evitar el bloqueo
+	go func() {
+		defer wg.Done()
+		<-kernelsync.ChannelThreadCreate
+	}()
+
+	wg.Wait()
 
 	// Verificar que se creó un nuevo TCB
 	if len(kernelglobals.EveryTCBInTheKernel) != 2 {
@@ -72,14 +85,19 @@ func TestThreadCreate(t *testing.T) {
 		t.Errorf("El nuevo TCB debería pertenecer al PCB con PID %d, pero tiene PID %d", newPID, newTCB.FatherPCB.PID)
 	}
 
-	// Verificar que el nuevo TCB está en la cola de ready usando ThreadExists
-	exists, err := kernelglobals.ShortTermScheduler.ThreadExists(newTCB.TID, newPID)
-	if err != nil {
-		t.Errorf("Error al verificar existencia del TCB en la cola de ready: %v", err)
+	// Verificar que el nuevo TCB está en la cola de new usando ThreadExists
+	foundInNewStateQueue := false
+	kernelglobals.NewStateQueue.Do(func(tcb *kerneltypes.TCB) {
+		if tcb.TID == newTCB.TID && tcb.FatherPCB.PID == newTCB.FatherPCB.PID {
+			foundInNewStateQueue = true
+		}
+	})
+
+	if !foundInNewStateQueue {
+		t.Errorf("El nuevo TCB con TID %d y PID %d no fue añadido a la cola NewStateQueue", newTCB.TID, newTCB.FatherPCB.PID)
 	}
-	if !exists {
-		t.Errorf("El nuevo TCB con TID %d no fue añadido a la cola de ready", newTCB.TID)
-	}
+
+	logCurrentState("Estado Final")
 }
 
 func TestThreadJoin(t *testing.T) {

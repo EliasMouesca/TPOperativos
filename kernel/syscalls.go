@@ -170,20 +170,9 @@ func ThreadCreate(args []string) error {
 
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, newTCB)
 	logger.Info("Nuevo (<%v:%v>) agregado a la lista de EveryTCBInTheKernel. ", newTCB.FatherPCB.PID, newTCB.TID)
+
 	currentPCB.TIDs = append(currentPCB.TIDs, newTID)
 	logger.Info("El TID: %v fue agregado a la lista de TIDs del PCB: %v. ", newTCB.TID, newTCB.FatherPCB.PID)
-
-	/*
-		if kernelglobals.ShortTermScheduler == nil {
-			logger.Error("ShortTermScheduler no está inicializado.")
-			return fmt.Errorf("ShortTermScheduler no inicializado")
-		}
-
-		err = kernelglobals.ShortTermScheduler.AddToReady(&kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1])
-		logger.Info("## (<%d>:<%d>) Se crea un nuevo hilo - Estado: READY", newTCB.FatherPCB.PID, newTCB.TID)
-		if err != nil {
-			return fmt.Errorf("error al agregar el TCB a la cola de Ready: %v", err)
-		}*/
 
 	kernelglobals.NewStateQueue.Add(buscarTCBPorTID(newTID, currentPCB.PID))
 	logger.Info("(<%v:%v>) fue agregado a NewStateQueue.", newTCB.FatherPCB.PID, newTCB.TID)
