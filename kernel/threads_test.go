@@ -31,7 +31,7 @@ func TestThreadCreate(t *testing.T) {
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, newPCB)
 
 	// Asignar la referencia correcta del PCB guardado en EveryPCBInTheKernel
-	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+	fatherPCB := buscarPCBPorPID(newPID)
 
 	// Crear un TCB para ese PCB
 	execTCB := kerneltypes.TCB{
@@ -44,7 +44,7 @@ func TestThreadCreate(t *testing.T) {
 
 	// Añadir el TCB a EveryTCBInTheKernel y obtener la referencia
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
-	kernelglobals.ExecStateThread = &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1] // Asignar el puntero al último TCB añadido
+	kernelglobals.ExecStateThread = buscarTCBPorTID(5, fatherPCB.PID)
 	kernelglobals.ExecStateThread.FatherPCB.TIDs = append(kernelglobals.ExecStateThread.FatherPCB.TIDs, kernelglobals.ExecStateThread.TID)
 
 	logCurrentState("Estado inicial")
@@ -100,7 +100,7 @@ func TestThreadJoin(t *testing.T) {
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, newPCB)
 
 	// Asignar la referencia correcta del PCB guardado en EveryPCBInTheKernel
-	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+	fatherPCB := buscarPCBPorPID(newPID)
 
 	// Crear dos TCBs, uno para el hilo actual y otro para el TID a joinear
 	execTCB := kerneltypes.TCB{
@@ -122,7 +122,7 @@ func TestThreadJoin(t *testing.T) {
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
 
 	// Inicializar el hilo actual en ejecución
-	kernelglobals.ExecStateThread = &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	kernelglobals.ExecStateThread = buscarTCBPorTID(2, fatherPCB.PID)
 
 	// Añadir el TCB del hilo a joinear a EveryTCBInTheKernel
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, joinedTCB)
@@ -188,7 +188,7 @@ func TestThreadCancel(t *testing.T) {
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, newPCB)
 
 	// Asignar la referencia correcta del PCB guardado en EveryPCBInTheKernel
-	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+	fatherPCB := buscarPCBPorPID(newPID)
 
 	// Crear dos TCBs, uno para el hilo actual y otro para el TID a cancelar
 	execTCB := kerneltypes.TCB{
@@ -210,7 +210,7 @@ func TestThreadCancel(t *testing.T) {
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
 
 	// Inicializar el hilo actual en ejecución
-	kernelglobals.ExecStateThread = &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	kernelglobals.ExecStateThread = buscarTCBPorTID(2, fatherPCB.PID)
 
 	// Añadir el TCB del hilo a cancelar a la cola de Ready (simulando que está listo para ejecutarse)
 	kernelglobals.ShortTermScheduler.AddToReady(&cancelTCB)
@@ -272,7 +272,7 @@ func TestThreadExit(t *testing.T) {
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, newPCB)
 
 	// Asignar la referencia correcta del PCB guardado en EveryPCBInTheKernel
-	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+	fatherPCB := buscarPCBPorPID(newPID)
 
 	// Crear un TCB para el hilo actual
 	execTCB := kerneltypes.TCB{
@@ -287,7 +287,7 @@ func TestThreadExit(t *testing.T) {
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
 
 	// Inicializar el hilo actual en ejecución
-	kernelglobals.ExecStateThread = &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	kernelglobals.ExecStateThread = buscarTCBPorTID(0, fatherPCB.PID)
 
 	// Añadir el TID del hilo actual al PCB
 	fatherPCB.TIDs = append(fatherPCB.TIDs, execTCB.TID)
