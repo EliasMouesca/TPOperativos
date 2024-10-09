@@ -54,7 +54,6 @@ func init() {
 		logger.Fatal("No se pudo leer el log-level - %v", err.Error())
 	}
 
-	logger.Info("Configuración cargada exitosamente")
 }
 
 func main() {
@@ -141,7 +140,8 @@ func ExecuteSyscall(syscall syscalls.Syscall, wg *sync.WaitGroup) error {
 			syscalls.SyscallNames[syscall.Type],
 		)
 	} else {
-		logger.Info("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
+		logger.Error("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
+		return nil
 	}
 
 	// Canal para sincronización

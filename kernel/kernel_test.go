@@ -13,7 +13,7 @@ import (
 var mutexNames = []string{"mutex_A", "mutex_B", "mutex_C", "mutex_D"}
 
 func init() {
-	rand.Seed(time.Now().UnixNano()) // Semilla para la generación de números aleatorios
+	rand.Seed(time.Now().UnixNano())
 }
 
 func generateRandomName(base string) string {
@@ -63,7 +63,7 @@ func TestThreadCreateKERNEL(t *testing.T) {
 
 	syscall := syscalls.Syscall{
 		Type:      syscalls.ThreadCreate,
-		Arguments: []string{threadName, "1"}, // Cambia los argumentos según el pseudocódigo y la prioridad del hilo
+		Arguments: []string{threadName, "1"},
 	}
 	sendSyscallRequest(t, syscall)
 	t.Logf("ThreadCreate syscall enviado correctamente para %s.", threadName)
@@ -75,10 +75,25 @@ func TestThreadCancelKERNEL(t *testing.T) {
 
 	syscall := syscalls.Syscall{
 		Type:      syscalls.ThreadCancel,
-		Arguments: []string{"3"}, // TID del hilo a cancelar
+		Arguments: []string{"3"},
 	}
 	sendSyscallRequest(t, syscall)
 	t.Log("ThreadCancel syscall enviado correctamente.")
+}
+
+// Test para ThreadJoin
+func TestThreadJoinKERNEL(t *testing.T) {
+	time.Sleep(2 * time.Second)
+
+	// Vamos a suponer que queremos joinear el TID 2
+	tidToJoin := "2"
+
+	syscall := syscalls.Syscall{
+		Type:      syscalls.ThreadJoin,
+		Arguments: []string{tidToJoin},
+	}
+	sendSyscallRequest(t, syscall)
+	t.Logf("ThreadJoin syscall enviado correctamente para el TID %s.", tidToJoin)
 }
 
 // Test para crear un mutex con nombre aleatorio

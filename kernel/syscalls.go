@@ -321,12 +321,16 @@ func ThreadExit(args []string) error {
 }
 
 func MutexCreate(args []string) error {
-	// TODO: chequear numero de args
-	// TODO: Chequear que el nombre sea único
 	// Crea un nuevo mutex para el proceso sin asignar a ningún hilo.
 
 	execTCB := kernelglobals.ExecStateThread
 	currentPCB := execTCB.FatherPCB
+
+	for _, existingMutex := range currentPCB.CreatedMutexes {
+		if existingMutex.Name == args[0] {
+			return fmt.Errorf("ya existe un mutex con el nombre <%v> en el proceso con PID <%d>", args[0], currentPCB.PID)
+		}
+	}
 
 	newMutex := kerneltypes.Mutex{
 		Name:        args[0],
