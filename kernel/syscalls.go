@@ -234,16 +234,18 @@ func ThreadJoin(args []string) error {
 	for _, tcbToJoin := range kernelglobals.EveryTCBInTheKernel {
 		if tcbToJoin.TID == tidToJoin && tcbToJoin.FatherPCB.Equal(execTCB.FatherPCB) {
 			execTCB.JoinedTCB = &tcbToJoin
-			logger.Info("El (<%v:%v>) quedo con atributo joinedTCB a: (<%v:%v>)", execTCB.FatherPCB.PID, execTCB.TID, execTCB.JoinedTCB.FatherPCB.PID, execTCB.JoinedTCB.TID)
 			break
 		}
 	}
+
+	logger.Info("El (<%v:%v>) quedo con atributo joinedTCB a: (<%v:%v>)", execTCB.FatherPCB.PID, execTCB.TID, execTCB.JoinedTCB.FatherPCB.PID, execTCB.JoinedTCB.TID)
 
 	kernelglobals.BlockedStateQueue.Add(execTCB)
 
 	kernelglobals.ExecStateThread = nil
 
 	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidToJoin)
+
 	return nil
 }
 

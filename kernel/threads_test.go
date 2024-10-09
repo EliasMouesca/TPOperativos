@@ -166,7 +166,7 @@ func TestThreadJoin(t *testing.T) {
 	}
 
 	tcb := buscarTCBPorTID(0, fatherPCB.PID)
-	if tcb.JoinedTCB == nil {
+	if tcb.JoinedTCB != buscarTCBPorTID(2, fatherPCB.PID) {
 		t.Errorf("El joinedTCB del TCB que ejecuto la syscall quedo en nil, deberia estar apuntando al que llamo.")
 	}
 
@@ -234,7 +234,7 @@ func TestThreadCancel(t *testing.T) {
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
 
 	// Inicializar el hilo actual en ejecución
-	kernelglobals.ExecStateThread = buscarTCBPorTID(2, fatherPCB.PID)
+	kernelglobals.ExecStateThread = buscarTCBPorTID(0, fatherPCB.PID)
 
 	// Añadir el TCB del hilo a cancelar a la cola de Ready (simulando que está listo para ejecutarse)
 	kernelglobals.ShortTermScheduler.AddToReady(&cancelTCB)
