@@ -150,12 +150,21 @@ func ExecuteSyscall(syscall syscalls.Syscall, wg *sync.WaitGroup) error {
 		logger.Info("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
 	}
 
+	// Canal para sincronización
+	done := make(chan bool)
+
+	// Ejecutar syscall en una goroutine, pero asegurarnos de esperar su finalización
 	go func() {
 		err := syscallFunc(syscall.Arguments)
 		if err != nil {
-			logger.Error("La syscall devolvio un error - %v", err)
+			logger.Error("La syscall devolvió un error - %v", err)
 		}
+		// Enviar señal al canal indicando que la syscall ha finalizado
+		done <- true
 	}()
+
+	// Bloqueamos hasta que la syscall termine
+	<-done
 	return nil
 }
 
