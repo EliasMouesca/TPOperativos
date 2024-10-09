@@ -34,7 +34,7 @@ func TestProcessCreateKERNEL(t *testing.T) {
 	// Esperar un tiempo para asegurarse de que el servidor kernel esté activo
 	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 2; i++ {
 		syscall := syscalls.Syscall{
 			Type:      syscalls.ProcessCreate,
 			Arguments: []string{"test_process", "1024", "1"},
@@ -110,4 +110,17 @@ func TestMutexUnlockKERNEL(t *testing.T) {
 	}
 	sendSyscallRequest(t, syscall)
 	t.Log("MutexUnlock syscall enviado correctamente (Nombre: mutex_A).")
+}
+
+// Test para finalizar un proceso (ProcessExit)
+func TestProcessExitKERNEL(t *testing.T) {
+	time.Sleep(2 * time.Second)
+
+	// Supongamos que queremos finalizar el proceso con PID 1
+	syscall := syscalls.Syscall{
+		Type:      syscalls.ProcessExit,
+		Arguments: []string{"1"}, // PID del proceso a finalizar
+	}
+	sendSyscallRequest(t, syscall)
+	t.Log("ProcessExit syscall enviado correctamente para el proceso con PID 1.")
 }

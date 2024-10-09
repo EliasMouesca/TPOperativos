@@ -45,12 +45,6 @@ func init() {
 		Ready: types.Queue[*kerneltypes.TCB]{},
 	}
 
-	// Agregar logs para verificar los valores cargados
-	logger.Info("Configuración cargada: SelfPort=%d, MemoryPort=%d, CpuPort=%d",
-		kernelglobals.Config.SelfPort,
-		kernelglobals.Config.MemoryPort,
-		kernelglobals.Config.CpuPort)
-
 	if err = kernelglobals.Config.Validate(); err != nil {
 		logger.Fatal("La configuración no es válida - %v", err.Error())
 	}

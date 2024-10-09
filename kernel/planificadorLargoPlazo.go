@@ -74,7 +74,7 @@ func NewProcessToReady() {
 
 		// Mover el mainThread a la cola de Ready
 		kernelglobals.ShortTermScheduler.AddToReady(mainThreadPtr)
-		logger.Info("Se agregó (<%d:0>) a la cola Ready", pid)
+		logger.Info("## (<%d:0>) Se movio a la cola Ready", pid)
 
 		// Señalización para indicar que el proceso ha sido agregado exitosamente a Ready
 		kernelsync.SemProcessCreateOK <- struct{}{}
@@ -137,7 +137,7 @@ func NewThreadToReady() {
 			logger.Error("Error al agregar el TCB a la cola de Ready: %v", err)
 			continue
 		}
-		logger.Info("## (<%d>:<%d>) Se movió el hilo de NEW a READY", newTCB.FatherPCB.PID, newTCB.TID)
+		logger.Info("## (<%d>:<%d>) Se crea el Hilo- Estado: READY", newTCB.FatherPCB.PID, newTCB.TID)
 
 	}
 }

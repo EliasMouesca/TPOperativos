@@ -68,7 +68,6 @@ func ProcessCreate(args []string) error {
 
 	<-kernelsync.SemProcessCreateOK
 
-	logger.Info("Finaliza la syscall ProcessCreate")
 	return nil
 }
 
@@ -80,9 +79,12 @@ func ProcessExit(args []string) error {
 	tcb := kernelglobals.ExecStateThread
 	pcb := tcb.FatherPCB
 
+	// Enviar la señal a la memoria sobre la finalización del proceso
+	kernelsync.ChannelFinishprocess <- pcb.PID
+
 	// Verificar que el hilo que llama sea el main (TID 0)
 	if tcb.TID != 0 {
-		return errors.New("el hilo que quiso eliminar el proceso no es el hilo main")
+		return errors.New("El hilo que quiso eliminar el proceso no es el hilo main")
 	}
 
 	// Eliminar todos los hilos del PCB de las colas de Ready
@@ -94,7 +96,7 @@ func ProcessExit(args []string) error {
 			if err != nil {
 				logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
 			} else {
-				logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de las colas de Ready y se movió a ExitStateQueue", tid, pcb.PID)
+				logger.Info("(<%d:%d>) Finaliza el hilo", pcb.PID, tid)
 			}
 		}
 
@@ -108,7 +110,7 @@ func ProcessExit(args []string) error {
 			// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
 			if blockedTCB.FatherPCB.PID == pcb.PID {
 				kernelglobals.ExitStateQueue.Add(blockedTCB)
-				logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de BlockedStateQueue y se movió a ExitStateQueue", blockedTCB.TID, pcb.PID)
+				logger.Info("(<%d:%d>) Finaliza el hilo", pcb.PID, blockedTCB.TID)
 			} else {
 				// Si no es, se vuelve a insertar en la cola de bloqueados
 				kernelglobals.BlockedStateQueue.Add(blockedTCB)
@@ -125,7 +127,7 @@ func ProcessExit(args []string) error {
 			// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
 			if newTCB.FatherPCB.PID == pcb.PID {
 				kernelglobals.ExitStateQueue.Add(newTCB)
-				logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de NewStateQueue y se movió a ExitStateQueue", newTCB.TID, pcb.PID)
+				logger.Info("(<%d:%d>) Finaliza el hilo", pcb.PID, newTCB.TID)
 			} else {
 				// Si no es, se vuelve a insertar en la cola de new
 				kernelglobals.NewStateQueue.Add(newTCB)
@@ -136,9 +138,6 @@ func ProcessExit(args []string) error {
 	// Finalmente, mover el hilo principal (ExecStateThread) a ExitStateQueue
 	kernelglobals.ExitStateQueue.Add(tcb)
 	kernelglobals.ExecStateThread = nil
-
-	// Enviar la señal a la memoria sobre la finalización del proceso
-	kernelsync.ChannelFinishprocess <- pcb.PID
 
 	logger.Info("## Finaliza el proceso <%v>", pcb.PID)
 
@@ -168,13 +167,10 @@ func ThreadCreate(args []string) error {
 	}
 
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, newTCB)
-	logger.Info("Nuevo (<%v:%v>) agregado a la lista de EveryTCBInTheKernel. ", newTCB.FatherPCB.PID, newTCB.TID)
 
 	currentPCB.TIDs = append(currentPCB.TIDs, newTID)
-	logger.Info("El TID: %v fue agregado a la lista de TIDs del PCB: %v. ", newTCB.TID, newTCB.FatherPCB.PID)
 
 	kernelglobals.NewStateQueue.Add(buscarTCBPorTID(newTID, currentPCB.PID))
-	logger.Info("(<%v:%v>) fue agregado a NewStateQueue.", newTCB.FatherPCB.PID, newTCB.TID)
 
 	kernelsync.ChannelThreadCreate <- args
 
@@ -273,7 +269,7 @@ func ThreadCancel(args []string) error {
 	// Intentar eliminar el TID de las colas Ready usando ThreadRemove del planificador
 	err = kernelglobals.ShortTermScheduler.ThreadRemove(types.Tid(tidCancelar), currentPCB.PID)
 	if err == nil {
-		logger.Info("Se movió el TID <%d> del PCB con PID <%d> de ReadyStateQueue a ExitStateQueue", tidCancelar, currentPCB.PID)
+		logger.Info("## (<%d:%d>) Finaliza el hilo", currentPCB.PID, tidCancelar)
 		return nil
 	}
 
