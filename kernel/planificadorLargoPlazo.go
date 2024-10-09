@@ -28,6 +28,9 @@ func planificadorLargoPlazo() {
 
 func NewProcessToReady() {
 	for {
+		logger.Info("Esperando a que ProcessCreate complete.")
+		<-kernelsync.SemProcessCreate
+
 		// Espera los argumentos del proceso desde el canal
 		args := <-kernelsync.ChannelProcessArguments
 		logger.Debug("Llegaron los argumentos de la syscall: %v", args)
@@ -56,29 +59,31 @@ func NewProcessToReady() {
 			}
 		}
 
-		// Obtener el PCB desde la cola de NewStateQueue
-		pcb, err := kernelglobals.NewPCBStateQueue.GetAndRemoveNext()
-		if err != nil {
-			logger.Error("Error en la cola NEW - %v", err)
-			continue
+		pcbPtr := buscarPCBPorPID(types.Pid(pid))
+		if pcbPtr == nil {
+			logger.Error("No se encontró el PCB con PID <%d> en la lista global", pid)
 		}
 
 		// Crear el hilo principal (mainThread) ahora que el proceso tiene espacio en memoria
 		mainThread := kerneltypes.TCB{
 			TID:       0,
 			Prioridad: prioridad,
-			FatherPCB: pcb,
+			FatherPCB: pcbPtr,
 		}
 
 		// Agregar el mainThread a la lista de TCBs en el kernel
 		kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
 
 		// Obtener el puntero del hilo principal para encolarlo en Ready
-		mainThreadPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+		//mainThreadPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+		mainThreadPtr := buscarTCBPorTID(0, pcbPtr.PID)
 
 		// Mover el mainThread a la cola de Ready
 		kernelglobals.ShortTermScheduler.AddToReady(mainThreadPtr)
-		logger.Info("Se agregó el hilo main (TID 0) del proceso PID <%d> a la cola Ready", pcb.PID)
+		logger.Info("Se agregó el hilo main (TID 0) del proceso PID <%d> a la cola Ready", pid)
+
+		// Señalización para indicar que el proceso ha sido agregado exitosamente a Ready
+		kernelsync.SemProcessCreateOK <- struct{}{}
 	}
 }
 

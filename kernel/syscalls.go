@@ -48,15 +48,27 @@ func ProcessCreate(args []string) error {
 	// Agregar el PCB a la lista de PCBs en el kernel
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, processCreate)
 
+	// Buscar el PCB recien creado utilizando el PID
+	pcbPtr := buscarPCBPorPID(processCreate.PID)
+	if pcbPtr == nil {
+		logger.Error("No se encontró el PCB con PID <%d> en la lista global", processCreate.PID)
+		return errors.New("PCB no encontrado")
+	}
+
 	// Mandar el proceso a la cola de NewStateQueue (solo PCB, sin TCB)
-	kernelglobals.NewPCBStateQueue.Add(&kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1])
+	kernelglobals.NewPCBStateQueue.Add(pcbPtr)
 
 	//Agrego el PID a args, para despues pasarselo a memoria
 	pidStr := strconv.Itoa(int(processCreate.PID))
 	args = append(args, pidStr)
 
+	logger.Info("Argumentos enviados al planificador para nuevo proceso: %v", args)
+
 	// Enviar los argumentos al canal para que NewProcessToReady los procese
 	kernelsync.ChannelProcessArguments <- args
+
+	kernelsync.SemProcessCreate <- struct{}{}
+	<-kernelsync.SemProcessCreateOK
 
 	return nil
 }
@@ -537,5 +549,22 @@ func IO(args []string) error {
 	time.Sleep(time.Duration(threadBlockedTime) * time.Millisecond)
 
 	<-kernelsync.SemIo
+	return nil
+}
+
+func buscarPCBPorPID(pid types.Pid) *kerneltypes.PCB {
+	for i := range kernelglobals.EveryPCBInTheKernel {
+		if kernelglobals.EveryPCBInTheKernel[i].PID == pid {
+			return &kernelglobals.EveryPCBInTheKernel[i]
+		}
+	}
+	return nil
+}
+func buscarTCBPorTID(tid types.Tid, pid types.Pid) *kerneltypes.TCB {
+	for i := range kernelglobals.EveryTCBInTheKernel {
+		if kernelglobals.EveryTCBInTheKernel[i].TID == tid && kernelglobals.EveryTCBInTheKernel[i].FatherPCB.PID == pid {
+			return &kernelglobals.EveryTCBInTheKernel[i]
+		}
+	}
 	return nil
 }

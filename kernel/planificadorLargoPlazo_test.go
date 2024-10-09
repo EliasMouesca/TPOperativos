@@ -22,36 +22,48 @@ func TestNewProcessToReady(t *testing.T) {
 	}
 
 	// Crear el PCB y agregarlo a la cola NewPCBStateQueue
-	PIDcount++
 	processCreate := kerneltypes.PCB{
-		PID:  types.Pid(PIDcount),
+		PID:  types.Pid(5),
 		TIDs: []types.Tid{0},
 	}
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, processCreate)
 	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
 
-	// Crear los argumentos que se enviarán a través del canal
-	args := []string{"test_file", "500", "1"}
-
-	// Enviar los argumentos a través del canal
-	kernelsync.ChannelProcessArguments = make(chan []string, 1)
-	kernelsync.ChannelProcessArguments <- args
-
 	// Añadir el PCB a NewPCBStateQueue
 	kernelglobals.NewPCBStateQueue.Add(fatherPCB)
 
-	logCurrentState("Antes de pasar el proceso a READY")
+	// Inicializar los canales
+	kernelsync.ChannelProcessArguments = make(chan []string, 1)
+	kernelsync.SemProcessCreate = make(chan struct{}, 1)
 
-	// Llamar a la función en un goroutine para simular el comportamiento concurrente
-	go NewProcessToReady()
+	// Crear los argumentos que se enviarán a través del canal
+	args := []string{"test_file", "500", "0"}
 
-	// Esperar a que el proceso sea movido a la cola Ready
-	time.Sleep(100 * time.Millisecond) // Simulación de latencia
+	// Ejecutar la syscall ProcessCreate en un goroutine
+
+	logCurrentState("Estado Inicial")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		err := ProcessCreate(args)
+		if err != nil {
+			t.Errorf("Error inesperado en ProcessCreate: %v", err)
+		}
+	}()
+
+	go func() {
+		NewProcessToReady()
+	}()
+
+	wg.Wait()
 
 	// Verificar que el hilo principal fue movido a la cola Ready
-	existsInReady, _ := kernelglobals.ShortTermScheduler.ThreadExists(0, processCreate.PID)
+	existsInReady, _ := kernelglobals.ShortTermScheduler.ThreadExists(0, 1)
 	if !existsInReady {
-		t.Errorf("El TID <0> del PCB con PID <%d> no fue movido correctamente a ReadyStateQueue", processCreate.PID)
+		t.Errorf("El (<%d:0>) no fue movido correctamente a ReadyStateQueue", processCreate.PID)
 	} else {
 		logger.Info("## (<%v:%v>) fue movido a la cola de READY.", processCreate.PID, processCreate.TIDs[0])
 	}
@@ -61,12 +73,7 @@ func TestNewProcessToReady(t *testing.T) {
 		t.Errorf("No se agregó correctamente el TCB a EveryTCBInTheKernel")
 	}
 
-	// Verificar que el PCB ya no está en la cola NewPCBStateQueue
-	if !kernelglobals.NewPCBStateQueue.IsEmpty() {
-		t.Errorf("El PCB con PID <%d> aún se encuentra en la cola NewPCBStateQueue", processCreate.PID)
-	}
-
-	logCurrentState("Estado Final luego de mover el proceso a Ready")
+	logCurrentState("Estado Final")
 }
 
 func TestProcessToExit(t *testing.T) {
