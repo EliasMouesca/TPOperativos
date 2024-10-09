@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+// ---- TODO: PARA LOS TEST DE SUCCES MEMORIA DEBE ESTAR EJECUTANDOSE, PARA LOS DE ERROR NO DEBE ESTAR EJECUTANDO. ----
+
 func TestDumpMemory_Success(t *testing.T) {
 	// Inicializar variables globales
 	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
