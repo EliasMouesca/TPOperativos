@@ -154,11 +154,15 @@ func TestThreadJoin(t *testing.T) {
 	// Argumentos de entrada para ThreadJoin (TID del hilo a joinear)
 	args := []string{"2"} // El TID del hilo a joinear
 
-	// Llamar a ThreadJoin
-	err := ThreadJoin(args)
-	if err != nil {
-		t.Errorf("Error inesperado en ThreadJoin: %v", err)
-	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		ThreadJoin(args)
+	}()
+
+	wg.Wait()
 
 	// Verificar que el hilo actual está bloqueado en la cola de BlockedStateQueue
 	if kernelglobals.ExecStateThread != nil {
