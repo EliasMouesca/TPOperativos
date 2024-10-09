@@ -462,7 +462,7 @@ func DumpMemory(args []string) error {
 	tid := strconv.Itoa(int(execTCB.TID))
 
 	// Mover el hilo actual a la cola de bloqueados antes de hacer el request a memoria
-	logger.Info("Moviendo el hilo a la cola de bloqueados (PID: %v, TID: %v)", pid, tid)
+	logger.Info("## (<%v:%v>) Se movio a la cola de Bloqueados", pid, tid)
 	kernelglobals.ExecStateThread = nil
 	kernelglobals.BlockedStateQueue.Add(execTCB)
 
@@ -490,7 +490,7 @@ func DumpMemory(args []string) error {
 				if err != nil {
 					logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
 				} else {
-					logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de las colas de Ready y se movió a ExitStateQueue", tid, pcb.PID)
+					logger.Info("## (<%v:%v>) Finaliza el hilo", pcb.PID, tid)
 				}
 			}
 
@@ -539,7 +539,7 @@ func DumpMemory(args []string) error {
 	// Si la operación fue exitosa, mover el hilo de bloqueados a la cola de READY
 	kernelglobals.BlockedStateQueue.Remove(execTCB)      // Quitar de la cola de bloqueados
 	kernelglobals.ShortTermScheduler.AddToReady(execTCB) // Mover a READY
-	logger.Info("DumpMemory completado exitosamente, moviendo hilo a READY (PID: %v, TID: %v)", pid, tid)
+	logger.Info("DumpMemory completado exitosamente! Moviendo (<%v:%v>) a READY", pid, tid)
 
 	return nil
 }

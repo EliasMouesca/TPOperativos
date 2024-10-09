@@ -152,3 +152,31 @@ func TestProcessExitKERNEL(t *testing.T) {
 	sendSyscallRequest(t, syscall)
 	t.Logf("ProcessExit syscall enviado correctamente para el proceso con PID %s.", pid)
 }
+
+// Test para DumpMemory
+func TestDumpMemoryKERNEL(t *testing.T) {
+	time.Sleep(2 * time.Second)
+
+	// No necesitamos argumentos adicionales para este caso
+	syscall := syscalls.Syscall{
+		Type:      syscalls.DumpMemory,
+		Arguments: []string{}, // Sin argumentos
+	}
+	sendSyscallRequest(t, syscall)
+	t.Log("DumpMemory syscall enviada correctamente.")
+}
+
+// Test para IO
+func TestIOKERNEL(t *testing.T) {
+	time.Sleep(2 * time.Second)
+
+	// Vamos a suponer que queremos bloquear el hilo por 500 milisegundos
+	blockedTime := "500"
+
+	syscall := syscalls.Syscall{
+		Type:      syscalls.IO,
+		Arguments: []string{blockedTime}, // Tiempo de bloqueo en milisegundos
+	}
+	sendSyscallRequest(t, syscall)
+	t.Logf("IO syscall enviada correctamente, con un tiempo de bloqueo de %s milisegundos.", blockedTime)
+}
