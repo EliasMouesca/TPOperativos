@@ -28,8 +28,6 @@ func planificadorLargoPlazo() {
 
 func NewProcessToReady() {
 	for {
-		//<-kernelsync.SemProcessCreate
-
 		// Espera los argumentos del proceso desde el canal
 		args := <-kernelsync.ChannelProcessArguments
 		logger.Info("Llegaron los argumentos de la syscall: %v", args)

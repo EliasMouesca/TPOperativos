@@ -65,7 +65,6 @@ func ProcessCreate(args []string) error {
 	// Enviar los argumentos al canal para que NewProcessToReady los procese
 	kernelsync.ChannelProcessArguments <- args
 
-	//kernelsync.SemProcessCreate <- struct{}{}
 	<-kernelsync.SemProcessCreateOK
 
 	logger.Info("Finaliza la syscall ProcessCreate")
@@ -231,20 +230,27 @@ func ThreadJoin(args []string) error {
 		return nil
 	}
 
-	for _, tcbToJoin := range kernelglobals.EveryTCBInTheKernel {
-		if tcbToJoin.TID == tidToJoin && tcbToJoin.FatherPCB.Equal(execTCB.FatherPCB) {
-			execTCB.JoinedTCB = &tcbToJoin
+	// Buscar el TCB del TID a joinear
+	tcbToJoin := buscarTCBPorTID(tidToJoin, currentPCB.PID)
+	if tcbToJoin == nil {
+		return errors.New("no se encontró el TCB del hilo a joinear en EveryTCBInTheKernel")
+	}
+
+	// Modificar execTCB para que tenga el puntero a tcbToJoin
+	execTCB.JoinedTCB = tcbToJoin
+
+	for i := range kernelglobals.EveryTCBInTheKernel {
+		if kernelglobals.EveryTCBInTheKernel[i].TID == execTCB.TID && kernelglobals.EveryTCBInTheKernel[i].FatherPCB.PID == execTCB.FatherPCB.PID {
+			kernelglobals.EveryTCBInTheKernel[i] = *execTCB
 			break
 		}
 	}
-
-	logger.Info("El (<%v:%v>) quedo con atributo joinedTCB a: (<%v:%v>)", execTCB.FatherPCB.PID, execTCB.TID, execTCB.JoinedTCB.FatherPCB.PID, execTCB.JoinedTCB.TID)
 
 	kernelglobals.BlockedStateQueue.Add(execTCB)
 
 	kernelglobals.ExecStateThread = nil
 
-	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a TID <%d>", currentPCB.PID, execTCB.TID, tidToJoin)
+	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a (<%d:%d>)", currentPCB.PID, execTCB.TID, currentPCB.PID, tidToJoin)
 
 	return nil
 }

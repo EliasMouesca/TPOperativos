@@ -164,6 +164,10 @@ func TestThreadJoin(t *testing.T) {
 
 	wg.Wait()
 
+	logger.Info("everytcbinthekernel:  %v", kernelglobals.EveryTCBInTheKernel)
+
+	logCurrentState("Estado Final")
+
 	// Verificar que el hilo actual está bloqueado en la cola de BlockedStateQueue
 	if kernelglobals.ExecStateThread != nil {
 		t.Errorf("ExecStateThread debería ser nil, pero no lo es")
@@ -189,8 +193,6 @@ func TestThreadJoin(t *testing.T) {
 	if !blocked {
 		t.Errorf("El hilo actual no fue añadido a la BlockedStateQueue correctamente")
 	}
-
-	logCurrentState("Estado Final")
 }
 
 func TestThreadCancel(t *testing.T) {

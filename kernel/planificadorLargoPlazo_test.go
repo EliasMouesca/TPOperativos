@@ -34,7 +34,6 @@ func TestNewProcessToReady(t *testing.T) {
 
 	// Inicializar los canales
 	kernelsync.ChannelProcessArguments = make(chan []string, 1)
-	kernelsync.SemProcessCreate = make(chan struct{}, 1)
 
 	// Crear los argumentos que se enviarán a través del canal
 	args := []string{"test_file", "500", "0"}
