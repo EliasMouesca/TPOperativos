@@ -12,6 +12,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"os"
+	"sync"
 )
 
 func init() {
@@ -115,18 +116,25 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = ExecuteSyscall(syscall) // map a la libreria de syscalls
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	//El WaitGroup asegura que no se envie la respuesta HTTP al cliente hasta que la syscall haya terminado
+
+	err = ExecuteSyscall(syscall, &wg) // map a la libreria de syscalls
 	if err != nil {
 		// Por alguna razón esto rompe cuando quiero compilar
 		logger.Error("Error al ejecutar la syscall: %v - %v", syscalls.SyscallNames[syscall.Type], err)
 		w.WriteHeader(http.StatusInternalServerError)
-	} else {
-		w.WriteHeader(http.StatusOK)
 	}
 
+	wg.Wait()
+
+	w.WriteHeader(http.StatusOK)
 }
 
-func ExecuteSyscall(syscall syscalls.Syscall) error {
+func ExecuteSyscall(syscall syscalls.Syscall, wg *sync.WaitGroup) error {
+	defer wg.Done()
 	syscallFunc, exists := syscallSet[syscall.Type]
 	if !exists {
 		return errors.New("la syscall pedida no es una syscall que el kernel entienda")
