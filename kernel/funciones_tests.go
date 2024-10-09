@@ -9,7 +9,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Prioridades"
 	"github.com/sisoputnfrba/tp-golang/types"
-	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"os"
 )
 
 // ANSI escape codes for colors
@@ -139,5 +139,5 @@ func logCurrentState(context string) {
 	logBuffer.WriteString("\n")
 
 	// Escribir el log completo en una sola operación
-	logger.Info(logBuffer.String())
+	fmt.Fprint(os.Stdout, logBuffer.String())
 }
