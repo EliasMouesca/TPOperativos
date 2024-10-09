@@ -504,7 +504,7 @@ func DumpMemory(args []string) error {
 				// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
 				if blockedTCB.FatherPCB.PID == pcb.PID {
 					kernelglobals.ExitStateQueue.Add(blockedTCB)
-					logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de BlockedStateQueue y se movió a ExitStateQueue", blockedTCB.TID, pcb.PID)
+					logger.Info("## (<%v:%v>) Finaliza el hilo", pcb.PID, blockedTCB.TID)
 				} else {
 					// Si no es, se vuelve a insertar en la cola de bloqueados
 					kernelglobals.BlockedStateQueue.Add(blockedTCB)
@@ -521,7 +521,7 @@ func DumpMemory(args []string) error {
 				// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
 				if newTCB.FatherPCB.PID == pcb.PID {
 					kernelglobals.ExitStateQueue.Add(newTCB)
-					logger.Info("Se eliminó el TID <%d> del PCB con PID <%d> de NewStateQueue y se movió a ExitStateQueue", newTCB.TID, pcb.PID)
+					logger.Info("## (<%v:%v>) Finaliza el hilo", pcb.PID, newTCB.TID)
 				} else {
 					// Si no es, se vuelve a insertar en la cola de new
 					kernelglobals.NewStateQueue.Add(newTCB)
