@@ -28,7 +28,6 @@ func planificadorLargoPlazo() {
 
 func NewProcessToReady() {
 	for {
-		logger.Info("Esperando a que ProcessCreate complete.")
 		<-kernelsync.SemProcessCreate
 
 		// Espera los argumentos del proceso desde el canal

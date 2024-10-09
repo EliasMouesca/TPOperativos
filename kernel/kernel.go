@@ -127,7 +127,7 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		logger.Error("Error al ejecutar la syscall: %v - %v", syscalls.SyscallNames[syscall.Type], err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-
+	logCurrentState("Estado luego de recibir syscall.")
 	wg.Wait()
 
 	w.WriteHeader(http.StatusOK)
@@ -192,7 +192,7 @@ func initProcess(fileName, processSize string) {
 	newThread := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
 
 	// Mover el hilo principal a la cola de ready
-	kernelglobals.ShortTermScheduler.AddToReady(newThread)
+	kernelglobals.ExecStateThread = newThread
 	logger.Info("## (<%v>:0) Se crea el proceso - Estado: NEW", pid)
 
 	logCurrentState("Estado general luego de Inicializar Kernel")

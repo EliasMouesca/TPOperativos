@@ -31,7 +31,7 @@ var syscallSet = map[int]syscallFunction{
 	syscalls.IO:            IO,
 }
 
-var PIDcount int = 0
+var PIDcount int = 1
 
 func ProcessCreate(args []string) error {
 	// Esta syscall recibirá 3 parámetros de la CPU: nombre del archivo, tamaño del proceso y prioridad del hilo main (TID 0).
