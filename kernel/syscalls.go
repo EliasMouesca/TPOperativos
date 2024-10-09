@@ -234,7 +234,8 @@ func ThreadJoin(args []string) error {
 	for _, tcbToJoin := range kernelglobals.EveryTCBInTheKernel {
 		if tcbToJoin.TID == tidToJoin && tcbToJoin.FatherPCB.Equal(execTCB.FatherPCB) {
 			execTCB.JoinedTCB = &tcbToJoin
-			logger.Info("Estado del atributo JoinedTCB del TCB que llamo a ThreadJoin luego de ejecutar: %v", execTCB.JoinedTCB)
+			logger.Info("El (<%v:%v>) quedo con atributo joinedTCB a: (<%v:%v>)", execTCB.FatherPCB.PID, execTCB.TID, execTCB.JoinedTCB.FatherPCB.PID, execTCB.JoinedTCB.TID)
+			break
 		}
 	}
 

@@ -42,7 +42,7 @@ func logCurrentState(context string) {
 		if tcb.JoinedTCB == nil {
 			logger.Info("    (<%d:%d>), Prioridad: %d, JoinedTCB: nil", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad)
 		} else {
-			logger.Info("    (<%d:%d>), Prioridad: %d, JoinedTCB: %d", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad, tcb.JoinedTCB.TID)
+			logger.Info("    (<%d:%d>), Prioridad: %d, JoinedTCB: %v", tcb.FatherPCB.PID, tcb.TID, tcb.Prioridad, tcb.JoinedTCB.TID)
 		}
 
 		if len(tcb.LockedMutexes) == 0 {

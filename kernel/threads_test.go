@@ -160,11 +160,14 @@ func TestThreadJoin(t *testing.T) {
 		t.Errorf("Error inesperado en ThreadJoin: %v", err)
 	}
 
-	logCurrentState("Estado luego de llamar a ThreadJoin")
-
 	// Verificar que el hilo actual está bloqueado en la cola de BlockedStateQueue
 	if kernelglobals.ExecStateThread != nil {
 		t.Errorf("ExecStateThread debería ser nil, pero no lo es")
+	}
+
+	tcb := buscarTCBPorTID(0, fatherPCB.PID)
+	if tcb.JoinedTCB == nil {
+		t.Errorf("El joinedTCB del TCB que ejecuto la syscall quedo en nil, deberia estar apuntando al que llamo.")
 	}
 
 	// Verificar que el hilo actual está en la cola de BlockedStateQueue
@@ -182,6 +185,8 @@ func TestThreadJoin(t *testing.T) {
 	if !blocked {
 		t.Errorf("El hilo actual no fue añadido a la BlockedStateQueue correctamente")
 	}
+
+	logCurrentState("Estado Final")
 }
 
 func TestThreadCancel(t *testing.T) {
