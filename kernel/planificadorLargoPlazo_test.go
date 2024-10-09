@@ -27,7 +27,7 @@ func TestNewProcessToReady(t *testing.T) {
 		TIDs: []types.Tid{0},
 	}
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, processCreate)
-	fatherPCB := buscarPCBPorPID(0)
+	fatherPCB := buscarPCBPorPID(5)
 
 	// Añadir el PCB a NewPCBStateQueue
 	kernelglobals.NewPCBStateQueue.Add(fatherPCB)
@@ -61,7 +61,7 @@ func TestNewProcessToReady(t *testing.T) {
 	wg.Wait()
 
 	// Verificar que el hilo principal fue movido a la cola Ready
-	existsInReady, _ := kernelglobals.ShortTermScheduler.ThreadExists(0, 1)
+	existsInReady, _ := kernelglobals.ShortTermScheduler.ThreadExists(0, 2)
 	if !existsInReady {
 		t.Errorf("El (<%d:0>) no fue movido correctamente a ReadyStateQueue", processCreate.PID)
 	} else {

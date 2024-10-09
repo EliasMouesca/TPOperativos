@@ -28,11 +28,11 @@ func planificadorLargoPlazo() {
 
 func NewProcessToReady() {
 	for {
-		<-kernelsync.SemProcessCreate
+		//<-kernelsync.SemProcessCreate
 
 		// Espera los argumentos del proceso desde el canal
 		args := <-kernelsync.ChannelProcessArguments
-		logger.Debug("Llegaron los argumentos de la syscall: %v", args)
+		logger.Info("Llegaron los argumentos de la syscall: %v", args)
 		fileName := args[0]
 		processSize := args[1]
 		prioridad, _ := strconv.Atoi(args[2])
@@ -78,7 +78,7 @@ func NewProcessToReady() {
 
 		// Mover el mainThread a la cola de Ready
 		kernelglobals.ShortTermScheduler.AddToReady(mainThreadPtr)
-		logger.Info("Se agregó el hilo main (TID 0) del proceso PID <%d> a la cola Ready", pid)
+		logger.Info("Se agregó (<%d:0>) a la cola Ready", pid)
 
 		// Señalización para indicar que el proceso ha sido agregado exitosamente a Ready
 		kernelsync.SemProcessCreateOK <- struct{}{}

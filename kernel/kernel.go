@@ -127,9 +127,8 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		logger.Error("Error al ejecutar la syscall: %v - %v", syscalls.SyscallNames[syscall.Type], err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	logCurrentState("Estado luego de recibir syscall.")
 	wg.Wait()
-
+	logCurrentState("Estado luego de recibir syscall.")
 	w.WriteHeader(http.StatusOK)
 }
 

@@ -62,14 +62,13 @@ func ProcessCreate(args []string) error {
 	pidStr := strconv.Itoa(int(processCreate.PID))
 	args = append(args, pidStr)
 
-	logger.Info("Argumentos enviados al planificador para nuevo proceso: %v", args)
-
 	// Enviar los argumentos al canal para que NewProcessToReady los procese
 	kernelsync.ChannelProcessArguments <- args
 
-	kernelsync.SemProcessCreate <- struct{}{}
+	//kernelsync.SemProcessCreate <- struct{}{}
 	<-kernelsync.SemProcessCreateOK
 
+	logger.Info("Finaliza la syscall ProcessCreate")
 	return nil
 }
 
