@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
-	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
+	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
+	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -30,6 +32,16 @@ func init() {
 	err = json.Unmarshal(configData, &kernelglobals.Config)
 	if err != nil {
 		logger.Fatal("No se pudo parsear el archivo de configuración - %v", err.Error())
+	}
+
+	// Inicializar colas y planificadores globales
+	kernelglobals.EveryPCBInTheKernel = []kerneltypes.PCB{}
+	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
+	kernelglobals.NewStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.BlockedStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.ExitStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.ShortTermScheduler = &Fifo.Fifo{
+		Ready: types.Queue[*kerneltypes.TCB]{},
 	}
 
 	// Agregar logs para verificar los valores cargados
@@ -131,36 +143,49 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 		logger.Info("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
 	}
 
-	kernelsync.WaitPlanificadorLP.Add(1)
 	go func() {
-		defer kernelsync.WaitPlanificadorLP.Done()
 		err := syscallFunc(syscall.Arguments)
 		if err != nil {
 			logger.Error("La syscall devolvio un error - %v", err)
 		}
 	}()
-	kernelsync.WaitPlanificadorLP.Wait()
 	return nil
 }
 
 func initProcess(fileName, processSize string) {
 	logger.Info("Inicializando el proceso inicial con archivo: %s, tamaño: %s", fileName, processSize)
 
-	// Crear los argumentos para la syscall ProcessCreate
-	args := []string{fileName, processSize, "0"}
-	logger.Info("Archivo y tamanio guardados.")
+	//TODO: HAY QUE CREAR ESTO A MANO POR QUE LA SYSCALL ProcessCreate NECESITA QUE HAYA UN HILO EJECUTANDO
+	//		ENTONCES LO HACEMOS A MANO, QUE NO CAMBIA NADA Y SON 20 LINEAS MAS. :)
 
-	// Enviar la syscall ProcessCreate para que el kernel la maneje
-	syscall := syscalls.Syscall{
-		Type:      syscalls.ProcessCreate, // Tipo de syscall
-		Arguments: args,                   // Argumentos del proceso (archivo y tamaño)
+	// Crear el PCB para el proceso inicial
+	pid := types.Pid(1) // Asignar el primer PID como 1 (puedes cambiar según la lógica de PID en tu sistema)
+	pcb := kerneltypes.PCB{
+		PID:  pid,
+		TIDs: []types.Tid{0}, // El primer TCB tiene TID 0
 	}
 
-	// Ejecutar la syscall
-	err := ExecuteSyscall(syscall)
-	if err != nil {
-		logger.Fatal("Error al ejecutar la syscall ProcessCreate: %v", err)
+	// Agregar el PCB a la lista global de PCBs en el kernel
+	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, pcb)
+
+	// Crear el TCB (thread) principal con TID 0 y prioridad 0
+	mainThread := kerneltypes.TCB{
+		TID:           0,
+		Prioridad:     0,                      // Prioridad más alta (0)
+		FatherPCB:     &pcb,                   // Asociar el TCB al PCB creado
+		LockedMutexes: []*kerneltypes.Mutex{}, // Sin mutex bloqueados al inicio
+		JoinedTCB:     nil,                    // No está unido a ningún otro thread
 	}
 
-	logger.Info("Proceso inicial creado correctamente.")
+	// Agregar el TCB a la lista global de TCBs en el kernel
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
+
+	// Hacer que este thread sea el que está en ejecución
+	newThread := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+
+	// Mover el hilo principal a la cola de ready
+	kernelglobals.ShortTermScheduler.AddToReady(newThread)
+	logger.Info("## (<%v>:0) Se crea el proceso - Estado: NEW", pid)
+
+	logCurrentState("Estado general luego de Inicializar Kernel")
 }

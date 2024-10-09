@@ -7,6 +7,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"sync"
 	"testing"
 	"time"
 )
@@ -225,6 +226,10 @@ func TestThreadExitAndToExit(t *testing.T) {
 		Ready: types.Queue[*kerneltypes.TCB]{}, // Inicializa la cola de Ready
 	}
 
+	// Inicializar canal
+	kernelsync.ChannelFinishThread = make(chan []string)
+	kernelsync.ThreadExitComplete = make(chan struct{})
+
 	// Crear un PCB
 	newPID := types.Pid(1)
 	pcb := kerneltypes.PCB{
@@ -275,26 +280,22 @@ func TestThreadExitAndToExit(t *testing.T) {
 
 	kernelglobals.BlockedStateQueue.Add(mutexBlockedTCBPtr)
 
-	// Inicializar canal
-	kernelsync.ChannelFinishThread = make(chan []string)
-	kernelsync.SemFinishThread = make(chan struct{})
-	kernelsync.SemMovedFinishThreads = make(chan struct{})
-
 	logCurrentState("Estado Inicial")
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		ThreadExit([]string{})
+	}()
+
+	// Ejecutar ThreadToExit en paralelo
 	go func() {
 		ThreadToExit()
 	}()
 
-	time.Sleep(50 * time.Millisecond)
-
-	// Ejecutar ThreadExit en un goroutine (simulando que el hilo finaliza)
-	ThreadExit([]string{})
-
-	// Verificar que los TCBs fueron movidos a ExitStateQueue y desbloquearon correctamente
-	time.Sleep(100 * time.Millisecond) // Simular tiempo para la ejecución concurrente
-
-	logCurrentState("Estado despues de Planificar")
+	wg.Wait()
 
 	foundExecTCBInExit := false
 	foundJoinTCBInReady := false
@@ -323,7 +324,7 @@ func TestThreadExitAndToExit(t *testing.T) {
 
 	// Verificaciones finales
 	if !foundExecTCBInExit {
-		t.Errorf("El TID <%d> del PCB <%d> no fue movido correctamente a ExitStateQueue", execTCBPtr.TID, fatherPCB.PID)
+		t.Errorf("El (<%d:%d>) no fue movido correctamente a ExitStateQueue", fatherPCB.PID, execTCBPtr.TID)
 	}
 	if !foundJoinTCBInReady {
 		t.Errorf("El TID <%d> del PCB <%d> bloqueado por THREAD_JOIN no fue movido correctamente a ReadyStateQueue", joinTCBPtr.TID, fatherPCB.PID)
@@ -331,6 +332,8 @@ func TestThreadExitAndToExit(t *testing.T) {
 	if !foundMutexBlockedTCBInReady {
 		t.Errorf("El TID <%d> del PCB <%d> bloqueado por mutex no fue movido correctamente a ReadyStateQueue", mutexBlockedTCBPtr.TID, fatherPCB.PID)
 	}
+
+	logCurrentState("Estado Final")
 }
 
 func setup2() {

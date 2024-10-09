@@ -26,7 +26,7 @@ var ChannelFinishprocess = make(chan types.Pid)
 var SemFinishprocess = make(chan any)
 
 var ChannelFinishThread = make(chan []string, 1)
-var SemFinishThread = make(chan struct{}, 1)
+var ThreadExitComplete = make(chan struct{}, 1)
 var SemMovedFinishThreads = make(chan struct{}, 1)
 
 var ChannelThreadCreate = make(chan []string)

@@ -140,8 +140,6 @@ func NewThreadToReady() {
 		}
 		logger.Info("## (<%d>:<%d>) Se movió el hilo de NEW a READY", newTCB.FatherPCB.PID, newTCB.TID)
 
-		// Notificar que se completó la creación del hilo
-		// kernelsync.SemThreadCreate <- 0
 	}
 }
 
@@ -153,6 +151,7 @@ func ThreadToExit() {
 	// tomados por el hilo finalizado (en caso que hubiera).
 
 	for {
+
 		// Leer los argumentos enviados por ThreadExit
 		args := <-kernelsync.ChannelFinishThread
 		tid, err := strconv.Atoi(args[0])
@@ -165,8 +164,6 @@ func ThreadToExit() {
 			logger.Error("Error al convertir el PID: %v", err)
 			continue
 		}
-
-		<-kernelsync.SemFinishThread
 
 		logger.Info("## Iniciando finalización del TID <%v> del PCB con PID <%d>", tid, pid)
 
@@ -205,9 +202,8 @@ func ThreadToExit() {
 			kernelglobals.ExecStateThread = nil
 		}
 
-		kernelsync.SemMovedFinishThreads <- struct{}{}
-
-		logger.Info("## Finalización del TID <%d> del PCB con PID <%d> completada", tid, pid)
+		logger.Info("Señalizando que ThreadToExit ha completado.")
+		kernelsync.ThreadExitComplete <- struct{}{}
 	}
 }
 
