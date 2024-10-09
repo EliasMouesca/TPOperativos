@@ -4,19 +4,22 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
+	"math/rand"
 	"net/http"
-	"sync"
 	"testing"
 	"time"
 )
 
-var (
-	processCounter int
-	threadCounter  int
-	mutexCounter   int
-	mutexNames     = []string{"mutex_A", "mutex_B", "mutex_C", "mutex_D"}
-	mu             sync.Mutex
-)
+var mutexNames = []string{"mutex_A", "mutex_B", "mutex_C", "mutex_D"}
+
+func init() {
+	rand.Seed(time.Now().UnixNano()) // Semilla para la generación de números aleatorios
+}
+
+func generateRandomName(base string) string {
+	randomNumber := rand.Intn(100) // Genera un número aleatorio entre 0 y 99
+	return base + "_" + string(rune(randomNumber))
+}
 
 func sendSyscallRequest(t *testing.T, syscall syscalls.Syscall) {
 	// Serializar la syscall en JSON
@@ -38,15 +41,11 @@ func sendSyscallRequest(t *testing.T, syscall syscalls.Syscall) {
 	}
 }
 
-// Test para crear un proceso
+// Test para crear un proceso con nombre aleatorio
 func TestProcessCreateKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	// Usar un mutex para asegurar que el contador se incremente correctamente entre ejecuciones paralelas
-	mu.Lock()
-	processCounter++
-	processName := "test_process_" + string(rune(processCounter))
-	mu.Unlock()
+	processName := generateRandomName("test_process")
 
 	syscall := syscalls.Syscall{
 		Type:      syscalls.ProcessCreate,
@@ -56,14 +55,11 @@ func TestProcessCreateKERNEL(t *testing.T) {
 	t.Logf("ProcessCreate syscall para proceso %s enviado correctamente.", processName)
 }
 
-// Test para crear un hilo para el proceso del hilo en ejecución
+// Test para crear un hilo con nombre aleatorio
 func TestThreadCreateKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	mu.Lock()
-	threadCounter++
-	threadName := "thread_code_" + string(rune(threadCounter))
-	mu.Unlock()
+	threadName := generateRandomName("thread_code")
 
 	syscall := syscalls.Syscall{
 		Type:      syscalls.ThreadCreate,
@@ -85,14 +81,11 @@ func TestThreadCancelKERNEL(t *testing.T) {
 	t.Log("ThreadCancel syscall enviado correctamente.")
 }
 
-// Test para crear un mutex
+// Test para crear un mutex con nombre aleatorio
 func TestMutexCreateKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	mu.Lock()
-	mutexName := mutexNames[mutexCounter%len(mutexNames)] // Usar el nombre basado en el contador
-	mutexCounter++
-	mu.Unlock()
+	mutexName := generateRandomName("mutex")
 
 	syscall := syscalls.Syscall{
 		Type:      syscalls.MutexCreate,
@@ -102,14 +95,11 @@ func TestMutexCreateKERNEL(t *testing.T) {
 	t.Logf("MutexCreate syscall enviado correctamente (Nombre: %s).", mutexName)
 }
 
-// Test para hacer lock a un mutex
+// Test para hacer lock a un mutex con nombre aleatorio
 func TestMutexLockKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	mu.Lock()
-	mutexName := mutexNames[mutexCounter%len(mutexNames)]
-	mutexCounter++
-	mu.Unlock()
+	mutexName := generateRandomName("mutex")
 
 	syscall := syscalls.Syscall{
 		Type:      syscalls.MutexLock,
@@ -119,14 +109,11 @@ func TestMutexLockKERNEL(t *testing.T) {
 	t.Logf("MutexLock syscall enviado correctamente (Nombre: %s).", mutexName)
 }
 
-// Test para desbloquear un mutex
+// Test para desbloquear un mutex con nombre aleatorio
 func TestMutexUnlockKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	mu.Lock()
-	mutexName := mutexNames[mutexCounter%len(mutexNames)]
-	mutexCounter++
-	mu.Unlock()
+	mutexName := generateRandomName("mutex")
 
 	syscall := syscalls.Syscall{
 		Type:      syscalls.MutexUnlock,
@@ -136,19 +123,17 @@ func TestMutexUnlockKERNEL(t *testing.T) {
 	t.Logf("MutexUnlock syscall enviado correctamente (Nombre: %s).", mutexName)
 }
 
-// Test para finalizar un proceso (ProcessExit)
+// Test para finalizar un proceso (ProcessExit) basado en el PID del proceso en ejecución
 func TestProcessExitKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
-	// Suponiendo que queremos finalizar el proceso más reciente (PID basado en el processCounter)
-	mu.Lock()
-	pid := processCounter
-	mu.Unlock()
+	// Aquí asumo que el kernel mantiene el PID del proceso en ejecución
+	pid := "1" // Puedes modificar esto para tomar el PID dinámicamente
 
 	syscall := syscalls.Syscall{
 		Type:      syscalls.ProcessExit,
-		Arguments: []string{string(rune(pid))}, // PID del proceso a finalizar
+		Arguments: []string{pid}, // PID del proceso a finalizar
 	}
 	sendSyscallRequest(t, syscall)
-	t.Logf("ProcessExit syscall enviado correctamente para el proceso con PID %d.", pid)
+	t.Logf("ProcessExit syscall enviado correctamente para el proceso con PID %s.", pid)
 }

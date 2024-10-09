@@ -170,6 +170,13 @@ func ThreadCreate(args []string) error {
 
 	currentPCB.TIDs = append(currentPCB.TIDs, newTID)
 
+	for i := range kernelglobals.EveryPCBInTheKernel {
+		if kernelglobals.EveryPCBInTheKernel[i].PID == currentPCB.PID {
+			kernelglobals.EveryPCBInTheKernel[i] = *currentPCB
+			break
+		}
+	}
+
 	kernelglobals.NewStateQueue.Add(buscarTCBPorTID(newTID, currentPCB.PID))
 
 	kernelsync.ChannelThreadCreate <- args
