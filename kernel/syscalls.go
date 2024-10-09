@@ -185,7 +185,7 @@ func ThreadCreate(args []string) error {
 			return fmt.Errorf("error al agregar el TCB a la cola de Ready: %v", err)
 		}*/
 
-	kernelglobals.NewStateQueue.Add(&kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1])
+	kernelglobals.NewStateQueue.Add(buscarTCBPorTID(newTID, currentPCB.PID))
 	logger.Info("(<%v:%v>) fue agregado a NewStateQueue.", newTCB.FatherPCB.PID, newTCB.TID)
 
 	kernelsync.ChannelThreadCreate <- args

@@ -27,7 +27,7 @@ func TestNewProcessToReady(t *testing.T) {
 		TIDs: []types.Tid{0},
 	}
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, processCreate)
-	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+	fatherPCB := buscarPCBPorPID(0)
 
 	// Añadir el PCB a NewPCBStateQueue
 	kernelglobals.NewPCBStateQueue.Add(fatherPCB)
@@ -98,7 +98,7 @@ func TestProcessToExit(t *testing.T) {
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, pcb)
 
 	// Obtener la referencia correcta del PCB desde EveryPCBInTheKernel
-	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+	fatherPCB := buscarPCBPorPID(newPID)
 
 	// Crear 4 hilos asociados a este PCB
 	mainThread := kerneltypes.TCB{TID: 0, Prioridad: 1, FatherPCB: fatherPCB}
@@ -173,7 +173,7 @@ func TestNewThreadToReady(t *testing.T) {
 		TIDs: []types.Tid{0}, // Iniciar con TID 0
 	}
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, pcb)
-	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+	fatherPCB := buscarPCBPorPID(newPID)
 
 	// Crear el TCB principal y asignarlo como hilo en ejecución
 	mainThread := kerneltypes.TCB{TID: 0, Prioridad: 1, FatherPCB: fatherPCB}
@@ -244,12 +244,12 @@ func TestThreadExitAndToExit(t *testing.T) {
 		TIDs: []types.Tid{0, 1, 2}, // El TCB principal y dos threads adicionales
 	}
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, pcb)
-	fatherPCB := &kernelglobals.EveryPCBInTheKernel[len(kernelglobals.EveryPCBInTheKernel)-1]
+	fatherPCB := buscarPCBPorPID(newPID)
 
 	// Crear TCB principal (execTCB)
 	execTCB := kerneltypes.TCB{TID: 0, Prioridad: 1, FatherPCB: fatherPCB}
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, execTCB)
-	execTCBPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	execTCBPtr := buscarTCBPorTID(0, fatherPCB.PID)
 	kernelglobals.ExecStateThread = execTCBPtr
 
 	// Crear mutex y asignarlo al execTCB
@@ -265,7 +265,7 @@ func TestThreadExitAndToExit(t *testing.T) {
 		JoinedTCB: execTCBPtr, // Bloqueado esperando que execTCB termine
 	}
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, joinTCB)
-	joinTCBPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	joinTCBPtr := buscarTCBPorTID(1, fatherPCB.PID)
 	kernelglobals.BlockedStateQueue.Add(joinTCBPtr)
 
 	// Crear TCB bloqueado por mutex
@@ -275,7 +275,7 @@ func TestThreadExitAndToExit(t *testing.T) {
 		FatherPCB: fatherPCB,
 	}
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mutexBlockedTCB)
-	mutexBlockedTCBPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	mutexBlockedTCBPtr := buscarTCBPorTID(2, fatherPCB.PID)
 	mutex.BlockedTCBs = append(mutex.BlockedTCBs, mutexBlockedTCBPtr)
 
 	// Asignar mutex al PCB

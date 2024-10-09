@@ -75,7 +75,6 @@ func NewProcessToReady() {
 		kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
 
 		// Obtener el puntero del hilo principal para encolarlo en Ready
-		//mainThreadPtr := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
 		mainThreadPtr := buscarTCBPorTID(0, pcbPtr.PID)
 
 		// Mover el mainThread a la cola de Ready
