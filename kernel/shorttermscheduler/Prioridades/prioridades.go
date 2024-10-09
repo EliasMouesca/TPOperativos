@@ -53,12 +53,12 @@ func (prioridades *Prioridades) Planificar() (*kerneltypes.TCB, error) {
 	// El proceso se quita de la cola, si por alguna razón el proceso vuelve de CPU sin terminar, debería "creárselo"
 	// de nuevo y agregarlo a la cola. TODO: Cómo rompe esto el tema del quantum??
 	prioridades.ReadyThreads = prioridades.ReadyThreads[1:]
-
+	logger.Info("Planificando en Prioridades el hilo con TID: %v", selectedProces.TID)
 	return selectedProces, nil
 }
 
 func (prioridades *Prioridades) AddToReady(threadToAdd *kerneltypes.TCB) error {
-	logger.Trace("Adding thread to ready (Prioridades): %v", threadToAdd)
+	logger.Info("Adding thread to ready (Prioridades) TID: %v, Prioridad: %v", threadToAdd.TID, threadToAdd.Prioridad)
 
 	// Si es la primera vez que se llama a la función (la lista es nula), creala
 	if prioridades.ReadyThreads == nil {

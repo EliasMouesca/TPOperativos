@@ -6,6 +6,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/types"
+	"github.com/sisoputnfrba/tp-golang/utils/logger"
 )
 
 type Fifo struct {
@@ -55,7 +56,6 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 	// Bloqueate hasta que alguien te mande algo por este channel -> quién manda por este channel? -> AddToReady()
 	// Entonces, bloqueate hasta que alguien agregue un hilo a ready.
 	<-kernelsync.PendingThreadsChannel
-
 	var nextTcb *kerneltypes.TCB
 	var err error
 
@@ -65,6 +65,7 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 		return nil, errors.New("se quiso obtener un hilo y no habia ningun hilo en ready")
 	}
 
+	logger.Info("Planificando en FIFO el hilo con TID: %v", nextTcb.TID)
 	// Retorná el hilo elegido
 	return nextTcb, nil
 }
@@ -73,10 +74,12 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 func (f *Fifo) AddToReady(tcb *kerneltypes.TCB) error {
 	// Agregá el proceso a la cola fifo
 	f.Ready.Add(tcb)
+	logger.Info("Se agrego a Ready fifo el hilo con TID: %v", tcb.TID)
 
 	// Mandá mensaje por el canal, o sea, permití que una vuelta más de Planificar() ejecute
 	go func() {
 		kernelsync.PendingThreadsChannel <- true
 	}()
+
 	return nil
 }

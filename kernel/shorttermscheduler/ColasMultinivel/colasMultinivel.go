@@ -58,6 +58,7 @@ func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
 		return nextTcb, err
 	}
 
+	logger.Info("Planificando en CMM el hilo con TID: %v", nextTcb.TID)
 	return nextTcb, nil
 }
 
@@ -86,9 +87,25 @@ func (cmm *ColasMultiNivel) AddToReady(tcb *kerneltypes.TCB) error {
 		}
 	}
 
+	logger.Info("Se agrego a Ready de CMM el TID: %v", tcb.TID)
 	go func() {
 		kernelsync.PendingThreadsChannel <- true
 	}()
+
+	// Desalojo la cpu si es necesario
+	if kernelglobals.ExecStateThread != nil {
+		if tcb.Prioridad < kernelglobals.ExecStateThread.Prioridad {
+			logger.Info("Desalojando el hilo con TID: %v y Prioridad: %v por el hilo con TID: %v y Prioridad mayor: %v",
+				kernelglobals.ExecStateThread.TID, kernelglobals.ExecStateThread.Prioridad, tcb.TID, tcb.Prioridad)
+			err := shorttermscheduler.CpuInterrupt(
+				types.Interruption{
+					Type: types.InterruptionEviction,
+				})
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
@@ -98,7 +115,7 @@ func (cmm *ColasMultiNivel) addNewQueue(tcb *kerneltypes.TCB) error {
 	newQueue := new(types.Queue[*kerneltypes.TCB])
 	newQueue.Priority = tcb.Prioridad
 	newQueue.Add(tcb)
-
+	logger.Info("Se crea nueva cola de prioridad: %v en CMM", tcb.Prioridad)
 	// Buscar la posición correcta para insertar la nueva cola
 	insertedAt := false
 	for i := range cmm.ReadyQueue {

@@ -79,6 +79,7 @@ func main() {
 	// Listen and serve
 	http.HandleFunc("/kernel/syscall", syscallRecieve)
 	http.HandleFunc("/", badRequest)
+	http.HandleFunc("/kernel/process_finished", CpuReturnThread)
 
 	url := fmt.Sprintf("%s:%d", kernelglobals.Config.SelfAddress, kernelglobals.Config.SelfPort)
 	logger.Info("Server activo en %s", url)
@@ -198,4 +199,24 @@ func initProcess(fileName, processSize string) {
 	logger.Info("## (<%v>:0) Se crea el proceso - Estado: NEW", pid)
 
 	logCurrentState("Estado general luego de Inicializar Kernel")
+}
+
+func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
+	var thread types.Thread
+	err := json.NewDecoder(r.Body).Decode(&thread)
+	if err != nil {
+		logger.Error("No se puedo leer la request de CPU")
+	}
+
+	logger.Info("Se saco de Exec el hilo: <TID %v : PID %v>", thread.TID, thread.PID)
+
+	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
+		if tcb.TID == thread.TID {
+			// if no termino de ejecutar
+			kernelglobals.ShortTermScheduler.AddToReady(&tcb)
+			// else if si termino de ejecutar
+			//
+		}
+	}
+
 }
