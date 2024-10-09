@@ -97,7 +97,7 @@ func ProcessToExit() {
 		// Simular el request a memoria (puede reemplazarse con la función real si está disponible)
 		err := sendMemoryRequest(request)
 		if err != nil {
-			logger.Error("Error en el request a memoria: %v", err)
+			logger.Error("Error en el request: %v", err)
 		}
 		kernelsync.InitProcess <- 0
 	}
@@ -291,7 +291,7 @@ func UnlockIO() {
 		if err != nil {
 			logger.Error("No se pudo remover el tcb de la BlockQueue - %v", err)
 		}
-		logger.Info("Desbloqueando (<%v>:<%v>)", tcbBlock.FatherPCB.PID, tcbBlock.TID)
+		logger.Info("“## (<%v>:<%v>) finalizó IO y pasa a READY", tcbBlock.FatherPCB.PID, tcbBlock.TID)
 		// lo vuelvo a poner en ready, si no se pierde la referencia a ese tcb y nunca se vuelve a planificar
 		err = kernelglobals.ShortTermScheduler.AddToReady(tcbBlock)
 		if err != nil {

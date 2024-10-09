@@ -244,10 +244,9 @@ func ThreadJoin(args []string) error {
 	}
 
 	kernelglobals.BlockedStateQueue.Add(execTCB)
+	logger.Info("## (<%v>:<%v>)- Bloqueado por: <PTHREAD_JOIN>", currentPCB.PID, execTCB.TID)
 
 	kernelglobals.ExecStateThread = nil
-
-	logger.Info("## (<%d>:<%d>) Hilo se mueve a estado BLOCK esperando a (<%d:%d>)", currentPCB.PID, execTCB.TID, currentPCB.PID, tidToJoin)
 
 	return nil
 }
@@ -360,7 +359,7 @@ func MutexLock(args []string) error {
 				mutex.AssignedTCB = execTCB
 				execTCB.LockedMutexes = append(execTCB.LockedMutexes, mutex)
 			} else {
-				logger.Info("## El mutex <%v> ya está tomado. Bloqueando al TID <%d> del proceso con PID <%d>", mutexName, execTCB.TID, execTCB.FatherPCB.PID)
+				logger.Info("“## (<%v>:<%v>)- Bloqueado por: <MUTEX> (nombre: %v)", execTCB.FatherPCB.PID, execTCB.TID, mutexName)
 				mutex.BlockedTCBs = append(mutex.BlockedTCBs, execTCB)
 				kernelglobals.BlockedStateQueue.Add(execTCB)
 			}
