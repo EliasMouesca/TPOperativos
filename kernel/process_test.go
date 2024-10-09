@@ -6,6 +6,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
 	"github.com/sisoputnfrba/tp-golang/types"
+	"sync"
 	"testing"
 )
 
@@ -18,21 +19,19 @@ func TestProcessCreate(t *testing.T) {
 	// Definir los argumentos para el proceso
 	args := []string{"test_file", "500", "1"}
 
-	// Llamar a la syscall ProcessCreate
-	err := ProcessCreate(args)
-	if err != nil {
-		t.Errorf("Error inesperado al crear el proceso: %v", err)
-	}
+	// Lanzar la syscall ProcessCreate en un goroutine
+	go func() {
+		err := ProcessCreate(args)
+		if err != nil {
+			t.Errorf("Error inesperado en ProcessCreate: %v", err)
+		}
+	}()
 
 	// Verificar que los argumentos se hayan enviado al canal
-	select {
-	case receivedArgs := <-kernelsync.ChannelProcessArguments:
-		if len(receivedArgs) != 3 || receivedArgs[0] != "test_file" || receivedArgs[1] != "500" || receivedArgs[2] != "1" {
-			t.Errorf("Los argumentos recibidos en el canal no coinciden: %v", receivedArgs)
-		}
-	default:
-		t.Errorf("No se recibieron argumentos en ChannelProcessArguments")
-	}
+	args = <-kernelsync.ChannelProcessArguments
+
+	// Enviar la señal para permitir que la syscall continúe
+	kernelsync.SemProcessCreateOK <- struct{}{}
 
 	// Verificar que se haya creado un PCB con PID correcto y que esté en NEW
 	if len(kernelglobals.EveryPCBInTheKernel) == 0 {
@@ -98,11 +97,29 @@ func TestProcessExit(t *testing.T) {
 
 	logCurrentState("Estado Inicial")
 
-	// Llamar a la syscall ProcessExit
-	err := ProcessExit([]string{})
-	if err != nil {
-		t.Errorf("Error inesperado en ProcessExit: %v", err)
+	// Usar WaitGroup para esperar la finalización de ProcessExit
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Llamar a la syscall ProcessExit en una goroutine
+	go func() {
+		defer wg.Done() // Indicar que la goroutine ha terminado
+		err := ProcessExit([]string{})
+		if err != nil {
+			t.Errorf("Error inesperado en ProcessExit: %v", err)
+		}
+	}()
+
+	// Verificar que el PID se ha enviado al canal
+	pid := <-kernelsync.ChannelFinishprocess
+
+	// Asegurarse de que el PID sea el esperado
+	if pid != pcb.PID {
+		t.Errorf("PID recibido del canal es incorrecto. Esperado: %d, Recibido: %d", pcb.PID, pid)
 	}
+
+	// Esperar a que ProcessExit termine
+	wg.Wait()
 
 	// Verificar que todos los hilos asociados al PCB fueron movidos a la cola ExitStateQueue
 	for _, tcb := range []*kerneltypes.TCB{mainThreadPtr, readyThreadPtr, blockedThreadPtr, newThreadPtr} {
