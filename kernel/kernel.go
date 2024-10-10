@@ -12,6 +12,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 )
 
@@ -202,21 +203,54 @@ func initProcess(fileName, processSize string) {
 }
 
 func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
-	var thread types.Thread
-	err := json.NewDecoder(r.Body).Decode(&thread)
+	tid, err := strconv.Atoi(r.URL.Query().Get("tid"))
+	pid, err := strconv.Atoi(r.URL.Query().Get("pid"))
+	thread := types.Thread{
+		TID: types.Tid(tid),
+		PID: types.Pid(pid),
+	}
+	var interruption types.Interruption
+	err = json.NewDecoder(r.Body).Decode(&interruption)
 	if err != nil {
 		logger.Error("No se puedo leer la request de CPU")
 	}
 
+	logger.Info("Se recibio la interrupcion < %v > de CPU", interruption.Description)
 	logger.Info("Se saco de Exec el hilo: <TID %v : PID %v>", thread.TID, thread.PID)
 
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
 		if tcb.TID == thread.TID {
-			// if no termino de ejecutar
-			kernelglobals.ShortTermScheduler.AddToReady(&tcb)
-			// else if si termino de ejecutar
-			//
+			// Si lo desalojaron o hubo fin de quantum vuelve a ready
+			if interruption.Type == 0 || interruption.Type == 4 {
+				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
+				if err != nil {
+					return
+				}
+				return
+				// Sino hay que matarlo
+				// Si ya termino el mismo hace la syscall y se manda a exit
+			} else {
+				killTcb(&tcb)
+				return
+			}
+		}
+	}
+}
+
+func killTcb(tcb *kerneltypes.TCB) {
+	pcbPadre := tcb.FatherPCB
+	// Elimino el tid del pcb padre
+	for i, tid := range pcbPadre.TIDs {
+		if tid == tcb.TID {
+			pcbPadre.TIDs = append(pcbPadre.TIDs[:i], pcbPadre.TIDs[i+1:]...)
+			break
 		}
 	}
 
+	for _, lockedMutex := range tcb.LockedMutexes {
+		// TODO: Desbloquar estos Mutexs ?
+	}
+
+	// Mando el tcb a Exit
+	kernelglobals.ExitStateQueue.Add(tcb)
 }
