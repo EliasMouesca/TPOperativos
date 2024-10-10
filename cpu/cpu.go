@@ -113,7 +113,7 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Debug("Interrupción externa recibida parseada correctamente: '%v'", interruption.Description)
+	logger.Info("## Interrupción externa recibida parseada correctamente: '%v'", interruption.Description)
 	if len(interruptionChannel) == 0 {
 		logger.Debug("Enviando interrupción por el canal de interrupciones")
 		interruptionChannel <- interruption
@@ -191,7 +191,7 @@ func loopInstructionCycle() {
 		}
 
 		// Execute
-		logger.Info("T%v P%v - Ejecutando: '%v' %v",
+		logger.Info("## T%v P%v - Ejecutando: '%v' %v",
 			currentThread.TID, currentThread.PID, instructionToParse, arguments)
 
 		err = instruction(&currentExecutionContext, arguments)

@@ -47,23 +47,22 @@ func writeMemInstruction(context *types.ExecutionContext, arguments []string) er
 
 	physicalAddress := context.MemoryBase + *virtualAddressRegister
 
-	validAddress, err := memoryIsThisAddressOk(*currentThread, physicalAddress)
-	if err != nil {
-		return err
-	}
-	if !validAddress {
+	if *virtualAddressRegister >= context.MemorySize {
+		logger.Debug("Se trató de escribir una dirección no perteneciente al proceso! Interrumpiendo...")
 		interruptionChannel <- types.Interruption{
 			Type:        types.InterruptionSegFault,
 			Description: "La dirección no forma parte del espacio del memoria del proceso"}
 		return nil
 	}
 
-	data, err := memoryRead(*currentThread, physicalAddress)
+	err = memoryWrite(*currentThread, physicalAddress, *dataRegister)
 	if err != nil {
 		return err
 	}
 
-	*dataRegister = data
+	logger.Info("## P%v T%v - Escribió '%v' en la dirección física <%v>",
+		currentThread.PID, currentThread.TID, *dataRegister, physicalAddress)
+
 	return nil
 }
 
@@ -80,14 +79,16 @@ func readMemInstruction(context *types.ExecutionContext, arguments []string) err
 
 	physicalAddress := context.MemoryBase + *virtualAddressRegister
 
-	validAddress, err := memoryIsThisAddressOk(*currentThread, physicalAddress)
-	if err != nil {
-		return err
-	}
-	if !validAddress {
+	if *virtualAddressRegister >= context.MemorySize {
+		logger.Debug("Se trató de leer una dirección no perteneciente al proceso! Interrumpiendo...")
 		interruptionChannel <- types.Interruption{
 			Type:        types.InterruptionSegFault,
 			Description: "La dirección no forma parte del espacio del memoria del proceso"}
+		return nil
+	}
+
+	if currentThread == nil {
+		logger.Error("Se mando a ejecutar la instrucción readMemory pero no hay ningún hilo en ejecución ?")
 		return nil
 	}
 
@@ -95,6 +96,8 @@ func readMemInstruction(context *types.ExecutionContext, arguments []string) err
 	if err != nil {
 		return err
 	}
+	logger.Info("## P%v T%v - Leyó '%v' de la dirección física <%v>",
+		currentThread.PID, currentThread.TID, *dataRegister, physicalAddress)
 
 	return nil
 }

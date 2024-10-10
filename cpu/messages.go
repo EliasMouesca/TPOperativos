@@ -25,11 +25,6 @@ func memoryUpdateExecutionContext(thread types.Thread, ectx types.ExecutionConte
 	return err
 }
 
-// TODO: Esto lo tengo que hacer yo o pedírselo a memoria?
-func memoryIsThisAddressOk(tid types.Thread, physicalAdrress uint32) (bool, error) {
-	return true, nil
-}
-
 func memoryGiveMeInstruction(thread types.Thread, pc uint32) (instruction string, err error) {
 	logger.Info("T%v P%v - FETCH PC=%v", thread.TID, thread.PID, pc)
 	url := fmt.Sprintf("http://%v:%v/memoria/getInstruction?tid=%v&pid=%v&pc=%v",
