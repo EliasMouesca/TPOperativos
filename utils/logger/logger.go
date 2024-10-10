@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	LogLevel  int
-	LogWriter io.Writer
+	LogLevel      int
+	FileWriter    io.Writer
+	ConsoleWriter io.Writer
 )
 
 const (
@@ -52,7 +53,8 @@ func ConfigureLogger(filepath string, level string) error {
 		return err
 	}
 
-	LogWriter = io.MultiWriter(file, os.Stdout)
+	FileWriter = file
+	ConsoleWriter = os.Stdout
 
 	return nil
 }
@@ -105,11 +107,45 @@ func log(level int, format string, args ...interface{}) {
 	levelString := levelTags[level]
 	formattedMessage := fmt.Sprintf(format, args...)
 
-	stringToPrint := fmt.Sprintf("\033[90m%s\033[0m [ %s ] %s\n", formattedTime, levelString, formattedMessage)
+	stringToFile := fmt.Sprintf("%s [ %s ] %s\n", formattedTime, levelString, formattedMessage)
+	stringColored := fmt.Sprintf("%s%v%s [ %s ] %v%s\n",
+		escapeSequences["grey"], formattedTime,
+		escapeSequences[levelColors[level]],
+		levelString, formattedMessage,
+		escapeSequences["reset"])
 
-	_, err := LogWriter.Write([]byte(stringToPrint))
+	_, err := FileWriter.Write([]byte(stringToFile))
 	if err != nil {
-		fmt.Printf("Could not write to logger, this should not be happening!: %v", err)
+		fmt.Printf("Could not write log to file, this should not be happening!: %v", err)
 		os.Exit(1)
 	}
+
+	_, err = ConsoleWriter.Write([]byte(stringColored))
+	if err != nil {
+		fmt.Printf("Could not write log to console, this should not be happening!: %v", err)
+		os.Exit(1)
+	}
+
+}
+
+var escapeSequences = map[string]string{
+	"reset":      "\033[0m",
+	"bold":       "\033[1m",
+	"grey":       "\033[90m",
+	"red":        "\033[31m",
+	"bright_red": "\033[91m",
+	"green":      "\033[32m",
+	"yellow":     "\033[33m",
+	"blue":       "\033[34m",
+	"cyan":       "\033[35m",
+	"white":      "\033[0m",
+}
+
+var levelColors = map[int]string{
+	LevelFatal: "bright_red",
+	LevelError: "red",
+	LevelWarn:  "yellow",
+	LevelInfo:  "green",
+	LevelDebug: "reset",
+	LevelTrace: "grey",
 }

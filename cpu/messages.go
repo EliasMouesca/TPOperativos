@@ -58,7 +58,8 @@ func memoryWrite(thread types.Thread, physicalDirection uint32, data uint32) err
 func kernelYourProcessFinished(thread types.Thread, interruptReceived types.Interruption) (err error) {
 	logger.Debug("Kernel, tu proceso terminó! TID: %v, PID: %v", thread.TID, thread.PID)
 	logger.Debug("Int. received - %v", interruptReceived.Description)
-	url := fmt.Sprintf("http://%v:%v/kernel/process_finished", config.KernelAddress, config.KernelPort)
+	url := fmt.Sprintf("http://%v:%v/kernel/process_finished?pid=%v&tid=%v",
+		config.KernelAddress, config.KernelPort, thread.PID, thread.TID)
 	err = sendThisToThere(url, interruptReceived)
 	return err
 }

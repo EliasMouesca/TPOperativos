@@ -2,15 +2,15 @@ package dino
 
 import "fmt"
 
-func dino(usa_galera bool) {
-    color := "\033[92m"
-    nocolor := "\033[0m"
+func Dino(usaGalera bool) {
+	color := "\033[92m"
+	nocolor := "\033[0m"
 
-    galera := `
+	galera := `
                    |~|				
 		   | |				`
-    dino := 
-    `		  _---_				
+	dino :=
+		`		  _---_				
 		 /   o \			
 		(  ,___/			
 	       /   /      ,        __   ___	
@@ -27,10 +27,10 @@ func dino(usa_galera bool) {
 		|  |  |       | |  | :   \__  	
 		/__|\_|       /_|__|  '-____~)	
 		`
-	fmt.Print(color);
-	if usa_galera {
-        fmt.Println(galera);
-    }
-	fmt.Println(dino);
-	fmt.Print(nocolor);
+	fmt.Print(color)
+	if usaGalera {
+		fmt.Println(galera)
+	}
+	fmt.Println(dino)
+	fmt.Print(nocolor)
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
+	"github.com/sisoputnfrba/tp-golang/utils/dino"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"io"
 	"net/http"
@@ -23,7 +24,7 @@ import (
 var config CpuConfig
 
 // Execution context actual, los registros que está fisicamente en la CPU
-var currentExecutionContext *types.ExecutionContext = nil
+var currentExecutionContext types.ExecutionContext
 
 // El hilo (PID + TID) que se está ejecutando en este momento
 var currentThread *types.Thread = nil
@@ -70,6 +71,7 @@ func init() {
 }
 
 func main() {
+	dino.Dino(true)
 	logger.Info("--- Comienzo ejecución CPU ---")
 
 	http.HandleFunc("POST /cpu/interrupt", interruptFromKernel)
@@ -85,11 +87,12 @@ func main() {
 
 func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 	// Log request
-	logger.Debug("Request recibida de: %v", r.RemoteAddr)
+	logger.Debug("Request %v - %v %v", r.RemoteAddr, r.Method, r.URL)
 
 	// Parse body
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		logger.Error("Error leyendo el body")
 		badRequest(w, r)
 		return
 	}
@@ -98,31 +101,34 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 	var interruption = types.Interruption{}
 	err = json.Unmarshal(body, &interruption)
 	if err != nil {
+		logger.Error("Error parseando la interrupción recibida en body")
 		badRequest(w, r)
 		return
 	}
 
 	if currentThread == nil {
+		logger.Debug("No hay nada para interrumpir! Saliendo...")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Kernel, mi amor, todavía no me mandaste a ejecutar nada, qué querés que interrumpa???"))
 		return
 	}
 
-	logger.Debug("Interrupción externa recibida %v", interruption.Description)
+	logger.Debug("Interrupción externa recibida parseada correctamente: '%v'", interruption.Description)
 	if len(interruptionChannel) == 0 {
+		logger.Debug("Enviando interrupción por el canal de interrupciones")
 		interruptionChannel <- interruption
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("La CPU recibió la interrupción"))
 	} else {
+		logger.Debug("Ya se dio otra interrupción previamente")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("La CPU ya recibió otra interrupción y se va a detener al final del ciclo"))
 	}
-
 }
 
 func executeThread(w http.ResponseWriter, r *http.Request) {
 	// Log request
-	logger.Debug("Request recibida de: %v", r.RemoteAddr)
+	logger.Debug("Request de %v - %v", r.RemoteAddr, r.URL)
 
 	query := r.URL.Query()
 	tid, err := strconv.Atoi(query.Get("tid"))
@@ -146,7 +152,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	// Obtenemos el contexto de ejecución
 	logger.Debug("Proceso P%v T%v admitido en la CPU", thread.PID, thread.TID)
 	logger.Debug("Obteniendo contexto de ejecución")
-	*currentExecutionContext, err = memoryGiveMeExecutionContext(thread)
+	currentExecutionContext, err = memoryGiveMeExecutionContext(thread)
 	if err != nil {
 		logger.Error("No se pudo obtener el contexto de ejecución del T%v P%v - %v",
 			thread.TID, thread.PID, err.Error())
@@ -188,7 +194,7 @@ func loopInstructionCycle() {
 		logger.Info("T%v P%v - Ejecutando: '%v' %v",
 			currentThread.TID, currentThread.PID, instructionToParse, arguments)
 
-		err = instruction(currentExecutionContext, arguments)
+		err = instruction(&currentExecutionContext, arguments)
 		if err != nil {
 			logger.Error("No se pudo ejecutar la instrucción - %v", err.Error())
 			if len(interruptionChannel) != 0 {
@@ -207,7 +213,7 @@ func loopInstructionCycle() {
 	}
 
 	finishedThread := *currentThread
-	finishedExecutionContext := *currentExecutionContext
+	finishedExecutionContext := currentExecutionContext
 	receivedInterrupt := <-interruptionChannel
 	currentThread = nil
 
@@ -251,7 +257,7 @@ func decode(instructionToDecode string) (instruction Instruction, arguments []st
 }
 
 func badRequest(w http.ResponseWriter, r *http.Request) {
-	logger.Error("CPU recibió una request mal formada de %v", r.RemoteAddr)
+	//logger.Error("CPU recibió una request mal formada de %v", r.RemoteAddr)
 	w.WriteHeader(http.StatusBadRequest)
 	_, err := w.Write([]byte("Tu request está mal formada!"))
 	if err != nil {
