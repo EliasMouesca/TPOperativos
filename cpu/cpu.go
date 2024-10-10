@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -22,7 +23,7 @@ import (
 var config CpuConfig
 
 // Execution context actual, los registros que está fisicamente en la CPU
-var currentExecutionContext types.ExecutionContext
+var currentExecutionContext *types.ExecutionContext = nil
 
 // El hilo (PID + TID) que se está ejecutando en este momento
 var currentThread *types.Thread = nil
@@ -123,42 +124,41 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	// Log request
 	logger.Debug("Request recibida de: %v", r.RemoteAddr)
 
-	// Parse body
-	body, err := io.ReadAll(r.Body)
+	query := r.URL.Query()
+	tid, err := strconv.Atoi(query.Get("tid"))
 	if err != nil {
+		logger.Error("Query param no se pudo traducir a int - %v", err.Error())
 		badRequest(w, r)
 		return
 	}
 
-	// Parse Thread
-	var execMsg types.Thread
-	err = json.Unmarshal(body, &execMsg)
+	pid, err := strconv.Atoi(query.Get("pid"))
 	if err != nil {
+		logger.Error("Query param no se pudo traducir a int - %v", err.Error())
 		badRequest(w, r)
 		return
 	}
+	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
 
 	// Esperá a que la CPU esté libre, no pinta andar cambiándole el contexto y el currentThread al proceso que se está ejecutando
 	cpuMutex.Lock()
 
 	// Obtenemos el contexto de ejecución
-	logger.Debug("Proceso P%v T%v admitido en la CPU", execMsg.PID, execMsg.TID)
+	logger.Debug("Proceso P%v T%v admitido en la CPU", thread.PID, thread.TID)
 	logger.Debug("Obteniendo contexto de ejecución")
-	currentExecutionContext, err = memoryGiveMeExecutionContext(execMsg)
+	*currentExecutionContext, err = memoryGiveMeExecutionContext(thread)
 	if err != nil {
 		logger.Error("No se pudo obtener el contexto de ejecución del T%v P%v - %v",
-			execMsg.TID, execMsg.PID, err.Error())
+			thread.TID, thread.PID, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("No se pudo obtener el contexto de ejecución - " + err.Error()))
-
 		cpuMutex.Unlock()
-
 		return
 	}
 
 	// Si hasta acá las cosas salieron bien, poné a ejecutar el proceso
-	logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", execMsg.TID, execMsg.PID)
-	currentThread = &execMsg
+	logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", thread.TID, thread.PID)
+	currentThread = &thread
 	go loopInstructionCycle()
 
 	// Repondemos al kernel: "Tu proceso se está ejecutando, sé feliz"
@@ -188,9 +188,9 @@ func loopInstructionCycle() {
 		logger.Info("T%v P%v - Ejecutando: '%v' %v",
 			currentThread.TID, currentThread.PID, instructionToParse, arguments)
 
-		err = instruction(&currentExecutionContext, arguments)
+		err = instruction(currentExecutionContext, arguments)
 		if err != nil {
-			logger.Error("no se pudo ejecutar la instrucción - %v", err.Error())
+			logger.Error("No se pudo ejecutar la instrucción - %v", err.Error())
 			if len(interruptionChannel) != 0 {
 				interruptionChannel <- types.Interruption{
 					Type:        types.InterruptionBadInstruction,
@@ -207,6 +207,7 @@ func loopInstructionCycle() {
 	}
 
 	finishedThread := *currentThread
+	finishedExecutionContext := *currentExecutionContext
 	receivedInterrupt := <-interruptionChannel
 	currentThread = nil
 
@@ -219,6 +220,12 @@ func loopInstructionCycle() {
 		// Yo creo que esto es suficientemente grave como para terminar la ejecución
 		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())
 	}
+
+	err = memoryUpdateExecutionContext(finishedThread, finishedExecutionContext)
+	if err != nil {
+		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())
+	}
+
 }
 
 func fetch() (instructionToParse string, err error) {

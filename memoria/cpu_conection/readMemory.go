@@ -18,7 +18,7 @@ func ReadMemory(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Request recibida de: %v", r.RemoteAddr)
 
 	query := r.URL.Query()
-	dirS := query.Get("dir")
+	dirS := query.Get("addr")
 	tidS := query.Get("tid")
 	pidS := query.Get("pid")
 
