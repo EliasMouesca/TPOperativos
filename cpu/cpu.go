@@ -41,9 +41,10 @@ var syscallBuffer *syscalls.Syscall
 var cpuMutex = sync.Mutex{}
 
 func init() {
-	// Configure logger
-	err := logger.ConfigureLogger("cpu.log", "TRACE")
+	// Tatrá de configurar el logger con un nivel arbitrario
+	err := logger.ConfigureLogger("cpu.log", "ERROR")
 	if err != nil {
+		// Si no podemos logear, no corremos
 		fmt.Printf("No se pudo crear el logger - %v\n", err)
 		os.Exit(1)
 	}
@@ -63,20 +64,22 @@ func init() {
 		logger.Fatal("La configuración no es válida - %v", err.Error())
 	}
 
+	// Seteamos el nivel que realmente dice la config
 	err = logger.SetLevel(config.LogLevel)
 	if err != nil {
 		logger.Fatal("No se pudo setear el nivel de log - %v", err.Error())
 	}
-
 }
 
 func main() {
 	dino.Dino(true)
 	logger.Info("--- Comienzo ejecución CPU ---")
 
+	// Router
 	http.HandleFunc("POST /cpu/interrupt", interruptFromKernel)
 	http.HandleFunc("POST /cpu/execute", executeThread)
 	http.HandleFunc("/", badRequest)
+
 	self := fmt.Sprintf("%v:%v", config.SelfAddress, config.SelfPort)
 	logger.Info("CPU Sirviendo en %v", self)
 	err := http.ListenAndServe(self, nil)
@@ -120,7 +123,7 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("La CPU recibió la interrupción"))
 	} else {
-		logger.Debug("Ya se dio otra interrupción previamente")
+		logger.Debug("Ya se dio otra interrupción previamente, ignorando...")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("La CPU ya recibió otra interrupción y se va a detener al final del ciclo"))
 	}
@@ -150,7 +153,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	cpuMutex.Lock()
 
 	// Obtenemos el contexto de ejecución
-	logger.Debug("Proceso P%v T%v admitido en la CPU", thread.PID, thread.TID)
+	logger.Info("Proceso P%v T%v admitido en la CPU", thread.PID, thread.TID)
 	logger.Debug("Obteniendo contexto de ejecución")
 	currentExecutionContext, err = memoryGiveMeExecutionContext(thread)
 	if err != nil {
