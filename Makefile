@@ -1,5 +1,5 @@
 # List of projects
-PROJECTS = cpu kernel filesystem memoria
+PROJECTS = cpu memoria #kernel filesystem memoria
 
 # Default target
 all: $(PROJECTS)

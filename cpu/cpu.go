@@ -42,7 +42,7 @@ var cpuMutex = sync.Mutex{}
 
 func init() {
 	// Configure logger
-	err := logger.ConfigureLogger("cpu.log", "DEBUG")
+	err := logger.ConfigureLogger("cpu.log", "TRACE")
 	if err != nil {
 		fmt.Printf("No se pudo crear el logger - %v\n", err)
 		os.Exit(1)

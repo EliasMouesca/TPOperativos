@@ -15,7 +15,7 @@ import (
 //TODO: Agregar el tiempo de espera para cada petición del CPU
 
 func init() {
-	loggerLevel := "INFO"
+	loggerLevel := "TRACE"
 	err := logger.ConfigureLogger("memoria.log", loggerLevel)
 	if err != nil {
 		fmt.Println("No se pudo crear el logger - ", err)
@@ -50,7 +50,6 @@ func main() {
 	logger.Info("--- Comienzo ejecución MEMORIA ---")
 
 	// TRUE RESPONSE
-	http.HandleFunc("/", memoria_helpers.BadRequest)
 	http.HandleFunc("/memoria/getContext", cpu.GetContext)
 	http.HandleFunc("/memoria/saveContext", cpu.SaveContext)
 
@@ -65,6 +64,7 @@ func main() {
 	http.HandleFunc("/memoria/finishThread", kernel.FinishThread)
 
 	http.HandleFunc("/memoria/memoryDump", fileSystem.DumpMemory)
+	http.HandleFunc("/", memoria_helpers.BadRequest)
 
 	self := fmt.Sprintf("%v:%v", memoria_helpers.Config.SelfAddress, memoria_helpers.Config.SelfPort)
 	logger.Info("Server activo en %v", self)

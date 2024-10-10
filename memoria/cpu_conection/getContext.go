@@ -11,6 +11,7 @@ import (
 )
 
 func GetContext(w http.ResponseWriter, r *http.Request) {
+	logger.Trace("Memoria entró a GetContext()")
 	if r.Method != "GET" {
 		logger.Error("Metodo no permitido")
 		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)

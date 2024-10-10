@@ -12,7 +12,7 @@ import (
 
 func memoryGiveMeExecutionContext(thread types.Thread) (ectx types.ExecutionContext, err error) {
 	logger.Info("T%v P%v - Solicito contexto de ejecución", thread.TID, thread.PID)
-	url := fmt.Sprintf("http://%v:%v/getContext?pid=%v&tid=%v",
+	url := fmt.Sprintf("http://%v:%v/memoria/getContext?pid=%v&tid=%v",
 		config.MemoryAddress, config.MemoryPort, thread.PID, thread.TID)
 	err = receiveThatFromHere(url, &ectx)
 	return ectx, err
@@ -20,7 +20,7 @@ func memoryGiveMeExecutionContext(thread types.Thread) (ectx types.ExecutionCont
 
 func memoryUpdateExecutionContext(thread types.Thread, ectx types.ExecutionContext) error {
 	logger.Info("T%v P%v - Actualizo contexto de ejecución", thread.TID, thread.PID)
-	url := fmt.Sprintf("http://%v:%v/saveContext?tid=%v&pid=%v", config.MemoryAddress, config.MemoryPort, thread.TID, thread.PID)
+	url := fmt.Sprintf("http://%v:%v/memoria/saveContext?tid=%v&pid=%v", config.MemoryAddress, config.MemoryPort, thread.TID, thread.PID)
 	err := sendThisToThere(url, ectx)
 	return err
 }
@@ -32,7 +32,7 @@ func memoryIsThisAddressOk(tid types.Thread, physicalAdrress uint32) (bool, erro
 
 func memoryGiveMeInstruction(thread types.Thread, pc uint32) (instruction string, err error) {
 	logger.Info("T%v P%v - FETCH PC=%v", thread.TID, thread.PID, pc)
-	url := fmt.Sprintf("http://%v:%v/getInstruction?tid=%v&pid=%v&pc=%v",
+	url := fmt.Sprintf("http://%v:%v/memoria/getInstruction?tid=%v&pid=%v&pc=%v",
 		config.MemoryAddress, config.MemoryPort, thread.TID, thread.PID, pc)
 	err = receiveThatFromHere(url, &instruction)
 	return instruction, err
@@ -49,7 +49,7 @@ func memoryRead(thread types.Thread, physicalDirection uint32) (uint32, error) {
 
 func memoryWrite(thread types.Thread, physicalDirection uint32, data uint32) error {
 	logger.Info("T%v P%v - ESCRIBIR -> %v", thread.TID, thread.PID, physicalDirection)
-	url := fmt.Sprintf("http://%v:%v/writeMem?tid=%v&pid=%v&addr=%v",
+	url := fmt.Sprintf("http://%v:%v/memoria/writeMem?tid=%v&pid=%v&addr=%v",
 		config.MemoryAddress, config.MemoryPort, thread.TID, thread.PID, physicalDirection)
 	err := sendThisToThere(url, data)
 	return err
