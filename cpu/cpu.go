@@ -19,7 +19,6 @@ import (
 // TODO: Testear _algo_ lel
 // TODO: Terminar los helpers
 
-// TODO: Qué tan mal está usar globales?
 // Configuración general de la CPU
 var config CpuConfig
 
@@ -73,7 +72,7 @@ func init() {
 
 func main() {
 	dino.Dino(true)
-	logger.Info("--- Comienzo ejecución CPU ---")
+	logger.Debug("--- Comienzo ejecución CPU ---")
 
 	// Router
 	http.HandleFunc("POST /cpu/interrupt", interruptFromKernel)
@@ -81,7 +80,7 @@ func main() {
 	http.HandleFunc("/", badRequest)
 
 	self := fmt.Sprintf("%v:%v", config.SelfAddress, config.SelfPort)
-	logger.Info("CPU Sirviendo en %v", self)
+	logger.Debug("CPU Sirviendo en %v", self)
 	err := http.ListenAndServe(self, nil)
 	if err != nil {
 		logger.Fatal("Listen and serve retornó error - " + err.Error())
@@ -153,7 +152,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	cpuMutex.Lock()
 
 	// Obtenemos el contexto de ejecución
-	logger.Info("Proceso P%v T%v admitido en la CPU", thread.PID, thread.TID)
+	logger.Debug("Proceso P%v T%v admitido en la CPU", thread.PID, thread.TID)
 	logger.Debug("Obteniendo contexto de ejecución")
 	currentExecutionContext, err = memoryGiveMeExecutionContext(thread)
 	if err != nil {

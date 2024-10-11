@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
-	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
@@ -36,16 +35,6 @@ func init() {
 		logger.Fatal("No se pudo parsear el archivo de configuración - %v", err.Error())
 	}
 
-	// Inicializar colas y planificadores globales
-	kernelglobals.EveryPCBInTheKernel = []kerneltypes.PCB{}
-	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
-	kernelglobals.NewStateQueue = types.Queue[*kerneltypes.TCB]{}
-	kernelglobals.BlockedStateQueue = types.Queue[*kerneltypes.TCB]{}
-	kernelglobals.ExitStateQueue = types.Queue[*kerneltypes.TCB]{}
-	kernelglobals.ShortTermScheduler = &Fifo.Fifo{
-		Ready: types.Queue[*kerneltypes.TCB]{},
-	}
-
 	if err = kernelglobals.Config.Validate(); err != nil {
 		logger.Fatal("La configuración no es válida - %v", err.Error())
 	}
@@ -58,11 +47,12 @@ func init() {
 }
 
 func main() {
-	logger.Info("-- Comenzó la ejecución del kernel --")
+	logger.Debug("-- Comenzó la ejecución del kernel --")
 
 	//TODO: PARA INICIALIZAR EL KERNEL HAY QUE PONER EN CONSOLA:
 	// go run . file_name 123
 
+	// -- PARSEAMOS LOS ARGS --
 	// Capturar los argumentos pasados al kernel por consola
 	if len(os.Args) < 3 {
 		logger.Fatal("Se requieren al menos dos argumentos: archivo de pseudocódigo y tamaño del proceso.")
@@ -70,20 +60,38 @@ func main() {
 	fileName := os.Args[1]    // Primer argumento: nombre del archivo de pseudocódigo
 	processSize := os.Args[2] // Segundo argumento: tamaño del proceso
 
-	// Crear el primer proceso
-	logger.Info("Creando el primer proceso inicial (archivo: %s, tamaño: %s)", fileName, processSize)
-	initProcess(fileName, processSize)
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		logger.Fatal("El archivo '%v' no existe!", fileName)
+	}
 
-	go planificadorLargoPlazo()
-	//go planificadorCortoPlazo()
+	// -- INICIALIZAMOS KERNEL --
+	// Inicializar colas y planificadores globales
+	kernelglobals.EveryPCBInTheKernel = []kerneltypes.PCB{}
+	kernelglobals.EveryTCBInTheKernel = []kerneltypes.TCB{}
+	kernelglobals.NewStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.BlockedStateQueue = types.Queue[*kerneltypes.TCB]{}
+	kernelglobals.ExitStateQueue = types.Queue[*kerneltypes.TCB]{}
+
+	// Crear el primer proceso
+	logger.Debug("## Creando el primer proceso inicial (archivo: %s, tamaño: %s)", fileName, processSize)
+
+	// Inicializamos el planificador de corto plazo (PCP)
+	logger.Info("Iniciando el planificador de corto plazo: %v", kernelglobals.Config.SchedulerAlgorithm)
+	kernelglobals.ShortTermScheduler = AlgorithmsMap[kernelglobals.Config.SchedulerAlgorithm]
+
+	// Poner a correr corto plazo
+	go planificadorCortoPlazo()
+	initFirstProcess(fileName, processSize)
+
+	planificadorLargoPlazo()
 
 	// Listen and serve
 	http.HandleFunc("/kernel/syscall", syscallRecieve)
-	http.HandleFunc("/", badRequest)
 	http.HandleFunc("/kernel/process_finished", CpuReturnThread)
+	http.HandleFunc("/", badRequest)
 
 	url := fmt.Sprintf("%s:%d", kernelglobals.Config.SelfAddress, kernelglobals.Config.SelfPort)
-	logger.Info("Server activo en %s", url)
+	logger.Debug("Server activo en %s", url)
 	err := http.ListenAndServe(url, nil)
 	if err != nil {
 		logger.Fatal("ListenAndServe retornó error - %v", err)
@@ -92,7 +100,7 @@ func main() {
 }
 
 func badRequest(w http.ResponseWriter, r *http.Request) {
-	logger.Info("Request inválida: %v", r.RequestURI)
+	logger.Debug("Request inválida: %v", r.RequestURI)
 	w.WriteHeader(http.StatusBadRequest)
 	_, err := w.Write([]byte("Bad request!"))
 	if err != nil {
@@ -164,14 +172,14 @@ func ExecuteSyscall(syscall syscalls.Syscall, wg *sync.WaitGroup) error {
 	return nil
 }
 
-func initProcess(fileName, processSize string) {
-	logger.Info("Inicializando el proceso inicial con archivo: %s, tamaño: %s", fileName, processSize)
+func initFirstProcess(fileName, processSize string) {
+	logger.Debug("Inicializando el proceso inicial con archivo: %s, tamaño: %s", fileName, processSize)
 
 	//TODO: HAY QUE CREAR ESTO A MANO POR QUE LA SYSCALL ProcessCreate NECESITA QUE HAYA UN HILO EJECUTANDO
 	//		ENTONCES LO HACEMOS A MANO, QUE NO CAMBIA NADA Y SON 20 LINEAS MAS. :)
 
 	// Crear el PCB para el proceso inicial
-	pid := types.Pid(1) // Asignar el primer PID como 1 (puedes cambiar según la lógica de PID en tu sistema)
+	pid := types.Pid(0) // Asignar el primer PID como 1 (puedes cambiar según la lógica de PID en tu sistema)
 	pcb := kerneltypes.PCB{
 		PID:  pid,
 		TIDs: []types.Tid{0}, // El primer TCB tiene TID 0
@@ -193,10 +201,12 @@ func initProcess(fileName, processSize string) {
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
 
 	// Hacer que este thread sea el que está en ejecución
-	newThread := &kernelglobals.EveryTCBInTheKernel[len(kernelglobals.EveryTCBInTheKernel)-1]
+	newThread := buscarTCBPorTID(mainThread.TID, pcb.PID)
+	err := kernelglobals.ShortTermScheduler.AddToReady(newThread)
+	if err != nil {
+		logger.Fatal("No se pudo poner en ready el primer hilo")
+	}
 
-	// Mover el hilo principal a la cola de ready
-	kernelglobals.ExecStateThread = newThread
 	logger.Info("## (<%v>:0) Se crea el proceso - Estado: NEW", pid)
 
 	logCurrentState("Estado general luego de Inicializar Kernel")
@@ -215,8 +225,8 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 		logger.Error("No se puedo leer la request de CPU")
 	}
 
-	logger.Info("Se recibio la interrupcion < %v > de CPU", interruption.Description)
-	logger.Info("Se saco de Exec el hilo: <TID %v : PID %v>", thread.TID, thread.PID)
+	logger.Debug("Se recibio la interrupcion < %v > de CPU", interruption.Description)
+	logger.Info("## Se saco de Exec el hilo: <TID %v : PID %v>", thread.TID, thread.PID)
 
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
 		if tcb.TID == thread.TID {
@@ -247,10 +257,29 @@ func killTcb(tcb *kerneltypes.TCB) {
 		}
 	}
 
-	for _, lockedMutex := range tcb.LockedMutexes {
-		// TODO: Desbloquar estos Mutexs ?
-	}
+	// como despues voy a sacar el lockedMutex de la lista de lockedMutexes va a alterar el recorrido de la lista, entonces la recorro en orden inverso
+	for i := len(tcb.LockedMutexes) - 1; i >= 0; i-- {
+		lockedMutex := tcb.LockedMutexes[i]
+		lockedMutex.AssignedTCB = nil
 
-	// Mando el tcb a Exit
+		// lo saco de la lista de mutexes lockeados por el tcb
+		tcb.LockedMutexes = append(tcb.LockedMutexes[:i], tcb.LockedMutexes[i+1:]...)
+
+		if len(lockedMutex.BlockedTCBs) > 0 {
+			nextTcb := lockedMutex.BlockedTCBs[0]
+			lockedMutex.BlockedTCBs = lockedMutex.BlockedTCBs[1:]
+
+			// asigno el mutex al siguiente TCB y lo pongo en ready
+			nextTcb.LockedMutexes = append(nextTcb.LockedMutexes, lockedMutex)
+			lockedMutex.AssignedTCB = nextTcb
+
+			err := kernelglobals.ShortTermScheduler.AddToReady(nextTcb)
+			if err != nil {
+				logger.Error("Error al mover el TCB <%d> a Ready - %v", nextTcb.TID, err)
+			}
+		}
+	}
 	kernelglobals.ExitStateQueue.Add(tcb)
+	logger.Info("## (<%d:%d>) Movido a la cola Exit por respuesta de CPU", tcb.TID, tcb.FatherPCB.PID)
+
 }

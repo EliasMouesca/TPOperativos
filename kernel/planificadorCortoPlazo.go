@@ -23,9 +23,6 @@ var AlgorithmsMap = map[string]kerneltypes.ShortTermSchedulerInterface{
 }
 
 func planificadorCortoPlazo() {
-	// Inicializamos el planificador de corto plazo (PCP)
-	kernelglobals.ShortTermScheduler = AlgorithmsMap[kernelglobals.Config.SchedulerAlgorithm]
-	logger.Info("Iniciando el planificador de corto plazo: %v", kernelglobals.Config.SchedulerAlgorithm)
 	// Mientras vivas, corré lo siguiente
 	for {
 		// Esta función se bloquea si no hay nada que hacer o si la CPU está ocupada
@@ -52,5 +49,8 @@ func planificadorCortoPlazo() {
 			return
 		}
 		kernelsync.QuantumChannel <- time.After(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
+		kernelglobals.ExecStateThread = tcbToExecute
+
+		logCurrentState("DESPUES DE PLANIFICAR")
 	}
 }

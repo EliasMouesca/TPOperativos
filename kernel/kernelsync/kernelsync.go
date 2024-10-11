@@ -10,7 +10,7 @@ import (
 var MutexCPU sync.Mutex
 
 // PendingThreadsChannel un canal para que el corto sepa que hay procesos pendientes de planificar
-var PendingThreadsChannel = make(chan any, 1)
+var PendingThreadsChannel = make(chan any)
 
 // QuantumChannel se manda una señal por acá cuando se acabó el quantum
 var QuantumChannel = make(chan any)

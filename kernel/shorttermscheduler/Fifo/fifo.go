@@ -15,7 +15,6 @@ type Fifo struct {
 
 func (f *Fifo) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
 	for _, v := range f.Ready.GetElements() {
-
 		if v.TID == tid && v.FatherPCB.PID == pid {
 			return true, nil
 		}
@@ -59,6 +58,7 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 	var nextTcb *kerneltypes.TCB
 	var err error
 
+	logger.Trace("%s", f.Ready)
 	// Fifo lo único que hace para seleccionar procesos es tomar el primero que entró
 	nextTcb, err = f.Ready.GetAndRemoveNext()
 	if err != nil {
@@ -72,12 +72,14 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 
 // AddToReady Le avisa al STS (versión FIFO) que hay un nuevo proceso listo
 func (f *Fifo) AddToReady(tcb *kerneltypes.TCB) error {
+	logger.Debug("Se agrego a Ready fifo el hilo con TID: %v", tcb.TID)
 	// Agregá el proceso a la cola fifo
 	f.Ready.Add(tcb)
-	logger.Info("Se agrego a Ready fifo el hilo con TID: %v", tcb.TID)
 
 	// Mandá mensaje por el canal, o sea, permití que una vuelta más de Planificar() ejecute
 	go func() {
+		logger.Trace("Hay hilos en ready!!")
+		logger.Trace("%s", f.Ready)
 		kernelsync.PendingThreadsChannel <- true
 	}()
 
