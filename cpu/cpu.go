@@ -147,6 +147,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	// Obtenemos el contexto de ejecución
 	logger.Debug("Proceso (<%d:%d>) admitido en la CPU", thread.PID, thread.TID)
 	logger.Debug("Obteniendo contexto de ejecución")
+
 	currentExecutionContext, err = memoryGiveMeExecutionContext(thread)
 	if err != nil {
 		logger.Error("No se pudo obtener el contexto de ejecución del T%v P%v - %v", thread.TID, thread.PID, err.Error())

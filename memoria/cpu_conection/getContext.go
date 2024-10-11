@@ -6,7 +6,6 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -25,27 +24,29 @@ func GetContext(w http.ResponseWriter, r *http.Request) {
 
 	logger.Debug("Contexto a buscar - (PID:TID) - (%v,%v)", pidS, tidS)
 
-	tid, err := strconv.Atoi(tidS)
-	pid, err := strconv.Atoi(pidS)
-	if err != nil {
-		logger.Error("No se pudo obtener los query params")
-		http.Error(w, "No se pudo obtener los query params", http.StatusBadRequest)
-		return
-	}
-	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
+	//tid, err := strconv.Atoi(tidS)
+	//pid, err := strconv.Atoi(pidS)
+	//if err != nil {
+	//	logger.Error("No se pudo obtener los query params")
+	//	http.Error(w, "No se pudo obtener los query params", http.StatusBadRequest)
+	//	return
+	//}
+	//thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
+	//
+	//context, exists := memoria_helpers.ExecContext[thread]
+	//if !exists {
+	//	logger.Error("No se pudo encontrar el contexto")
+	//	http.Error(w, "No se pudo encontrar el contexto", http.StatusNotFound)
+	//	return
+	//}
 
-	context, exists := memoria_helpers.ExecContext[thread]
-	if !exists {
-		logger.Error("No se pudo encontrar el contexto")
-		http.Error(w, "No se pudo encontrar el contexto", http.StatusNotFound)
-		return
-	}
+	context := types.ExecutionContext{}
 
 	logger.Debug("Contexto hayado: %v", context)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(context)
+	err := json.NewEncoder(w).Encode(context)
 	if err != nil {
 		logger.Error("Error al escribir el response - %v", err.Error())
 		http.Error(w, "Error al encontrar el contexto", http.StatusInternalServerError)

@@ -33,7 +33,7 @@ func planificadorCortoPlazo() {
 		}
 
 		// Esperá a que la CPU esté libre / bloqueásela al resto
-		//kernelsync.MutexCPU.Lock()
+		kernelsync.MutexCPU.Lock()
 
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
 		logger.Debug("Hilo a ejecutar: %d", tcbToExecute.TID)
