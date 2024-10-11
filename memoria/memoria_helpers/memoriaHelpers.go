@@ -32,5 +32,5 @@ func GetInstructionPosta(thread types.Thread, pc int) (string, error) {
 		}
 		return instruction, nil
 	*/
-	return "PROCESS_EXIT", nil
+	return "SET AX 1", nil
 }

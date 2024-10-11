@@ -2,6 +2,7 @@ package kernel_conection
 
 import (
 	"encoding/json"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -30,6 +31,12 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 
 	// Log obligatorio
 	logger.Info("## Hilo Creado - (PID:TID) - (%v,%v)", pidS, tidS)
+
+	// Guardar el contexto en ExecContext, usando PID y TID como clave
+	context := types.ExecutionContext{}
+	thread := types.Thread{PID: pidS, TID: tidS}
+	memoria_helpers.ExecContext[thread] = context
+	logger.Info("Contexto creado para el hilo - (PID:TID): (%v, %v)", pidS, tidS)
 
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte("Hilo creado correctamente"))

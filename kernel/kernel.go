@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
+	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
@@ -188,6 +189,23 @@ func initFirstProcess(fileName, processSize string) {
 	// Agregar el PCB a la lista global de PCBs en el kernel
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, pcb)
 
+	// LE AVISO A MEMORIA QUE SE CREO UN NUEVO PROCESO
+	request := types.RequestToMemory{
+		Thread:    types.Thread{PID: types.Pid(pid)},
+		Type:      types.CreateProcess,
+		Arguments: []string{fileName, processSize},
+	}
+	for {
+		err := sendMemoryRequest(request)
+		if err != nil {
+			logger.Error("Error al enviar request a memoria: %v", err)
+			<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
+		} else {
+			logger.Debug("Hay espacio disponible en memoria")
+			break
+		}
+	}
+
 	// Crear el TCB (thread) principal con TID 0 y prioridad 0
 	mainThread := kerneltypes.TCB{
 		TID:           0,
@@ -199,6 +217,21 @@ func initFirstProcess(fileName, processSize string) {
 
 	// Agregar el TCB a la lista global de TCBs en el kernel
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
+
+	// LE AVISO A MEMORIA QUE SE CREO UN NUEVO HILO
+	request2 := types.RequestToMemory{
+		Thread:    types.Thread{PID: mainThread.FatherPCB.PID, TID: mainThread.TID},
+		Type:      types.CreateThread,
+		Arguments: []string{fileName},
+	}
+	logger.Debug("Informando a Memoria sobre la creación de un hilo")
+
+	// Enviar la solicitud a memoria
+	err2 := sendMemoryRequest(request2)
+	if err2 != nil {
+		logger.Error("Error en el request a memoria: %v", err2)
+		return
+	}
 
 	// Hacer que este thread sea el que está en ejecución
 	newThread := buscarTCBPorTID(mainThread.TID, pcb.PID)
