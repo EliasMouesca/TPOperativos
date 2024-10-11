@@ -153,6 +153,17 @@ func TestProcessExitKERNEL(t *testing.T) {
 	t.Logf("ProcessExit syscall enviado correctamente para el proceso con PID %s.", pid)
 }
 
+func TestThreadExitKERNEL(t *testing.T) {
+	time.Sleep(2 * time.Second)
+
+	syscall := syscalls.Syscall{
+		Type:      syscalls.ThreadExit,
+		Arguments: []string{}, // PID del proceso a finalizar
+	}
+	sendSyscallRequest(t, syscall)
+	t.Logf("ThreadExit syscall enviado correctamente.")
+}
+
 // Test para DumpMemory
 func TestDumpMemoryKERNEL(t *testing.T) {
 	time.Sleep(2 * time.Second)

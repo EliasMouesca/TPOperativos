@@ -33,7 +33,7 @@ func planificadorCortoPlazo() {
 		}
 
 		// Esperá a que la CPU esté libre / bloqueásela al resto
-		kernelsync.MutexCPU.Lock()
+		//kernelsync.MutexCPU.Lock()
 
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
 		logger.Debug("Hilo a ejecutar: %d", tcbToExecute.TID)
@@ -46,11 +46,14 @@ func planificadorCortoPlazo() {
 		url := fmt.Sprintf("http://%v:%v/cpu/execute", kernelglobals.Config.CpuAddress, kernelglobals.Config.CpuPort)
 		_, err = http.Post(url, "application/json", bytes.NewBuffer(data))
 		if err != nil {
-			return
+			logger.Error("Error en request")
 		}
-		kernelsync.QuantumChannel <- time.After(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
 		kernelglobals.ExecStateThread = tcbToExecute
-
 		logCurrentState("DESPUES DE PLANIFICAR")
+
+		go func() {
+			kernelsync.QuantumChannel <- time.After(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
+		}()
+
 	}
 }

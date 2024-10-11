@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 )
@@ -132,32 +131,25 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	// Log request
 	logger.Debug("Request de %v - %v", r.RemoteAddr, r.URL)
 
-	query := r.URL.Query()
-	tid, err := strconv.Atoi(query.Get("tid"))
+	var thread types.Thread
+	err := json.NewDecoder(r.Body).Decode(&thread)
 	if err != nil {
-		logger.Error("Query param no se pudo traducir a int - %v", err.Error())
+		logger.Error("Error al decodificar el cuerpo del request - %v", err.Error())
 		badRequest(w, r)
 		return
 	}
 
-	pid, err := strconv.Atoi(query.Get("pid"))
-	if err != nil {
-		logger.Error("Query param no se pudo traducir a int - %v", err.Error())
-		badRequest(w, r)
-		return
-	}
-	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
+	defer r.Body.Close()
 
 	// Esperá a que la CPU esté libre, no pinta andar cambiándole el contexto y el currentThread al proceso que se está ejecutando
 	cpuMutex.Lock()
 
 	// Obtenemos el contexto de ejecución
-	logger.Debug("Proceso P%v T%v admitido en la CPU", thread.PID, thread.TID)
+	logger.Debug("Proceso (<%d:%d>) admitido en la CPU", thread.PID, thread.TID)
 	logger.Debug("Obteniendo contexto de ejecución")
 	currentExecutionContext, err = memoryGiveMeExecutionContext(thread)
 	if err != nil {
-		logger.Error("No se pudo obtener el contexto de ejecución del T%v P%v - %v",
-			thread.TID, thread.PID, err.Error())
+		logger.Error("No se pudo obtener el contexto de ejecución del T%v P%v - %v", thread.TID, thread.PID, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("No se pudo obtener el contexto de ejecución - " + err.Error()))
 		cpuMutex.Unlock()

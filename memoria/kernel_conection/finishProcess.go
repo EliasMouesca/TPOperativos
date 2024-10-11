@@ -1,43 +1,39 @@
 package kernel_conection
 
 import (
+	"encoding/json"
+	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 )
 
 func FinishProcess(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		logger.Error("Metodo no permitido")
-		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
-		return
-	}
-	logger.Debug("Request recibida de: %v", r.RemoteAddr)
-
-	query := r.URL.Query()
-	//TODO: rami: El kernel no te pasa el size
-	sizeS := query.Get("size")
-	pidS := query.Get("ptd")
-
-	//Log obligatorio
-	logger.Info("## Proceso Destruido -  PID: %v - Tamaño: %v", pidS, sizeS)
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func createProcess(w http.ResponseWriter, r *http.Request) {
+	// Verificar que sea un POST en lugar de GET
 	if r.Method != "POST" {
-		logger.Error("Metodo no permitido")
-		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
+		logger.Error("Método no permitido")
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		return
 	}
 	logger.Debug("Request recibida de: %v", r.RemoteAddr)
 
-	query := r.URL.Query()
-	sizeS := query.Get("size")
-	pidS := query.Get("ptd")
+	// Leer el cuerpo de la solicitud (debe contener un JSON con la información del proceso)
+	var requestData types.RequestToMemory
+	err := json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		logger.Error("Error al decodificar el cuerpo de la solicitud: %v", err)
+		http.Error(w, "Solicitud inválida", http.StatusBadRequest)
+		return
+	}
 
-	//Log obligatorio
-	logger.Info("## Proceso Creado -  PID: %v - Tamaño: %v", pidS, sizeS)
+	// Extraer PID del cuerpo JSON enviado por ProcessToExit
+	pidS := requestData.Thread.PID
+
+	// Log obligatorio
+	logger.Info("## Proceso Destruido - PID: %v", pidS)
 
 	w.WriteHeader(http.StatusOK)
+	_, err = w.Write([]byte("Proceso destruido correctamente"))
+	if err != nil {
+		logger.Error("Error escribiendo response: %v", err)
+	}
 }
