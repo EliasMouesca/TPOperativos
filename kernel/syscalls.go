@@ -96,7 +96,7 @@ func ProcessExit(args []string) error {
 			if err != nil {
 				logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
 			}
-			logger.Info("(<%d:%d>) Se quita de ready el hilo", pcb.PID, tid)
+			logger.Info("## (<%d:%d>) Se quita de ready", pcb.PID, tid)
 		}
 
 		// 2. Verificar y eliminar hilos en la cola de Blocked
@@ -139,7 +139,7 @@ func ProcessExit(args []string) error {
 	kernelglobals.ExitStateQueue.Add(tcb)
 	kernelglobals.ExecStateThread = nil
 
-	logger.Info("## Finaliza el proceso <%v>", pcb.PID)
+	logger.Info("## (<%v>) Finaliza el proceso", pcb.PID)
 
 	return nil
 }

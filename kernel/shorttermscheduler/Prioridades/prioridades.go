@@ -38,7 +38,7 @@ func (prioridades *Prioridades) ThreadRemove(tid types.Tid, pid types.Pid) error
 		if v.TID == tid && v.FatherPCB.PID == pid {
 			prioridades.ReadyThreads = append(prioridades.ReadyThreads[:i], prioridades.ReadyThreads[i+1:]...)
 			kernelglobals.ExitStateQueue.Add(v)
-			logger.Info("Hilo con TID <%d> del PCB con PID <%d> eliminado de la cola de prioridades", tid, pid)
+			logger.Info("## (<%v>:<%v>) Eliminado de la cola de prioridades", pid, tid)
 			return nil
 		}
 	}
