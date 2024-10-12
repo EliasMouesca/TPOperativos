@@ -1,5 +1,5 @@
-THREAD_CREATE ../demo_code/thread.dino 0
-THREAD_CREATE ../demo_code/thread.dino 0
+THREAD_CREATE ../demo_code/thread.dino 1
+THREAD_CREATE ../demo_code/thread.dino 2
 THREAD_CREATE ../demo_code/thread.dino 0
 SET AX 1
 SET BX 1

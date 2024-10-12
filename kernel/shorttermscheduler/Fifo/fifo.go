@@ -2,7 +2,6 @@ package Fifo
 
 import (
 	"errors"
-	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/types"
@@ -41,8 +40,12 @@ func (f *Fifo) ThreadRemove(tid types.Tid, pid types.Pid) error {
 			if v.TID != tid || v.FatherPCB.PID != pid {
 				f.Ready.Add(v)
 			} else {
-				kernelglobals.ExitStateQueue.Add(v)
+				//	kernelglobals.ExitStateQueue.Add(v)
+				go func() {
+					<-kernelsync.PendingThreadsChannel
+				}()
 			}
+
 		}
 		return nil
 	}

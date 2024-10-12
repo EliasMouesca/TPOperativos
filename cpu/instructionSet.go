@@ -123,6 +123,7 @@ func jnzInstruction(context *types.ExecutionContext, arguments []string) error {
 
 	if *register != 0 {
 		context.Pc = uint32(jump)
+		logger.Trace("actualizando PC: %v", context.Pc)
 	}
 
 	return nil
@@ -207,6 +208,7 @@ func logInstruction(ctx *types.ExecutionContext, args []string) error {
 	}
 
 	logger.Info("Logging register '%v': %v", registerString, *register)
+	fmt.Println(*register)
 	return nil
 }
 

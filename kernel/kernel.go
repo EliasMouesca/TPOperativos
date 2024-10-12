@@ -131,6 +131,7 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		logger.Error("Error al ejecutar la syscall: %v - %v", syscalls.SyscallNames[syscall.Type], err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+	logger.Trace("SE ejecuto ExecuteSyscall()")
 	logCurrentState("Estado luego de recibir syscall.")
 	w.WriteHeader(http.StatusOK)
 }
@@ -232,6 +233,7 @@ func initFirstProcess(fileName, processSize string) {
 }
 
 func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
+
 	tid, err := strconv.Atoi(r.URL.Query().Get("tid"))
 	pid, err := strconv.Atoi(r.URL.Query().Get("pid"))
 	thread := types.Thread{

@@ -44,6 +44,9 @@ func (cmm *ColasMultiNivel) ThreadRemove(tid types.Tid, pid types.Pid) error {
 				queue.Add(r)
 			} else {
 				kernelglobals.ExitStateQueue.Add(r)
+				go func() {
+					<-kernelsync.PendingThreadsChannel
+				}()
 			}
 		}
 	}
@@ -171,6 +174,6 @@ func roundRobin() error {
 		logger.Error("Failed to interrupt the CPU (end of quantum) - %v", err)
 		return err
 	}
-	logger.Info("(PID:%d TID:%d) - Desalojado por fin de quantum", pid, tid)
+	logger.Info("(PID:%d TID:%d) - Enviado a desalojar por fin de quantum", pid, tid)
 	return nil
 }

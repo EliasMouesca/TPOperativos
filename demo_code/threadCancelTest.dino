@@ -1,0 +1,3 @@
+THREAD_CREATE ../demo_code/threadCancelTest_trhead.dino 1
+THREAD_CANCEL 1
+PROCESS_EXIT

@@ -1,0 +1,3 @@
+THREAD_CREATE ../demo_code/easy.dino 1
+DUMP_MEMORY
+PROCESS_EXIT

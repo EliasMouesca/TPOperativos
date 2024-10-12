@@ -41,6 +41,7 @@ func planificadorCortoPlazo() {
 
 		if kernelglobals.ExecStateThread != nil {
 			tcbToExecute = kernelglobals.ExecStateThread
+			logger.Trace("DEVUELVO HILO SIN PLANIFICAR!")
 		} else {
 			<-kernelsync.PendingThreadsChannel
 			logger.Trace("Hay hilos en ready para planificar")
