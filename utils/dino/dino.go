@@ -2,7 +2,7 @@ package dino
 
 import "fmt"
 
-func Dino(usaGalera bool) {
+func Brachiosaurus(usaGalera bool) {
 	color := "\033[92m"
 	nocolor := "\033[0m"
 
@@ -34,3 +34,31 @@ func Dino(usaGalera bool) {
 	fmt.Println(dino)
 	fmt.Print(nocolor)
 }
+
+func Trex() {
+    color := "\033[93m"
+    nocolor := "\033[0m"
+
+    dino := `
+       __----_
+      /    O  \                 ,        __   ___
+      vvvvvvv  \               _|       |  | |   
+      \-----,   ;             / | °  _  |  | \--\
+            |    \___         \_; | | | \__; ___;
+             \        \--_
+            /|            \
+         m-/  \             \_
+           m-/ \  (     )      \
+                (/      /        \
+                 /     /_         \
+                  \   \  (__       -__
+                   \  \   \ :___      \__
+                  _/  /  _/  /  \_       \___
+                <<<__/ <<<___/    (________=====-_
+           `
+
+    fmt.Print(color)
+    fmt.Println(dino)
+    fmt.Print(nocolor)
+}
+

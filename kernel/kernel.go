@@ -10,6 +10,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"github.com/sisoputnfrba/tp-golang/utils/dino"
 	"net/http"
 	"os"
 	"strconv"
@@ -52,6 +53,7 @@ func init() {
 }
 
 func main() {
+    dino.Trex()
 	logger.Debug("-- Comenzó la ejecución del kernel --")
 
 	//TODO: PARA INICIALIZAR EL KERNEL HAY QUE PONER EN CONSOLA:

@@ -66,7 +66,7 @@ func init() {
 }
 
 func main() {
-	dino.Dino(true)
+	dino.Brachiosaurus(true)
 	logger.Debug("--- Comienzo ejecución CPU ---")
 
 	// Router
