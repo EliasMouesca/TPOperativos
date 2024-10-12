@@ -38,7 +38,6 @@ func planificadorCortoPlazo() {
 		kernelsync.MutexCPU.Lock()
 
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
-		logger.Debug("Hilo a ejecutar: %d", tcbToExecute.TID)
 
 		//Crafteo proximo hilo
 		nextThread := types.Thread{TID: tcbToExecute.TID, PID: tcbToExecute.FatherPCB.PID}
@@ -54,13 +53,15 @@ func planificadorCortoPlazo() {
 			kernelglobals.ShortTermScheduler.AddToReady(kernelglobals.ExecStateThread)
 		}
 		kernelglobals.ExecStateThread = tcbToExecute
-		logCurrentState("DESPUES DE PLANIFICAR")
 
+		logger.Debug("## (<%v>:<%v>) Ejecutando hilo", tcbToExecute.FatherPCB.PID, tcbToExecute.TID)
+
+		// TODO: Qué es esto?
 		go func() {
 			kernelsync.QuantumChannel <- time.After(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
 		}()
 
-		logger.Debug("Finalizó la planificación")
+		logger.Trace("Finalizó la planificación")
 
 	}
 }

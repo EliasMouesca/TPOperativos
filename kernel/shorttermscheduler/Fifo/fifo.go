@@ -10,7 +10,8 @@ import (
 )
 
 type Fifo struct {
-	Ready types.Queue[*kerneltypes.TCB]
+	Ready         types.Queue[*kerneltypes.TCB]
+	LastScheduled *kerneltypes.TCB
 }
 
 func (f *Fifo) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
@@ -55,8 +56,15 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 	// Bloqueate hasta que alguien te mande algo por este channel -> quién manda por este channel? -> AddToReady()
 	// Entonces, bloqueate hasta que alguien agregue un hilo a ready.
 	<-kernelsync.PendingThreadsChannel
+
+	// Bloqueate si hay una syscall en progreso, no queremos estar ejecutando a la vez que la syscall
+	<-kernelsync.SyscallFinalizada
 	var nextTcb *kerneltypes.TCB
 	var err error
+
+	if kernelglobals.ExecStateThread != nil {
+		return kernelglobals.ExecStateThread, nil
+	}
 
 	logger.Trace("%s", f.Ready)
 	// Fifo lo único que hace para seleccionar procesos es tomar el primero que entró
@@ -65,14 +73,16 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 		return nil, errors.New("se quiso obtener un hilo y no habia ningun hilo en ready")
 	}
 
-	logger.Info("Planificando en FIFO el hilo con TID: %v", nextTcb.TID)
+	f.LastScheduled = nextTcb
+
+	logger.Debug("FIFO Elijió el hilo (<%v>:<%v>)", nextTcb.FatherPCB.PID, nextTcb.TID)
 	// Retorná el hilo elegido
 	return nextTcb, nil
 }
 
 // AddToReady Le avisa al STS (versión FIFO) que hay un nuevo proceso listo
 func (f *Fifo) AddToReady(tcb *kerneltypes.TCB) error {
-	logger.Debug("Se agrego a Ready fifo el hilo con TID: %v", tcb.TID)
+	logger.Debug("## (<%v>:<%v>) Se crea el Hilo - Estado: READY", tcb.FatherPCB.PID, tcb.TID)
 	// Agregá el proceso a la cola fifo
 	f.Ready.Add(tcb)
 

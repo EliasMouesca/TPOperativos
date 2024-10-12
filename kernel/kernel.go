@@ -45,6 +45,10 @@ func init() {
 		logger.Fatal("No se pudo leer el log-level - %v", err.Error())
 	}
 
+	// Esto es un semaforo binario, arranca en 0, no tenog una mejor solución que mandarle el valor acá.
+	go func() {
+		kernelsync.SyscallFinalizada <- true
+	}()
 }
 
 func main() {
@@ -155,27 +159,19 @@ func ExecuteSyscall(syscall syscalls.Syscall, wg *sync.WaitGroup) error {
 		return nil
 	}
 
-	// Canal para sincronización
-	done := make(chan bool)
+	err := syscallFunc(syscall.Arguments)
+	if err != nil {
+		logger.Error("La syscall devolvió un error - %v", err)
+	}
 
-	// Ejecutar syscall en una goroutine, pero asegurarnos de esperar su finalización
 	go func() {
-		err := syscallFunc(syscall.Arguments)
-		if err != nil {
-			logger.Error("La syscall devolvió un error - %v", err)
-		}
-		// Enviar señal al canal indicando que la syscall ha finalizado
-		done <- true
+		kernelsync.SyscallFinalizada <- true
 	}()
 
-	// Bloqueamos hasta que la syscall termine
-	<-done
 	return nil
 }
 
 func initFirstProcess(fileName, processSize string) {
-	logger.Debug("Inicializando el proceso inicial con archivo: %s, tamaño: %s", fileName, processSize)
-
 	//TODO: HAY QUE CREAR ESTO A MANO POR QUE LA SYSCALL ProcessCreate NECESITA QUE HAYA UN HILO EJECUTANDO
 	//		ENTONCES LO HACEMOS A MANO, QUE NO CAMBIA NADA Y SON 20 LINEAS MAS. :)
 
@@ -185,6 +181,8 @@ func initFirstProcess(fileName, processSize string) {
 		PID:  pid,
 		TIDs: []types.Tid{0}, // El primer TCB tiene TID 0
 	}
+
+	logger.Info("## (<%v>:0) Se crea el proceso - Estado: NEW", pid)
 
 	// Agregar el PCB a la lista global de PCBs en el kernel
 	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, pcb)
@@ -224,7 +222,6 @@ func initFirstProcess(fileName, processSize string) {
 		Type:      types.CreateThread,
 		Arguments: []string{fileName},
 	}
-	logger.Debug("Informando a Memoria sobre la creación de un hilo")
 
 	// Enviar la solicitud a memoria
 	err2 := sendMemoryRequest(request2)
@@ -239,8 +236,6 @@ func initFirstProcess(fileName, processSize string) {
 	if err != nil {
 		logger.Fatal("No se pudo poner en ready el primer hilo")
 	}
-
-	logger.Info("## (<%v>:0) Se crea el proceso - Estado: NEW", pid)
 
 	logCurrentState("Estado general luego de Inicializar Kernel")
 }
@@ -259,7 +254,7 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Debug("Se recibio la interrupcion < %v > de CPU", interruption.Description)
-	logger.Info("## Se saco de Exec el hilo: <TID %v : PID %v>", thread.TID, thread.PID)
+	logger.Info("##(<%v>:<%v>) Se saco de Exec el hilo", thread.TID, thread.PID)
 
 	kernelsync.MutexCPU.Unlock()
 

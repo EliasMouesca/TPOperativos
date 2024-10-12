@@ -166,7 +166,7 @@ func ThreadToExit() {
 			continue
 		}
 
-		logger.Info("## Iniciando finalización del TID <%v> del PCB con PID <%d>", tid, pid)
+		logger.Trace("Se llamó thread to exit TID <%v> del PCB con PID <%d>", tid, pid)
 
 		// Obtener el TCB correspondiente del kernel
 		var execTCB *kerneltypes.TCB
@@ -203,7 +203,6 @@ func ThreadToExit() {
 			kernelglobals.ExecStateThread = nil
 		}
 
-		logger.Info("Señalizando que ThreadToExit ha completado.")
 		kernelsync.ThreadExitComplete <- struct{}{}
 	}
 }
