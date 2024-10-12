@@ -94,7 +94,8 @@ func (prioridades *Prioridades) AddToReady(threadToAdd *kerneltypes.TCB) error {
 		if threadToAdd.Prioridad < kernelglobals.ExecStateThread.Prioridad {
 			err := shorttermscheduler.CpuInterrupt(
 				types.Interruption{
-					Type: types.InterruptionEviction,
+					Type:        types.InterruptionEviction,
+					Description: "Interrupcion por desalojo",
 				})
 			if err != nil {
 				return err

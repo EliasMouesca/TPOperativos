@@ -112,7 +112,7 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("## Interrupción externa recibida parseada correctamente: '%v'", interruption.Description)
 	if len(interruptionChannel) == 0 {
-		logger.Debug("Enviando interrupción por el canal de interrupciones")
+		logger.Debug("Enviando interrupción por el canal de interrupciones: %v", interruption.Description)
 		interruptionChannel <- interruption
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("La CPU recibió la interrupción"))

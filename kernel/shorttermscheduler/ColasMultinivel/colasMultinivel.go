@@ -11,7 +11,8 @@ import (
 )
 
 type ColasMultiNivel struct {
-	ReadyQueue []*types.Queue[*kerneltypes.TCB]
+	ReadyQueue  []*types.Queue[*kerneltypes.TCB]
+	isRRRunning bool
 }
 
 func (cmm *ColasMultiNivel) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
@@ -52,12 +53,30 @@ func (cmm *ColasMultiNivel) ThreadRemove(tid types.Tid, pid types.Pid) error {
 
 func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
 
-	nextTcb, err := cmm.getNextTcb()
-	if err != nil {
-		return nextTcb, err
+	if !cmm.isRRRunning {
+		cmm.isRRRunning = true
+
+		go func() {
+			defer func() {
+				cmm.isRRRunning = false
+			}()
+			err := roundRobin()
+			if err != nil {
+				logger.Error("Error en roundRobin: %v", err)
+			}
+		}()
 	}
 
-	logger.Info("Planificando en CMM el hilo con TID: %v", nextTcb.TID)
+	var nextTcb *kerneltypes.TCB
+	var err error
+	for i := range cmm.ReadyQueue {
+		if !cmm.ReadyQueue[i].IsEmpty() {
+			nextTcb, err = cmm.ReadyQueue[i].GetAndRemoveNext()
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 	return nextTcb, nil
 }
 
@@ -98,7 +117,8 @@ func (cmm *ColasMultiNivel) AddToReady(tcb *kerneltypes.TCB) error {
 				kernelglobals.ExecStateThread.TID, kernelglobals.ExecStateThread.Prioridad, tcb.TID, tcb.Prioridad)
 			err := shorttermscheduler.CpuInterrupt(
 				types.Interruption{
-					Type: types.InterruptionEviction,
+					Type:        types.InterruptionEviction,
+					Description: "Interrupcion por desalojo",
 				})
 			if err != nil {
 				return err
@@ -134,22 +154,18 @@ func (cmm *ColasMultiNivel) addNewQueue(tcb *kerneltypes.TCB) error {
 }
 
 func (cmm *ColasMultiNivel) getNextTcb() (*kerneltypes.TCB, error) {
-	for i := range cmm.ReadyQueue {
-		if !cmm.ReadyQueue[i].IsEmpty() {
-			selectedTCB, err := cmm.ReadyQueue[i].GetAndRemoveNext()
-			return selectedTCB, err
-		}
-	}
+
 	return nil, errors.New("se quizo hacer un getNextTcb y no habia ningun tcb en ready")
 }
 
-func roundRobin(queue *types.Queue[*kerneltypes.TCB]) error {
+func roundRobin() error {
 	<-kernelsync.QuantumChannel
 	pid := kernelglobals.ExecStateThread.FatherPCB.PID
 	tid := kernelglobals.ExecStateThread.TID
 	err := shorttermscheduler.CpuInterrupt(
 		types.Interruption{
-			Type: types.InterruptionEndOfQuantum,
+			Type:        types.InterruptionEndOfQuantum,
+			Description: "Interrupcion por fin de Quantum",
 		})
 	if err != nil {
 		logger.Error("Failed to interrupt the CPU (end of quantum) - %v", err)

@@ -256,6 +256,8 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 				interruption.Type == types.InterruptionEndOfQuantum {
 				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
 
+				logger.Info("## (<%v>:<%v>) Se agrega a cola READY despues de EndOfQuantum o Desalojo", tcb.FatherPCB.PID, tcb.TID)
+
 			} else if interruption.Type != types.InterruptionSyscall {
 				// Sino, muere (ie: sysegv, div por 0, ...)
 				killTcb(&tcb)

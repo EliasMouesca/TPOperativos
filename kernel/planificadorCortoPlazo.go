@@ -73,9 +73,16 @@ func planificadorCortoPlazo() {
 
 		logger.Debug("## (<%v>:<%v>) Ejecutando hilo", tcbToExecute.FatherPCB.PID, tcbToExecute.TID)
 
-		// TODO: Qué es esto?
 		go func() {
-			kernelsync.QuantumChannel <- time.After(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
+			timer := time.NewTimer(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
+
+			if tcbToExecute == kernelglobals.ExecStateThread {
+				kernelsync.QuantumChannel <- timer.C
+			} else {
+				if !timer.Stop() {
+					<-timer.C
+				}
+			}
 		}()
 
 		logger.Trace("Finalizó la planificación")
