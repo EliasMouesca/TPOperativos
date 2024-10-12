@@ -227,7 +227,7 @@ func moveBlockedThreadsByJoin(tidFinalizado int) {
 			if err != nil {
 				logger.Error("Error al agregar el TID <%d> del PCB con PID <%d> a la cola de Ready: %v", tcb.TID, tcb.FatherPCB.PID, err)
 			} else {
-				logger.Info("## Moviendo el TID <%d> del PCB con PID <%d> de estado BLOCK a estado READY por THREAD_JOIN", tcb.TID, tcb.FatherPCB.PID)
+				logger.Info("## (<%v>:<%v>) Moviendo de estado BLOCK a estado READY por THREAD_JOIN", tcb.FatherPCB.PID, tcb.TID)
 			}
 		} else {
 			// Si el hilo no estaba esperando, volver a agregarlo a la cola de bloqueados

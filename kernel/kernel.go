@@ -245,7 +245,6 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Debug("Se recibio la interrupcion < %v > de CPU", interruption.Description)
-	logger.Info("##(<%v>:<%v>) Se saco de Exec el hilo", thread.TID, thread.PID)
 
 	kernelsync.MutexCPU.Unlock()
 
@@ -257,12 +256,7 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 				interruption.Type == types.InterruptionEndOfQuantum {
 				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
 
-			} else if interruption.Type == types.InterruptionSyscall {
-				go func() {
-					kernelsync.SyscallFinalizada <- true
-
-				}()
-			} else {
+			} else if interruption.Type != types.InterruptionSyscall {
 				// Sino, muere (ie: sysegv, div por 0, ...)
 				killTcb(&tcb)
 

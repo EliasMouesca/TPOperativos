@@ -255,6 +255,7 @@ func ThreadJoin(args []string) error {
 	logger.Info("## (<%v>:<%v>)- Bloqueado por: <PTHREAD_JOIN>", currentPCB.PID, execTCB.TID)
 
 	kernelglobals.ExecStateThread = nil
+	logger.Info("## (<%v>:<%v>) Se saco de Exec", currentPCB.PID, execTCB.TID)
 
 	return nil
 }

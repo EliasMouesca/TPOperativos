@@ -72,13 +72,12 @@ func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
 
 // AddToReady Le avisa al STS (versión FIFO) que hay un nuevo proceso listo
 func (f *Fifo) AddToReady(tcb *kerneltypes.TCB) error {
-	logger.Debug("## (<%v>:<%v>) Se crea el Hilo - Estado: READY", tcb.FatherPCB.PID, tcb.TID)
 	// Agregá el proceso a la cola fifo
 	f.Ready.Add(tcb)
 
 	// Mandá mensaje por el canal, o sea, permití que una vuelta más de Planificar() ejecute
 	go func() {
-		logger.Trace("Hay hilos en ready!!")
+		logger.Trace("Hay hilos en ready en FIFO")
 		logger.Trace("%s", f.Ready)
 		kernelsync.PendingThreadsChannel <- true
 	}()

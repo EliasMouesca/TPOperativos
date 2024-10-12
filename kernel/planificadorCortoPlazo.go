@@ -31,8 +31,6 @@ func planificadorCortoPlazo() {
 
 		// Bloqueate hasta que alguien te mande algo por este channel -> quién manda por este channel? -> AddToReady()
 		// Entonces, bloqueate hasta que alguien agregue un hilo a ready.
-		<-kernelsync.PendingThreadsChannel
-		logger.Trace("Hay hilos en ready..")
 
 		// Bloqueate si hay una syscall en progreso, no queremos estar ejecutando a la vez que la syscall
 		<-kernelsync.SyscallFinalizada
@@ -40,9 +38,13 @@ func planificadorCortoPlazo() {
 
 		var tcbToExecute *kerneltypes.TCB
 		var err error
+
 		if kernelglobals.ExecStateThread != nil {
 			tcbToExecute = kernelglobals.ExecStateThread
 		} else {
+			<-kernelsync.PendingThreadsChannel
+			logger.Trace("Hay hilos en ready para planificar")
+
 			tcbToExecute, err = kernelglobals.ShortTermScheduler.Planificar()
 			if err != nil {
 				logger.Error("No fue posible planificar cierto hilo - %v", err.Error())
