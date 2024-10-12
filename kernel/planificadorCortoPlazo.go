@@ -34,11 +34,14 @@ func planificadorCortoPlazo() {
 
 		// Esperá a que la CPU esté libre / bloqueásela al resto
 		kernelsync.MutexCPU.Lock()
+		//TODO: ACA CPU NO ESTA HACIENDO UNLOCK UNA VEZ QUE RECIBIO LA PRIMER INSTRUCCION DE MEMORIA, SE QUEDA LOOPEANDO loopInstructionCycle Y NUNCA LLEGA AL UNLOCK
+		// ESTO SUCEDE POR QUE MEMORIA SIEMPRE LE DEVUELVE LA INSTRUCCION (SET AX 1), HABRIA QUE VER DE Q LEA EL .TXT Y ENVIE COMO CORRESPONDE
 
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
 		logger.Debug("Hilo a ejecutar: %d", tcbToExecute.TID)
 
-		// Crafteo proximo hilo
+		//Crafteo proximo hilo
+		//TODO: COMO CPU QUEDA EN LOOP CON LA INSTRUCCION ANTERIOR, NUNCA LLEGA A RESPONDER EL OK EN ESTE POST...
 		nextThread := types.Thread{TID: tcbToExecute.TID, PID: tcbToExecute.FatherPCB.PID}
 		data, err := json.Marshal(nextThread)
 

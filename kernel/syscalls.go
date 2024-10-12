@@ -180,6 +180,7 @@ func ThreadCreate(args []string) error {
 	kernelglobals.NewStateQueue.Add(buscarTCBPorTID(newTID, currentPCB.PID))
 
 	kernelsync.ChannelThreadCreate <- args
+	<-kernelsync.ThreadCreateComplete
 
 	return nil
 }

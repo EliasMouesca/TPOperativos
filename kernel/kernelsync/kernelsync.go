@@ -29,6 +29,7 @@ var ChannelFinishThread = make(chan []string, 1)
 var ThreadExitComplete = make(chan struct{}, 1)
 
 var ChannelThreadCreate = make(chan []string)
+var ThreadCreateComplete = make(chan struct{}, 1)
 
 var ChannelIO = make(chan *kerneltypes.TCB)
 var SemIo = make(chan int)

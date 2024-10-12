@@ -139,6 +139,8 @@ func NewThreadToReady() {
 		}
 		logger.Info("## (<%d>:<%d>) Se crea el Hilo- Estado: READY", newTCB.FatherPCB.PID, newTCB.TID)
 
+		kernelsync.ThreadCreateComplete <- struct{}{}
+
 	}
 }
 
