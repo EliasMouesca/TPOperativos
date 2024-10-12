@@ -10,4 +10,3 @@ $(PROJECTS):
 	@cd $@ && go build -o $@
 
 .PHONY: all $(PROJECTS)
-

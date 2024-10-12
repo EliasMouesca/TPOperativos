@@ -11,6 +11,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func planificadorLargoPlazo() {
@@ -284,6 +285,9 @@ func releaseMutexes(tid int) {
 func UnlockIO() {
 	for {
 		tcbBlock := <-kernelsync.ChannelIO
+		timeBlocked := <-kernelsync.ChannelIO2
+
+		time.Sleep(time.Duration(timeBlocked) * time.Millisecond)
 
 		kernelsync.MutexPlanificadorLP.Lock()
 		err := kernelglobals.BlockedStateQueue.Remove(tcbBlock)
@@ -292,13 +296,11 @@ func UnlockIO() {
 		if err != nil {
 			logger.Error("No se pudo remover el tcb de la BlockQueue - %v", err)
 		}
-		logger.Info("“## (<%v>:<%v>) finalizó IO y pasa a READY", tcbBlock.FatherPCB.PID, tcbBlock.TID)
-		// lo vuelvo a poner en ready, si no se pierde la referencia a ese tcb y nunca se vuelve a planificar
 		err = kernelglobals.ShortTermScheduler.AddToReady(tcbBlock)
 		if err != nil {
 			logger.Error("No se pudo mover el tcb a la cola Ready. - %v", err)
 		}
-		kernelsync.SemIo <- 0
+		logger.Info("“## (<%v>:<%v>) finalizó IO y pasa a READY", tcbBlock.FatherPCB.PID, tcbBlock.TID)
 	}
 }
 

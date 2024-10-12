@@ -10,7 +10,6 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"strconv"
-	"time"
 )
 
 type syscallFunction func(args []string) error
@@ -553,11 +552,11 @@ func IO(args []string) error {
 	logger.Info("## (<%v>:<%v>) - Bloqueado por: <IO>", execTCB.FatherPCB.PID, execTCB.TID)
 	kernelsync.MutexPlanificadorLP.Unlock()
 
+	kernelglobals.ExecStateThread = nil
+
 	kernelsync.ChannelIO <- execTCB
+	kernelsync.ChannelIO2 <- threadBlockedTime
 
-	time.Sleep(time.Duration(threadBlockedTime) * time.Millisecond)
-
-	<-kernelsync.SemIo
 	return nil
 }
 

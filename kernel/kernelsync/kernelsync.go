@@ -32,6 +32,7 @@ var ChannelThreadCreate = make(chan []string)
 var ThreadCreateComplete = make(chan struct{}, 1)
 
 var ChannelIO = make(chan *kerneltypes.TCB)
+var ChannelIO2 = make(chan int)
 var SemIo = make(chan int)
 
 // SyscallFinalizada La idea es: no pongas otro proceso a ejecutar si la syscall que llamaron no terminó !!
