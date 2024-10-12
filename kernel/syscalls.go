@@ -95,12 +95,12 @@ func ProcessExit(args []string) error {
 			err := kernelglobals.ShortTermScheduler.ThreadRemove(tid, pcb.PID)
 			if err != nil {
 				logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
-			} else {
-				logger.Info("(<%d:%d>) Finaliza el hilo", pcb.PID, tid)
 			}
+			logger.Info("(<%d:%d>) Se quita de ready el hilo", pcb.PID, tid)
 		}
 
 		// 2. Verificar y eliminar hilos en la cola de Blocked
+		// TODO: Esto está mal, dejar de usar la queue así !
 		for !kernelglobals.BlockedStateQueue.IsEmpty() {
 			blockedTCB, err := kernelglobals.BlockedStateQueue.GetAndRemoveNext()
 			if err != nil {
@@ -110,7 +110,7 @@ func ProcessExit(args []string) error {
 			// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
 			if blockedTCB.FatherPCB.PID == pcb.PID {
 				kernelglobals.ExitStateQueue.Add(blockedTCB)
-				logger.Info("(<%d:%d>) Finaliza el hilo", pcb.PID, blockedTCB.TID)
+				logger.Info("(<%d:%d>) Se quita de blocked el hilo", pcb.PID, blockedTCB.TID)
 			} else {
 				// Si no es, se vuelve a insertar en la cola de bloqueados
 				kernelglobals.BlockedStateQueue.Add(blockedTCB)
@@ -127,7 +127,7 @@ func ProcessExit(args []string) error {
 			// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
 			if newTCB.FatherPCB.PID == pcb.PID {
 				kernelglobals.ExitStateQueue.Add(newTCB)
-				logger.Info("(<%d:%d>) Finaliza el hilo", pcb.PID, newTCB.TID)
+				logger.Info("(<%d:%d>) Se manda a exit", pcb.PID, newTCB.TID)
 			} else {
 				// Si no es, se vuelve a insertar en la cola de new
 				kernelglobals.NewStateQueue.Add(newTCB)

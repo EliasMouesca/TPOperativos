@@ -51,8 +51,6 @@ func (cmm *ColasMultiNivel) ThreadRemove(tid types.Tid, pid types.Pid) error {
 }
 
 func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
-	<-kernelsync.PendingThreadsChannel
-	<-kernelsync.SyscallFinalizada
 
 	nextTcb, err := cmm.getNextTcb()
 	if err != nil {

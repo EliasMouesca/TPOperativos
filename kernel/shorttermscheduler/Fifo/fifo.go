@@ -53,18 +53,8 @@ func (f *Fifo) ThreadRemove(tid types.Tid, pid types.Pid) error {
 // Planificar devuelve el próximo hilo a ejecutar o error en función del algoritmo FIFO
 // es una función que se bloquea si no hay procesos listos y se desbloquea sola si llegan a venir nuevos procesos listos
 func (f *Fifo) Planificar() (*kerneltypes.TCB, error) {
-	// Bloqueate hasta que alguien te mande algo por este channel -> quién manda por este channel? -> AddToReady()
-	// Entonces, bloqueate hasta que alguien agregue un hilo a ready.
-	<-kernelsync.PendingThreadsChannel
-
-	// Bloqueate si hay una syscall en progreso, no queremos estar ejecutando a la vez que la syscall
-	<-kernelsync.SyscallFinalizada
 	var nextTcb *kerneltypes.TCB
 	var err error
-
-	if kernelglobals.ExecStateThread != nil {
-		return kernelglobals.ExecStateThread, nil
-	}
 
 	logger.Trace("%s", f.Ready)
 	// Fifo lo único que hace para seleccionar procesos es tomar el primero que entró

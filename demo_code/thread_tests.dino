@@ -1,9 +1,3 @@
 THREAD_CREATE ../demo_code/thread.dino 1
-THREAD_CREATE ../demo_code/thread.dino 1
-THREAD_CREATE ../demo_code/thread.dino 1
-THREAD_CREATE ../demo_code/thread.dino 1
 THREAD_JOIN 1
-THREAD_JOIN 2
-THREAD_JOIN 3
-THREAD_JOIN 4
 PROCESS_EXIT

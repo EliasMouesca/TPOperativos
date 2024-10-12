@@ -9,12 +9,11 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
-	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"github.com/sisoputnfrba/tp-golang/utils/dino"
+	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 )
 
 func init() {
@@ -53,7 +52,7 @@ func init() {
 }
 
 func main() {
-    dino.Trex()
+	dino.Trex()
 	logger.Debug("-- Comenzó la ejecución del kernel --")
 
 	//TODO: PARA INICIALIZAR EL KERNEL HAY QUE PONER EN CONSOLA:
@@ -126,24 +125,17 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	//El WaitGroup asegura que no se envie la respuesta HTTP al cliente hasta que la syscall haya terminado
-
-	err = ExecuteSyscall(syscall, &wg) // map a la libreria de syscalls
+	err = ExecuteSyscall(syscall) // map a la libreria de syscalls
 	if err != nil {
 		// Por alguna razón esto rompe cuando quiero compilar
 		logger.Error("Error al ejecutar la syscall: %v - %v", syscalls.SyscallNames[syscall.Type], err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	wg.Wait()
 	logCurrentState("Estado luego de recibir syscall.")
 	w.WriteHeader(http.StatusOK)
 }
 
-func ExecuteSyscall(syscall syscalls.Syscall, wg *sync.WaitGroup) error {
-	defer wg.Done()
+func ExecuteSyscall(syscall syscalls.Syscall) error {
 	syscallFunc, exists := syscallSet[syscall.Type]
 	if !exists {
 		return errors.New("la syscall pedida no es una syscall que el kernel entienda")
@@ -174,9 +166,6 @@ func ExecuteSyscall(syscall syscalls.Syscall, wg *sync.WaitGroup) error {
 }
 
 func initFirstProcess(fileName, processSize string) {
-	//TODO: HAY QUE CREAR ESTO A MANO POR QUE LA SYSCALL ProcessCreate NECESITA QUE HAYA UN HILO EJECUTANDO
-	//		ENTONCES LO HACEMOS A MANO, QUE NO CAMBIA NADA Y SON 20 LINEAS MAS. :)
-
 	// Crear el PCB para el proceso inicial
 	pid := types.Pid(0) // Asignar el primer PID como 1 (puedes cambiar según la lógica de PID en tu sistema)
 	pcb := kerneltypes.PCB{
@@ -268,9 +257,15 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 				interruption.Type == types.InterruptionEndOfQuantum {
 				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
 
+			} else if interruption.Type == types.InterruptionSyscall {
+				go func() {
+					kernelsync.SyscallFinalizada <- true
+
+				}()
 			} else {
 				// Sino, muere (ie: sysegv, div por 0, ...)
 				killTcb(&tcb)
+
 			}
 			return
 		}

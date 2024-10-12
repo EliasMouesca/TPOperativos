@@ -47,8 +47,6 @@ func (prioridades *Prioridades) ThreadRemove(tid types.Tid, pid types.Pid) error
 }
 
 func (prioridades *Prioridades) Planificar() (*kerneltypes.TCB, error) {
-	<-kernelsync.PendingThreadsChannel
-	<-kernelsync.SyscallFinalizada
 
 	selectedProces := prioridades.ReadyThreads[0]
 	// El proceso se quita de la cola, si por alguna razón el proceso vuelve de CPU sin terminar, debería "creárselo"

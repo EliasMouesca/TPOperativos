@@ -26,16 +26,34 @@ func planificadorCortoPlazo() {
 	// Mientras vivas, corré lo siguiente
 	for {
 		logger.Trace("Empezando nueva planificación")
-		// Esta función se bloquea si no hay nada que hacer o si la CPU está ocupada
-		tcbToExecute, err := kernelglobals.ShortTermScheduler.Planificar()
-		if err != nil {
-			logger.Error("No fue posible planificar cierto hilo - %v", err.Error())
-			continue
+		logCurrentState("DESPUËS DE EMPEZAR A PLANIFICAR")
+		logger.Trace("Length PendingThreadsChannel %v", len(kernelsync.PendingThreadsChannel))
+
+		// Bloqueate hasta que alguien te mande algo por este channel -> quién manda por este channel? -> AddToReady()
+		// Entonces, bloqueate hasta que alguien agregue un hilo a ready.
+		<-kernelsync.PendingThreadsChannel
+		logger.Trace("Hay hilos en ready..")
+
+		// Bloqueate si hay una syscall en progreso, no queremos estar ejecutando a la vez que la syscall
+		<-kernelsync.SyscallFinalizada
+		logger.Trace("No hay una syscall activa o finalizó, planificando")
+
+		var tcbToExecute *kerneltypes.TCB
+		var err error
+		if kernelglobals.ExecStateThread != nil {
+			tcbToExecute = kernelglobals.ExecStateThread
+		} else {
+			tcbToExecute, err = kernelglobals.ShortTermScheduler.Planificar()
+			if err != nil {
+				logger.Error("No fue posible planificar cierto hilo - %v", err.Error())
+				continue
+			}
 		}
 
-		logger.Debug("Tratando de lockear la CPU para enviar nuevo proceso")
+		logger.Trace("Tratando de lockear la CPU para enviar nuevo proceso")
 		// Esperá a que la CPU esté libre / bloqueásela al resto
 		kernelsync.MutexCPU.Lock()
+		logger.Trace("CPU Lockeada, mandando a execute")
 
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
 
@@ -48,9 +66,6 @@ func planificadorCortoPlazo() {
 		_, err = http.Post(url, "application/json", bytes.NewBuffer(data))
 		if err != nil {
 			logger.Error("Error en request")
-		}
-		if kernelglobals.ExecStateThread != nil {
-			kernelglobals.ShortTermScheduler.AddToReady(kernelglobals.ExecStateThread)
 		}
 		kernelglobals.ExecStateThread = tcbToExecute
 
