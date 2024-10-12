@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func FinishThread(w http.ResponseWriter, r *http.Request) {
+func FinishThreadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		logger.Error("Método no permitido")
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)

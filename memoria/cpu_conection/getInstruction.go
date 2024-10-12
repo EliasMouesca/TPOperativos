@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func GetInstruction(w http.ResponseWriter, r *http.Request) {
+func GetInstructionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		logger.Error("Metodo no permitido")
 		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
@@ -32,7 +32,7 @@ func GetInstruction(w http.ResponseWriter, r *http.Request) {
 	}
 	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
 
-	instruccion, err := memoria_helpers.GetInstructionPosta(thread, pc)
+	instruccion, err := memoria_helpers.GetInstruction(thread, pc)
 	if err != nil {
 		logger.Error("No se pudo obtener la siguiente linea de código")
 		http.Error(w, "No se encontro la instrucción solicitada", http.StatusNotFound)

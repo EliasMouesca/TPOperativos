@@ -15,8 +15,6 @@ import (
 //TODO: Agregar el tiempo de espera para cada petición del CPU
 
 func init() {
-	memoria_helpers.LoadTestInstructions()
-
 	loggerLevel := "TRACE"
 	err := logger.ConfigureLogger("memoria.log", loggerLevel)
 	if err != nil {
@@ -52,20 +50,20 @@ func main() {
 	logger.Info("--- Comienzo ejecución MEMORIA ---")
 
 	// TRUE RESPONSE
-	http.HandleFunc("/memoria/getContext", cpu.GetContext)
-	http.HandleFunc("/memoria/saveContext", cpu.SaveContext)
+	http.HandleFunc("/memoria/getContext", cpu.GetContextHandler)
+	http.HandleFunc("/memoria/saveContext", cpu.SaveContextHandler)
 
 	// STUB FORMAT RESPONSE
-	http.HandleFunc("/memoria/getInstruction", cpu.GetInstruction)
-	http.HandleFunc("/memoria/readMem", cpu.ReadMemory)
-	http.HandleFunc("/memoria/writeMem", cpu.WriteMemory)
+	http.HandleFunc("/memoria/getInstruction", cpu.GetInstructionHandler)
+	http.HandleFunc("/memoria/readMem", cpu.ReadMemoryHandler)
+	http.HandleFunc("/memoria/writeMem", cpu.WriteMemoryHandler)
 
-	http.HandleFunc("/memoria/createProcess", kernel.CreateProcess)
-	http.HandleFunc("/memoria/finishProcess", kernel.FinishProcess)
-	http.HandleFunc("/memoria/createThread", kernel.CreateThread)
-	http.HandleFunc("/memoria/finishThread", kernel.FinishThread)
+	http.HandleFunc("/memoria/createProcess", kernel.CreateProcessHandler)
+	http.HandleFunc("/memoria/finishProcess", kernel.FinishProcessHandler)
+	http.HandleFunc("/memoria/createThread", kernel.CreateThreadHandler)
+	http.HandleFunc("/memoria/finishThread", kernel.FinishThreadHandler)
 
-	http.HandleFunc("/memoria/memoryDump", fileSystem.DumpMemory)
+	http.HandleFunc("/memoria/memoryDump", fileSystem.DumpMemoryHandler)
 	http.HandleFunc("/", memoria_helpers.BadRequest)
 
 	self := fmt.Sprintf("%v:%v", memoria_helpers.Config.SelfAddress, memoria_helpers.Config.SelfPort)

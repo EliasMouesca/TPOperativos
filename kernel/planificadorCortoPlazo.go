@@ -25,6 +25,7 @@ var AlgorithmsMap = map[string]kerneltypes.ShortTermSchedulerInterface{
 func planificadorCortoPlazo() {
 	// Mientras vivas, corré lo siguiente
 	for {
+		logger.Trace("Empezando nueva planificación")
 		// Esta función se bloquea si no hay nada que hacer o si la CPU está ocupada
 		tcbToExecute, err := kernelglobals.ShortTermScheduler.Planificar()
 		if err != nil {
@@ -32,16 +33,14 @@ func planificadorCortoPlazo() {
 			continue
 		}
 
+		logger.Debug("Tratando de lockear la CPU para enviar nuevo proceso")
 		// Esperá a que la CPU esté libre / bloqueásela al resto
 		kernelsync.MutexCPU.Lock()
-		//TODO: ACA CPU NO ESTA HACIENDO UNLOCK UNA VEZ QUE RECIBIO LA PRIMER INSTRUCCION DE MEMORIA, SE QUEDA LOOPEANDO loopInstructionCycle Y NUNCA LLEGA AL UNLOCK
-		// ESTO SUCEDE POR QUE MEMORIA SIEMPRE LE DEVUELVE LA MISMA INSTRUCCION (SET AX 1), HABRIA QUE VER DE Q LEA EL .TXT Y ENVIE COMO CORRESPONDE
 
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
 		logger.Debug("Hilo a ejecutar: %d", tcbToExecute.TID)
 
 		//Crafteo proximo hilo
-		//TODO: COMO CPU QUEDA EN LOOP CON LA INSTRUCCION ANTERIOR, NUNCA LLEGA A RESPONDER EL OK EN ESTE POST...
 		nextThread := types.Thread{TID: tcbToExecute.TID, PID: tcbToExecute.FatherPCB.PID}
 		data, err := json.Marshal(nextThread)
 
@@ -51,12 +50,17 @@ func planificadorCortoPlazo() {
 		if err != nil {
 			logger.Error("Error en request")
 		}
+		if kernelglobals.ExecStateThread != nil {
+			kernelglobals.ShortTermScheduler.AddToReady(kernelglobals.ExecStateThread)
+		}
 		kernelglobals.ExecStateThread = tcbToExecute
 		logCurrentState("DESPUES DE PLANIFICAR")
 
 		go func() {
 			kernelsync.QuantumChannel <- time.After(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
 		}()
+
+		logger.Debug("Finalizó la planificación")
 
 	}
 }

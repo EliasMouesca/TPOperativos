@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-func GetContext(w http.ResponseWriter, r *http.Request) {
-	logger.Trace("Memoria entró a GetContext()")
+func GetContextHandler(w http.ResponseWriter, r *http.Request) {
+	logger.Trace("Memoria entró a GetContextHandler()")
 	if r.Method != "GET" {
 		logger.Error("Metodo no permitido")
 		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)

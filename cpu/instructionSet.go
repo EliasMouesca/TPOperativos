@@ -1,11 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"net/http"
 	"strconv"
+	"strings"
 )
 
 // An Instruction is basically a function that takes an ectx and a slice of parameters (strings)
@@ -202,7 +206,7 @@ func logInstruction(ctx *types.ExecutionContext, args []string) error {
 		return err
 	}
 
-	logger.Info("Logging register '%v': %v", registerString, register)
+	logger.Info("Logging register '%v': %v", registerString, *register)
 	return nil
 }
 
@@ -215,17 +219,23 @@ func checkArguments(args []string, correctNumberOfArgs int) error {
 
 // A partir de acá las syscalls
 func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
-	err := memoryUpdateExecutionContext(*currentThread, ctx)
-	if err != nil {
-		return err
-	}
-
 	interruptionChannel <- types.Interruption{
 		Type:        types.InterruptionSyscall,
 		Description: "Interrupción por syscall",
 	}
 
-	syscallBuffer = &syscall
+	url := fmt.Sprintf("http://%v:%v/kernel/syscall", config.KernelAddress, config.KernelPort)
+	jsonData, err := json.Marshal(syscall)
+	if err != nil {
+		return fmt.Errorf("error al empaquetar syscall: %v", err)
+	}
+
+	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonData)))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error al enviar syscall al kernel: %v", err)
+	}
+
+	logger.Debug("Syscall enviada al kernel")
 
 	return nil
 

@@ -7,5 +7,5 @@ import (
 
 var Config config.MemoriaConfig
 var ExecContext = make(map[types.Thread]types.ExecutionContext)
-var InstructionList = make(map[types.Thread][]string)
+var CodeRegionForThreads = make(map[types.Thread][]string)
 var UserMem = make([]byte, Config.MemorySize)

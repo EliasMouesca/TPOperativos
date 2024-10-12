@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func CreateProcess(w http.ResponseWriter, r *http.Request) {
+func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		logger.Error("Método no permitido")
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func WriteMemory(w http.ResponseWriter, r *http.Request) {
+func WriteMemoryHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		logger.Error("Metodo no permitido")
 		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
@@ -50,7 +50,7 @@ func WriteMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = memoria_helpers.WriteMemoryPosta(dir, data)
+	err = memoria_helpers.WriteMemory(dir, data)
 	if err != nil {
 		logger.Error("Error al escribir en memoria de usuario")
 		http.Error(w, "Error al escribir en memoria", http.StatusInternalServerError)

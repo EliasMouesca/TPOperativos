@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func SaveContext(w http.ResponseWriter, r *http.Request) {
+func SaveContextHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		logger.Error("Metodo no permitido")
 		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)

@@ -16,11 +16,11 @@ func BadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func WriteMemoryPosta(dir int, data [4]byte) error {
+func WriteMemory(dir int, data [4]byte) error {
 	return nil
 }
 
-func ReadMemoryPosta(dir int) ([4]byte, error) {
+func ReadMemory(dir int) ([4]byte, error) {
 	cuatro_mordidas := [4]byte{byte(123), byte(255), byte(111), byte(222)}
 	return cuatro_mordidas, nil
 }
@@ -38,9 +38,9 @@ func ReadMemoryPosta(dir int) ([4]byte, error) {
 
 // TODOñ TEST YA QUE MEMORIA TODAVIA NO LEE ARCHIVOS. CREO UN SET DE INSTRUCCIONES Y SE LOS VOY MANDANDO A CPU A MEDIDA QUE LOS PIDE
 
-func GetInstructionPosta(thread types.Thread, pc int) (string, error) {
+func GetInstruction(thread types.Thread, pc int) (string, error) {
 	// Verificar si el hilo tiene instrucciones
-	instructions, exists := ThreadInstructions[thread]
+	instructions, exists := CodeRegionForThreads[thread]
 	if !exists {
 		return "", fmt.Errorf("No se encontraron instrucciones para el hilo (PID:%d, TID:%d)", thread.PID, thread.TID)
 	}
@@ -58,35 +58,34 @@ func GetInstructionPosta(thread types.Thread, pc int) (string, error) {
 	return instruction, nil
 }
 
-var ThreadInstructions = make(map[types.Thread][]string)
 var InstructionPointer = make(map[types.Thread]int)
 
+/*
 func LoadTestInstructions() {
 	// Instrucciones para el hilo1
 	thread1 := types.Thread{PID: 0, TID: 0}
-	ThreadInstructions[thread1] = []string{
+	[thread1] = []string{
 		"SET AX 1",
-		"SET BX 1",
-		"SET PC 5",
-		"SUM AX BX",
-		"SUB AX BX",
-		"READ_MEM AX BX",
-		"WRITE_MEM AX BX",
-		"JNZ AX 4",
-		"LOG AX",
-		"MUTEX_CREATE RECURSO_1",
-		"MUTEX_LOCK RECURSO_1",
-		"MUTEX_UNLOCK RECURSO_1",
-		"DUMP_MEMORY",
-		"IO 1500",
-		"PROCESS_CREATE proceso1 256 1",
-		"THREAD_CREATE hilo1 3",
-		"THREAD_CANCEL 1",
-		"THREAD_JOIN 1",
-		"THREAD_EXIT",
 		"PROCESS_EXIT",
-	}
-
-	// Inicializar los punteros de instrucciones
-	InstructionPointer[thread1] = 0
+		/*
+			"SET BX 1",
+			"SET PC 5",
+			"SUM AX BX",
+			"SUB AX BX",
+			//"READ_MEM AX BX",
+			//"WRITE_MEM AX BX",
+			"JNZ AX 4",
+			"LOG AX",
+			"MUTEX_CREATE RECURSO_1",
+			"MUTEX_LOCK RECURSO_1",
+			"MUTEX_UNLOCK RECURSO_1",
+			"DUMP_MEMORY",
+			"IO 1500",
+			"PROCESS_CREATE proceso1 256 1",
+			"THREAD_CREATE hilo1 3",
+			"THREAD_CANCEL 1",
+			"THREAD_JOIN 1",
+			"THREAD_EXIT",
+			"PROCESS_EXIT",
 }
+*/

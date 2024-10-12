@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func FinishProcess(w http.ResponseWriter, r *http.Request) {
+func FinishProcessHandler(w http.ResponseWriter, r *http.Request) {
 	// Verificar que sea un POST en lugar de GET
 	if r.Method != "POST" {
 		logger.Error("Método no permitido")

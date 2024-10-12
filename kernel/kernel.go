@@ -261,23 +261,27 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Se recibio la interrupcion < %v > de CPU", interruption.Description)
 	logger.Info("## Se saco de Exec el hilo: <TID %v : PID %v>", thread.TID, thread.PID)
 
+	kernelsync.MutexCPU.Unlock()
+
+	// Encontrá nuestro TCB
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
 		if tcb.TID == thread.TID {
-			// Si lo desalojaron o hubo fin de quantum vuelve a ready
-			if interruption.Type == 0 || interruption.Type == 4 {
+			// Si la INT fue eviction o EOQ -> vuelve a ready
+			if interruption.Type == types.InterruptionEviction ||
+				interruption.Type == types.InterruptionEndOfQuantum {
 				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
-				if err != nil {
-					return
-				}
-				return
-				// Sino hay que matarlo
-				// Si ya termino el mismo hace la syscall y se manda a exit
+
 			} else {
+				// Sino, muere (ie: sysegv, div por 0, ...)
 				killTcb(&tcb)
-				return
 			}
+			return
 		}
 	}
+
+	logger.Error("La cpu sacó de ejecución un proceso que el kernel no conocía -> xd")
+	w.WriteHeader(http.StatusNotFound)
+	return
 }
 
 func killTcb(tcb *kerneltypes.TCB) {
@@ -313,6 +317,6 @@ func killTcb(tcb *kerneltypes.TCB) {
 		}
 	}
 	kernelglobals.ExitStateQueue.Add(tcb)
-	logger.Info("## (<%d:%d>) Movido a la cola Exit por respuesta de CPU", tcb.TID, tcb.FatherPCB.PID)
+	logger.Info("## (<%d:%d>) Movido a la cola Exit por respuesta de CPU", tcb.FatherPCB.PID, tcb.TID)
 
 }

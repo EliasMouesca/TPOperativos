@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func ReadMemory(w http.ResponseWriter, r *http.Request) {
+func ReadMemoryHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		logger.Error("Metodo no permitido")
 		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
@@ -34,7 +34,7 @@ func ReadMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := memoria_helpers.ReadMemoryPosta(dir)
+	data, err := memoria_helpers.ReadMemory(dir)
 	if err != nil {
 		logger.Error("Error al leer la dirección: %v", dir)
 		http.Error(w, "No se pudo leer la dirección de memoria", http.StatusNotFound)

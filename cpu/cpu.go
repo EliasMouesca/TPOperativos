@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/types"
-	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/dino"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"io"
@@ -29,9 +28,6 @@ var currentThread *types.Thread = nil
 
 // Si a este canal se le pasa una interrupción, la CPU se detiene y llama al kernel pasándole la interrupción que se haya cargado
 var interruptionChannel = make(chan types.Interruption, 1)
-
-// El momento en que se detecta la syscall es distinto del momento en que se la manda al kernel, por eso tenemos un buffer
-var syscallBuffer *syscalls.Syscall
 
 // Un mutex para la CPU porque se hay partes del código que asumen que la CPU es única por eso tenemos que excluir mutuamente
 // las distintas requests que llegen (aunque el kernel en realidad nunca debería mandar a ejecutar un segundo hilo si

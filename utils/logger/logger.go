@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -103,15 +105,27 @@ func log(level int, format string, args ...interface{}) {
 		return
 	}
 
-	formattedTime := time.Now().Format("02/01/2006 15:04:05")
+	//formattedTime := time.Now().Format("02/01/2006 15:04:05")
+	formattedTime := time.Now().Format("15:04:05")
 	levelString := levelTags[level]
 	formattedMessage := fmt.Sprintf(format, args...)
 
-	stringToFile := fmt.Sprintf("%s [ %s ] %s\n", formattedTime, levelString, formattedMessage)
-	stringColored := fmt.Sprintf("%s%v%s [ %s ] %v%s\n",
+	// Get line and file
+	_, file, line, ok := runtime.Caller(2)
+	if !ok {
+		fmt.Println("Unable to retrieve caller information")
+		return
+	}
+
+	stringToFile := fmt.Sprintf("%s [ %s ] %s \t ->%s:%d\n",
+		formattedTime, levelString, formattedMessage, filepath.Base(file), line)
+
+	stringColored := fmt.Sprintf("%s%v%s [ %s ] %v%s -> %s:%d%s\n",
 		escapeSequences["grey"], formattedTime,
 		escapeSequences[levelColors[level]],
 		levelString, formattedMessage,
+		escapeSequences["grey"],
+		filepath.Base(file), line,
 		escapeSequences["reset"])
 
 	_, err := FileWriter.Write([]byte(stringToFile))
