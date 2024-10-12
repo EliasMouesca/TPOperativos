@@ -1,0 +1,6 @@
+MUTEX_CREATE recurso
+THREAD_CREATE ../demo_code/prueba_mutex_thread.dino 1
+THREAD_JOIN 1
+MUTEX_LOCK recurso
+MUTEX_UNLOCK recurso
+PROCESS_EXIT

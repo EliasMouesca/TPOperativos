@@ -371,7 +371,9 @@ func MutexLock(args []string) error {
 			} else {
 				logger.Info("“## (<%v>:<%v>)- Bloqueado por: <MUTEX> (nombre: %v)", execTCB.FatherPCB.PID, execTCB.TID, mutexName)
 				mutex.BlockedTCBs = append(mutex.BlockedTCBs, execTCB)
+				kernelglobals.ShortTermScheduler.ThreadRemove(execTCB.TID, execTCB.FatherPCB.PID)
 				kernelglobals.BlockedStateQueue.Add(execTCB)
+				kernelglobals.ExecStateThread = nil
 			}
 		}
 	}

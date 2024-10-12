@@ -1,0 +1,6 @@
+MUTEX_CREATE mutex
+THREAD_CREATE ../demo_code/deadlock_thread.dino 1
+MUTEX_LOCK mutex
+THREAD_JOIN 1
+MUTEX_UNLOCK mutex
+PROCESS_EXIT
