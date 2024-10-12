@@ -15,6 +15,8 @@ import (
 //TODO: Agregar el tiempo de espera para cada petición del CPU
 
 func init() {
+	memoria_helpers.LoadTestInstructions()
+
 	loggerLevel := "TRACE"
 	err := logger.ConfigureLogger("memoria.log", loggerLevel)
 	if err != nil {
