@@ -95,6 +95,7 @@ func ProcessExit(args []string) error {
 			if err != nil {
 				logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
 			}
+			<-kernelsync.PendingThreadsChannel
 			logger.Info("## (<%d:%d>) Se quita de ready", pcb.PID, tid)
 		}
 

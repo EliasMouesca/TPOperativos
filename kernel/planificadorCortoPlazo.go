@@ -79,6 +79,5 @@ func planificadorCortoPlazo() {
 		}()
 
 		logger.Trace("Finalizó la planificación")
-
 	}
 }

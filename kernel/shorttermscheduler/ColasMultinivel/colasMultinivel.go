@@ -136,31 +136,25 @@ func (cmm *ColasMultiNivel) addNewQueue(tcb *kerneltypes.TCB) error {
 func (cmm *ColasMultiNivel) getNextTcb() (*kerneltypes.TCB, error) {
 	for i := range cmm.ReadyQueue {
 		if !cmm.ReadyQueue[i].IsEmpty() {
-			nextTcb, err := roundRobin(cmm.ReadyQueue[i])
-			if err != nil {
-				return nil, err
-			}
-			return nextTcb, nil
+			selectedTCB, err := cmm.ReadyQueue[i].GetAndRemoveNext()
+			return selectedTCB, err
 		}
 	}
 	return nil, errors.New("se quizo hacer un getNextTcb y no habia ningun tcb en ready")
 }
 
-func roundRobin(queue *types.Queue[*kerneltypes.TCB]) (*kerneltypes.TCB, error) {
-	go func() {
-		<-kernelsync.QuantumChannel
-		pid := kernelglobals.ExecStateThread.FatherPCB.PID
-		tid := kernelglobals.ExecStateThread.TID
-		err := shorttermscheduler.CpuInterrupt(
-			types.Interruption{
-				Type: types.InterruptionEndOfQuantum,
-			})
-		if err != nil {
-			logger.Error("Failed to interrupt the CPU (end of quantum) - %v", err)
-			return
-		}
-		logger.Info("(PID:%d TID:%d) - Desalojado por fin de quantum", pid, tid)
-	}()
-	selectedTCB, err := queue.GetAndRemoveNext()
-	return selectedTCB, err
+func roundRobin(queue *types.Queue[*kerneltypes.TCB]) error {
+	<-kernelsync.QuantumChannel
+	pid := kernelglobals.ExecStateThread.FatherPCB.PID
+	tid := kernelglobals.ExecStateThread.TID
+	err := shorttermscheduler.CpuInterrupt(
+		types.Interruption{
+			Type: types.InterruptionEndOfQuantum,
+		})
+	if err != nil {
+		logger.Error("Failed to interrupt the CPU (end of quantum) - %v", err)
+		return err
+	}
+	logger.Info("(PID:%d TID:%d) - Desalojado por fin de quantum", pid, tid)
+	return nil
 }
