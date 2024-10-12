@@ -6,6 +6,7 @@ import (
 	cpu "github.com/sisoputnfrba/tp-golang/memoria/cpu_conection"
 	fileSystem "github.com/sisoputnfrba/tp-golang/memoria/fileSystem_conection"
 	kernel "github.com/sisoputnfrba/tp-golang/memoria/kernel_conection"
+    "github.com/sisoputnfrba/tp-golang/utils/dino"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -47,6 +48,7 @@ func init() {
 }
 
 func main() {
+    dino.Triceraptops()
 	logger.Info("--- Comienzo ejecución MEMORIA ---")
 
 	// TRUE RESPONSE
