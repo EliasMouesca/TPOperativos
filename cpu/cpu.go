@@ -19,6 +19,7 @@ import (
 
 // Configuración general de la CPU
 var config CpuConfig
+var MutexInterruption = sync.Mutex{}
 
 // Execution context actual, los registros que está fisicamente en la CPU
 var currentExecutionContext types.ExecutionContext
@@ -83,6 +84,10 @@ func main() {
 }
 
 func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
+	logger.Debug("Llega interrupt")
+	hiloEjecutando := currentThread
+	MutexInterruption.Lock()
+
 	// Log request
 	logger.Debug("Request %v - %v %v", r.RemoteAddr, r.Method, r.URL)
 
@@ -103,7 +108,7 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if currentThread == nil {
+	if hiloEjecutando == nil {
 		logger.Debug("No hay nada para interrumpir! Saliendo...")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Kernel, mi amor, todavía no me mandaste a ejecutar nada, qué querés que interrumpa???"))
@@ -114,6 +119,7 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 	if len(interruptionChannel) == 0 {
 		logger.Debug("Enviando interrupción por el canal de interrupciones: %v", interruption.Description)
 		interruptionChannel <- interruption
+		kernelYourProcessFinished(*hiloEjecutando, interruption)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("La CPU recibió la interrupción"))
 	} else {
@@ -121,6 +127,7 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("La CPU ya recibió otra interrupción y se va a detener al final del ciclo"))
 	}
+	MutexInterruption.Unlock()
 }
 
 func executeThread(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +175,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 
 func loopInstructionCycle() {
 	for {
+		MutexInterruption.Lock()
 		// Fetch
 		instructionToParse, err := fetch()
 		if err != nil {
@@ -195,6 +203,7 @@ func loopInstructionCycle() {
 				}
 			}
 		}
+		MutexInterruption.Unlock()
 
 		// Checkinterrupt
 		if len(interruptionChannel) > 0 {
