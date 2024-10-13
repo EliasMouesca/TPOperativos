@@ -92,6 +92,7 @@ func ProcessExit(args []string) error {
 		existsInReady, _ := kernelglobals.ShortTermScheduler.ThreadExists(tid, pcb.PID)
 		if existsInReady {
 			err := kernelglobals.ShortTermScheduler.ThreadRemove(tid, pcb.PID)
+			kernelglobals.ExitStateQueue.Add(tcb)
 			if err != nil {
 				logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
 			}
@@ -276,6 +277,7 @@ func ThreadCancel(args []string) error {
 
 	// Intentar eliminar el TID de las colas Ready usando ThreadRemove del planificador
 	err = kernelglobals.ShortTermScheduler.ThreadRemove(types.Tid(tidCancelar), currentPCB.PID)
+	kernelglobals.ExitStateQueue.Add(buscarTCBPorTID(types.Tid(tidCancelar), currentPCB.PID))
 	if err == nil {
 		logger.Info("## (<%d:%d>) Finaliza el hilo", currentPCB.PID, tidCancelar)
 		return nil
@@ -488,6 +490,7 @@ func DumpMemory(args []string) error {
 			existsInReady, _ := kernelglobals.ShortTermScheduler.ThreadExists(tid, pcb.PID)
 			if existsInReady {
 				err := kernelglobals.ShortTermScheduler.ThreadRemove(tid, pcb.PID)
+				kernelglobals.ExitStateQueue.Add(buscarTCBPorTID(tid, pcb.PID))
 				if err != nil {
 					logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
 				} else {

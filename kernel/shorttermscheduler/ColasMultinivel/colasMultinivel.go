@@ -60,13 +60,11 @@ func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
 		cmm.isRRRunning = true
 
 		go func() {
-			defer func() {
-				cmm.isRRRunning = false
-			}()
 			err := roundRobin()
 			if err != nil {
 				logger.Error("Error en roundRobin: %v", err)
 			}
+			cmm.isRRRunning = false
 		}()
 	}
 

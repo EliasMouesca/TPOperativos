@@ -25,7 +25,7 @@ const (
 )
 
 func logCurrentState(context string) {
-	if false {
+	if true {
 		// Crear un buffer para acumular todo el log
 		var logBuffer bytes.Buffer
 
