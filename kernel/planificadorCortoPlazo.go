@@ -47,6 +47,8 @@ func planificadorCortoPlazo() {
 			logger.Trace("Hay hilos en ready para planificar")
 
 			tcbToExecute, err = kernelglobals.ShortTermScheduler.Planificar()
+			logger.Debug("Hilo a planificar (<%v>:<%v>)", tcbToExecute.FatherPCB.PID, tcbToExecute.TID)
+
 			if err != nil {
 				logger.Error("No fue posible planificar cierto hilo - %v", err.Error())
 				continue
@@ -70,6 +72,7 @@ func planificadorCortoPlazo() {
 		if err != nil {
 			logger.Error("Error en request")
 		}
+		logger.Debug("tcbToExecute: %v", tcbToExecute.TID)
 		kernelglobals.ExecStateThread = tcbToExecute
 
 		logger.Debug("## (<%v>:<%v>) Ejecutando hilo", tcbToExecute.FatherPCB.PID, tcbToExecute.TID)
@@ -77,11 +80,11 @@ func planificadorCortoPlazo() {
 		go func() {
 			timer := time.NewTimer(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
 
-			if tcbToExecute == kernelglobals.ExecStateThread {
-				kernelsync.QuantumChannel <- timer.C
-			} else {
-				if !timer.Stop() {
-					<-timer.C
+			select {
+			case <-timer.C:
+				// El temporizador expiró, envía al canal
+				if tcbToExecute == kernelglobals.ExecStateThread {
+					kernelsync.QuantumChannel <- struct{}{} // Enviar un valor vacío al canal
 				}
 			}
 		}()

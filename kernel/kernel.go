@@ -124,7 +124,6 @@ func syscallRecieve(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	err = ExecuteSyscall(syscall) // map a la libreria de syscalls
 	if err != nil {
 		// Por alguna razón esto rompe cuando quiero compilar
@@ -249,6 +248,7 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Se recibio la interrupcion < %v > de CPU", interruption.Description)
 
 	kernelsync.MutexCPU.Unlock()
+	logger.Trace("Unlockear la CPU")
 
 	// Encontrá nuestro TCB
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
@@ -256,15 +256,15 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 			// Si la INT fue eviction o EOQ -> vuelve a ready
 			if interruption.Type == types.InterruptionEviction ||
 				interruption.Type == types.InterruptionEndOfQuantum {
-				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
-
 				logger.Info("## (<%v>:<%v>) Se agrega a cola READY despues de EndOfQuantum o Desalojo", tcb.FatherPCB.PID, tcb.TID)
+				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
 
 			} else if interruption.Type != types.InterruptionSyscall {
 				// Sino, muere (ie: sysegv, div por 0, ...)
 				killTcb(&tcb)
 
 			}
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 	}

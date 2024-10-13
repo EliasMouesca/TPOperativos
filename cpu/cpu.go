@@ -86,8 +86,9 @@ func main() {
 func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Llega interrupt")
 	hiloEjecutando := currentThread
-	MutexInterruption.Lock()
 
+	MutexInterruption.Lock()
+	logger.Debug("koqwdqowkpqkowpd: %v", currentThread)
 	// Log request
 	logger.Debug("Request %v - %v %v", r.RemoteAddr, r.Method, r.URL)
 
@@ -107,6 +108,8 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, r)
 		return
 	}
+
+	logger.Debug("Interrupcion recibida: %v", interruption.Description)
 
 	if hiloEjecutando == nil {
 		logger.Debug("No hay nada para interrumpir! Saliendo...")
@@ -194,6 +197,7 @@ func loopInstructionCycle() {
 			currentThread.TID, currentThread.PID, instructionToParse, arguments)
 
 		err = instruction(&currentExecutionContext, arguments)
+
 		if err != nil {
 			logger.Error("No se pudo ejecutar la instrucción - %v", err.Error())
 			if len(interruptionChannel) != 0 {
@@ -203,15 +207,19 @@ func loopInstructionCycle() {
 				}
 			}
 		}
-		MutexInterruption.Unlock()
 
 		// Checkinterrupt
+		logger.Debug("No hay interrupcion en interruptionChannel, continua ejecucion")
 		if len(interruptionChannel) > 0 {
+			logger.Debug("Hay interrupcion en interruptionChannel")
 			break
+		} else {
+			MutexInterruption.Unlock()
 		}
 
 	}
 
+	MutexInterruption.Lock()
 	finishedThread := *currentThread
 	finishedExecutionContext := currentExecutionContext
 	receivedInterrupt := <-interruptionChannel
@@ -232,6 +240,7 @@ func loopInstructionCycle() {
 		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())
 	}
 
+	MutexInterruption.Unlock()
 }
 
 func fetch() (instructionToParse string, err error) {

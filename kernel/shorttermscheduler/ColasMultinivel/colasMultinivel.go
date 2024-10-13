@@ -59,6 +59,7 @@ func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
 	if !cmm.isRRRunning {
 		cmm.isRRRunning = true
 
+		//go func(){} TODO: ESTO ESTA ROMPIENDO CUANDO SE QUIERE PLANIFICAR UN NUEVO HILO Y NO HAY NINGUNO EJECUTANDO
 		go func() {
 			err := roundRobin()
 			if err != nil {
@@ -161,8 +162,6 @@ func (cmm *ColasMultiNivel) getNextTcb() (*kerneltypes.TCB, error) {
 
 func roundRobin() error {
 	<-kernelsync.QuantumChannel
-	pid := kernelglobals.ExecStateThread.FatherPCB.PID
-	tid := kernelglobals.ExecStateThread.TID
 	err := shorttermscheduler.CpuInterrupt(
 		types.Interruption{
 			Type:        types.InterruptionEndOfQuantum,
@@ -172,6 +171,5 @@ func roundRobin() error {
 		logger.Error("Failed to interrupt the CPU (end of quantum) - %v", err)
 		return err
 	}
-	logger.Info("(PID:%d TID:%d) - Enviado a desalojar por fin de quantum", pid, tid)
 	return nil
 }
