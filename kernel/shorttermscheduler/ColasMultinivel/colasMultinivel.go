@@ -107,7 +107,7 @@ func (cmm *ColasMultiNivel) AddToReady(tcb *kerneltypes.TCB) error {
 		}
 	}
 
-	logger.Info("Se agrego a Ready de CMM el TID: %v", tcb.TID)
+	logger.Info("Se agrego a Ready de CMN el TID: %v", tcb.TID)
 	go func() {
 		kernelsync.PendingThreadsChannel <- true
 	}()
@@ -136,7 +136,7 @@ func (cmm *ColasMultiNivel) addNewQueue(tcb *kerneltypes.TCB) error {
 	newQueue := new(types.Queue[*kerneltypes.TCB])
 	newQueue.Priority = tcb.Prioridad
 	newQueue.Add(tcb)
-	logger.Info("Se crea nueva cola de prioridad: %v en CMM", tcb.Prioridad)
+	logger.Info("Se crea nueva cola de prioridad: %v en CMN", tcb.Prioridad)
 	// Buscar la posición correcta para insertar la nueva cola
 	insertedAt := false
 	for i := range cmm.ReadyQueue {

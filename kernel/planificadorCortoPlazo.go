@@ -19,7 +19,7 @@ import (
 var AlgorithmsMap = map[string]kerneltypes.ShortTermSchedulerInterface{
 	"FIFO": &Fifo.Fifo{},
 	"P":    &Prioridades.Prioridades{},
-	"CMM":  &ColasMultinivel.ColasMultiNivel{},
+	"CMN":  &ColasMultinivel.ColasMultiNivel{},
 }
 
 func planificadorCortoPlazo() {
