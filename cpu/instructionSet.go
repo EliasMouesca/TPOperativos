@@ -184,14 +184,22 @@ func setInstruction(ctx *types.ExecutionContext, args []string) error {
 		return err
 	}
 
-	// Parse second argument as int
+	// Try parsing second argument as int
 	i, err := strconv.Atoi(args[1])
 	if err != nil {
-		return errors.New("no se pudo parsear '" + args[1] + "' como un entero")
+		// Ok not int, but is it a register?
+		if reg2, err := ctx.GetRegister(args[1]); err != nil {
+			// It is not a register nor an int
+			return errors.New("no se pudo parsear '" + args[1] + "' como un entero o un registro")
+		} else {
+			// If it IS a register, set it to that value
+			*reg = *reg2
+		}
+	} else {
+		// Set the register
+		*reg = uint32(i)
 	}
 
-	// Set the register
-	*reg = uint32(i)
 	return nil
 }
 

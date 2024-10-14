@@ -76,6 +76,15 @@ func TestSetInstruction(t *testing.T) {
 	if context.Hx != 4 {
 		t.Errorf("SetInstruction expected hx to be 4, got %d", context.Hx)
 	}
+
+	err = setInstruction(&context, []string{"cx", "hx"})
+	if err != nil {
+		t.Error(err)
+	}
+	if context.Cx != 4 {
+		t.Errorf("SetInstruction expected cx to be 4, got %d", context.Cx)
+	}
+
 }
 
 // -- Este test no anda más porque el current thread es nil, pq no está ejecutando la CPU.
