@@ -244,10 +244,12 @@ func loopInstructionCycle() {
 }
 
 func fetch() (instructionToParse string, err error) {
-	instructionToParse, err = memoryGiveMeInstruction(*currentThread, currentExecutionContext.Pc)
+	instructionToParse, newPc, err := memoryGiveMeInstruction(*currentThread, currentExecutionContext.Pc)
 	if err != nil {
+		logger.Error("Error al obtener instrucción (PID: %v, TID: %v, PC: %v): %v", currentThread.PID, currentThread.TID, currentExecutionContext.Pc, err)
 		return "", err
 	}
+	currentExecutionContext.Pc = newPc
 	return instructionToParse, nil
 }
 
