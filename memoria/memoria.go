@@ -14,6 +14,7 @@ import (
 )
 
 func init() {
+	dino.Triceraptops()
 	loggerLevel := "TRACE"
 	err := logger.ConfigureLogger("memoria.log", loggerLevel)
 	if err != nil {
@@ -46,7 +47,6 @@ func init() {
 }
 
 func main() {
-	dino.Triceraptops()
 	logger.Info("--- Comienzo ejecución MEMORIA ---")
 
 	// TRUE RESPONSE

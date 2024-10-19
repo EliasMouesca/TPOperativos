@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/sisoputnfrba/tp-golang/utils/dino"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"log"
 	"net/http"
@@ -23,11 +24,12 @@ func init() {
 }
 
 func main() {
+	dino.Pterodactyl()
 	logger.Info("--- Comienzo ejecución del filesystem ---")
 
-	generateRequest("memoria", "8082")
+	generateRequest("memoria", "8083")
 
-	filesystemPort := "8083"
+	filesystemPort := "8082"
 	http.HandleFunc("/filesystem/accion", doSomething)
 	http.HandleFunc("/", notFound)
 

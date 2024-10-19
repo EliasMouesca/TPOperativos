@@ -1,0 +1,12 @@
+{
+  "ip_self": "127.0.0.1",
+  "port_self": 8082,
+  "ip_memory": "127.0.0.1",
+  "port_memory": 8083,
+  "mount_dir": "/tmp/lal",
+  "block_size": 64,
+  "block_count": 1024,
+  "block_access_delay": 15000,
+  "log_level": "ERROR"
+}
+

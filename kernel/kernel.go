@@ -55,16 +55,21 @@ func main() {
 	dino.Trex()
 	logger.Debug("-- Comenzó la ejecución del kernel --")
 
-	//TODO: PARA INICIALIZAR EL KERNEL HAY QUE PONER EN CONSOLA:
-	// go run . file_name 123
-
+	// TODO: Que onda lo del tamaño, preguntar bien si lo podemos sacar a la mierda de una vez!
 	// -- PARSEAMOS LOS ARGS --
 	// Capturar los argumentos pasados al kernel por consola
-	if len(os.Args) < 3 {
-		logger.Fatal("Se requieren al menos dos argumentos: archivo de pseudocódigo y tamaño del proceso.")
+	/*
+		if len(os.Args) < 3 {
+			logger.Fatal("Se requieren al menos dos argumentos: archivo de pseudocódigo y tamaño del proceso.")
+		}
+	*/
+
+	if len(os.Args) < 2 {
+		logger.Fatal("Se requiere al menos un argumento, el archivo a ejecutar")
 	}
-	fileName := os.Args[1]    // Primer argumento: nombre del archivo de pseudocódigo
-	processSize := os.Args[2] // Segundo argumento: tamaño del proceso
+
+	fileName := os.Args[1] // Primer argumento: nombre del archivo de pseudocódigo
+	processSize := "10"
 
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		logger.Fatal("El archivo '%v' no existe!", fileName)
