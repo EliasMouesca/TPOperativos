@@ -7,5 +7,5 @@
   "port_cpu": 8080,
   "scheduler_algorithm": "CMN",
   "quantum": 2000,
-  "log_level": "TRACE"
+  "log_level": "ERROR"
 }

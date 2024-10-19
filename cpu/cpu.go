@@ -184,6 +184,8 @@ func loopInstructionCycle() {
 		if err != nil {
 			logger.Fatal("No se pudo obtener instrucción a ejecutar - %v", err.Error())
 		}
+		// Increment PC
+		currentExecutionContext.Pc += 1
 
 		// Decode
 		instruction, arguments, err := decode(instructionToParse)
@@ -207,9 +209,6 @@ func loopInstructionCycle() {
 				}
 			}
 		}
-
-		// Increment PC
-		currentExecutionContext.Pc += 1
 
 		// Checkinterrupt
 		logger.Debug("No hay interrupcion en interruptionChannel, continua ejecucion")

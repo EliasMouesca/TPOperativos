@@ -6,14 +6,12 @@ import (
 	cpu "github.com/sisoputnfrba/tp-golang/memoria/cpu_conection"
 	fileSystem "github.com/sisoputnfrba/tp-golang/memoria/fileSystem_conection"
 	kernel "github.com/sisoputnfrba/tp-golang/memoria/kernel_conection"
-    "github.com/sisoputnfrba/tp-golang/utils/dino"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
+	"github.com/sisoputnfrba/tp-golang/utils/dino"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"os"
 )
-
-//TODO: Agregar el tiempo de espera para cada petición del CPU
 
 func init() {
 	loggerLevel := "TRACE"
@@ -25,7 +23,7 @@ func init() {
 	logger.Debug("Logger creado")
 
 	// Load Config
-	configData, err := os.ReadFile("config/Config.json")
+	configData, err := os.ReadFile("config.json")
 	if err != nil {
 		logger.Fatal("No se pudo leer el archivo de configuración - %v", err.Error())
 	}
@@ -48,7 +46,7 @@ func init() {
 }
 
 func main() {
-    dino.Triceraptops()
+	dino.Triceraptops()
 	logger.Info("--- Comienzo ejecución MEMORIA ---")
 
 	// TRUE RESPONSE

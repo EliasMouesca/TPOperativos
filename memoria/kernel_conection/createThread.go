@@ -53,11 +53,14 @@ func CreateThreadHandler(w http.ResponseWriter, r *http.Request) {
 	if scanner == nil {
 		logger.Error("No se pudo crear el scanner")
 	}
-	i := 0
+
 	for scanner.Scan() {
+		instructionRead := scanner.Text()
+		if isNotAnInstruction(instructionRead) {
+			continue
+		}
 		memoria_helpers.CodeRegionForThreads[thread] = append(
-			memoria_helpers.CodeRegionForThreads[thread], scanner.Text())
-		i++
+			memoria_helpers.CodeRegionForThreads[thread], instructionRead)
 	}
 
 	// Check for errors during scanning
@@ -70,4 +73,8 @@ func CreateThreadHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Error("Error escribiendo response: %v", err)
 	}
+}
+
+func isNotAnInstruction(instruction string) bool {
+	return instruction == "" || instruction[0] == '#' || instruction[0] == '\n'
 }
