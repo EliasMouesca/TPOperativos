@@ -24,7 +24,7 @@ func WriteMemoryHandler(w http.ResponseWriter, r *http.Request) {
 	pidS := query.Get("pid")
 
 	// Log obligatorio
-	logger.Info("## Escritura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS)
+	logger.Info("## Escritura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS, "")
 	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
 
 	dir, err := strconv.Atoi(dirS)

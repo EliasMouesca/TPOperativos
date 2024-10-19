@@ -31,8 +31,14 @@ Output:
 ejemplo URL: ".../memoria/getContext?pid=123&tid=123"
 
 
-## Obtener siguiente linea de pseudocódigo a ejecutar (hay que checkearlo)
-Endpoint: /getInstruction
+## Obtener siguiente linea de pseudocódigo a ejecutar
+Endpoint: _/getInstruction_
+Verbo: _GET_
+Params: _pid_, _tid_, _pc_
+Output: Instrucción a ejecutar (string)
+
+ie: "http://localhost:9999/memoria/getContext?pid=123&tid=123&pc=5"
+
 
 ### Funcionamiento:
     Devuelve un string (sin parsear) que corresponde al pc, del tid y pid (los tres pasados por parametros)

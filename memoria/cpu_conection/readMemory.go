@@ -24,7 +24,7 @@ func ReadMemoryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Que es el Tamaño????????
 	// Log obligatorio
-	logger.Info("## Lectura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS)
+	logger.Info("## Lectura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS, "")
 	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
 
 	dir, err := strconv.Atoi(dirS)

@@ -31,7 +31,8 @@ func TestExcecutionContext(t *testing.T) {
 	logger.Debug("--- Start Test ---")
 
 	// GETCONTEXT TEST (with no contexts saved)
-	baseURL := fmt.Sprintf("http://%v:%v/memoria/getContext", memoria_helpers.Config.SelfAddress, memoria_helpers.Config.SelfPort)
+	baseURL := fmt.Sprintf("http://%v:%v/memoria/getContext",
+		memoria_helpers.Config.SelfAddress, memoria_helpers.Config.SelfPort)
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		logger.Error("Error al parsear la URL")

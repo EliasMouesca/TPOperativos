@@ -25,19 +25,19 @@ func GetInstructionHandler(w http.ResponseWriter, r *http.Request) {
 
 	tid, err := strconv.Atoi(tidS)
 	pid, err := strconv.Atoi(pidS)
-	pc, err := strconv.Atoi(pcS) // Aquí PC es un parámetro, representa la posición de la instrucción
+	pc, err := strconv.Atoi(pcS)
 	if err != nil {
-		logger.Error("Error al obtener las query params")
-		http.Error(w, "Error al obtener las query params", http.StatusBadRequest)
+		logger.Error("Error al obtener los query params")
+		http.Error(w, "Error al obtener los query params", http.StatusBadRequest)
 	}
 
 	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
 
 	// Obtener la instrucción según el PC
-	instruccion, newPC, err := memoria_helpers.GetInstruction(thread, pc)
+	instruccion, err := memoria_helpers.GetInstruction(thread, pc)
 	if err != nil {
 		logger.Error("No se pudo obtener la siguiente linea de código")
-		http.Error(w, "No se encontró la instrucción solicitada", http.StatusNotFound)
+		http.Error(w, "No se pudo obtener la siguiente linea de código", http.StatusNotFound)
 		return
 	}
 
@@ -47,20 +47,22 @@ func GetInstructionHandler(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
 
 	// Devolver la instrucción y actualizar el PC
-	response := struct {
+	// Esto no se hace así, porque el que recibe esto no tiene ni puta idea de que recibió,
+	// Me voy a tener que ir a fijar directo en tu código como alguna clase de mono?? Jaja chiste, saludos eli
+	/*response := struct {
 		Instruction string `json:"instruction"`
 		PC          int    `json:"pc"`
 	}{
 		Instruction: instruccion,
 		PC:          int(newPC), // El PC avanza para la siguiente instrucción
-	}
+	}*/
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(instruccion)
 	if err != nil {
 		logger.Error("Error al escribir el response - %v", err.Error())
 		http.Error(w, "Error al escribir el response", http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }

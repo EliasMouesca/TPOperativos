@@ -4,3 +4,4 @@ cpu/cpu
 memoria/memoria
 kernel/kernel
 filesystem/filesystem
+WindowsPowerShell

@@ -21,35 +21,38 @@ func WriteMemory(dir int, data [4]byte) error {
 }
 
 func ReadMemory(dir int) ([4]byte, error) {
-	cuatro_mordidas := [4]byte{byte(123), byte(255), byte(111), byte(222)}
-	return cuatro_mordidas, nil
+	// cuatro mordidas, ja ja    ~eli
+	cuatroMordidas := [4]byte{byte(123), byte(255), byte(111), byte(222)}
+	return cuatroMordidas, nil
 }
 
-func GetInstruction(thread types.Thread, pc int) (string, uint32, error) {
+func GetInstruction(thread types.Thread, pc int) (instruction string, err error) {
 	// Verificar si el hilo tiene instrucciones
 	instructions, exists := CodeRegionForThreads[thread]
 	if !exists {
-		return "", 0, fmt.Errorf("No se encontraron instrucciones para el hilo (PID:%d, TID:%d)", thread.PID, thread.TID)
+		logger.Error("Memoria no sabe que este thread exista ! (PID:%d, TID:%d)", thread.PID, thread.TID)
+		return "", fmt.Errorf("no se encontraron instrucciones para el hilo (PID:%d, TID:%d)", thread.PID, thread.TID)
 	}
 
 	// puede pasar esto? creeria que no. Lo dejo por las dudas
-	if pc == -1 {
+	// Esto no puede pasar
+	/*if pc == -1 {
 		pc = InstructionPointer[thread]
-	}
+	}*/
 
 	// Verificar si el PC está dentro de los límites de las instrucciones
-	if pc >= len(instructions) {
-		return "", 0, fmt.Errorf("No hay más instrucciones para el hilo (PID:%d, TID:%d)", thread.PID, thread.TID)
+	if pc > len(instructions) {
+		logger.Error("Se pidió la instrucción número '%d' del proceso (PID:%d, TID:%d), la cual no existe",
+			pc, thread.PID, thread.TID)
+		return "", fmt.Errorf("no hay más instrucciones para el hilo (PID:%d, TID:%d)", thread.PID, thread.TID)
 	}
 
 	// Obtener la instrucción actual en la posición del PC
-	instruction := instructions[pc]
+	instruction = instructions[pc]
 
 	// Actualizar el PC para el siguiente ciclo
-	newPC := pc + 1
-	InstructionPointer[thread] = newPC // Guardar el nuevo PC en el mapa
+	//newPC := pc + 1     // Lo hace CPU !
+	//InstructionPointer[thread] = newPC
 
-	return instruction, uint32(newPC), nil
+	return instruction, nil
 }
-
-var InstructionPointer = make(map[types.Thread]int) //No estoy usando el map?? por que no? si me viene bien para buscar en el archivo... no entiendo

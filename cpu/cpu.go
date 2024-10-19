@@ -208,6 +208,9 @@ func loopInstructionCycle() {
 			}
 		}
 
+		// Increment PC
+		currentExecutionContext.Pc += 1
+
 		// Checkinterrupt
 		logger.Debug("No hay interrupcion en interruptionChannel, continua ejecucion")
 		if len(interruptionChannel) > 0 {
@@ -244,12 +247,11 @@ func loopInstructionCycle() {
 }
 
 func fetch() (instructionToParse string, err error) {
-	instructionToParse, newPc, err := memoryGiveMeInstruction(*currentThread, currentExecutionContext.Pc)
+	instructionToParse, err = memoryGiveMeInstruction(*currentThread, currentExecutionContext.Pc)
 	if err != nil {
 		logger.Error("Error al obtener instrucción (PID: %v, TID: %v, PC: %v): %v", currentThread.PID, currentThread.TID, currentExecutionContext.Pc, err)
 		return "", err
 	}
-	currentExecutionContext.Pc = newPc
 	return instructionToParse, nil
 }
 

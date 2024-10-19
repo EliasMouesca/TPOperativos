@@ -26,22 +26,17 @@ func memoryUpdateExecutionContext(thread types.Thread, ectx types.ExecutionConte
 	return err
 }
 
-func memoryGiveMeInstruction(thread types.Thread, pc uint32) (instruction string, newPC uint32, err error) {
+func memoryGiveMeInstruction(thread types.Thread, pc uint32) (instruction string, err error) {
 	logger.Info("T%v P%v - FETCH PC=%v", thread.TID, thread.PID, pc)
 	url := fmt.Sprintf("http://%v:%v/memoria/getInstruction?tid=%v&pid=%v&pc=%v",
 		config.MemoryAddress, config.MemoryPort, thread.TID, thread.PID, pc)
 
-	var response struct {
-		Instruction string `json:"instruction"`
-		PC          int    `json:"pc"`
-	}
-
-	err = receiveThatFromHere(url, &response)
+	err = receiveThatFromHere(url, &instruction)
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
 
-	return response.Instruction, uint32(response.PC), nil
+	return instruction, nil
 }
 
 func memoryRead(thread types.Thread, physicalDirection uint32) (uint32, error) {
