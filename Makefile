@@ -2,8 +2,7 @@
 PROJECTS = cpu memoria filesystem kernel 
 TERMINAL=st
 SHELL=fish
-CODE_TO_RUN=../demo_code/easy.dino
-TMUX_SESSION=dinos_session
+CODE_TO_RUN=../demo_code/fibonacii.dino
 
 .NOTPARALLEL:
 
@@ -18,8 +17,10 @@ $(PROJECTS):
 .PHONY: all magic $(PROJECTS)
 
 # Magia negra que seguro solamente funciona en mi compu
+TMUX_SESSION=dinos_session
 magic: all
 	tmux new-session -d -s $(TMUX_SESSION)
+	tmux source-file ~/.tmux.config
 	tmux split-window -h      # Split horizontally
 	tmux split-window -v      # Split vertically in the first pane
 	tmux split-window -v -t 0 # Split vertically in the second pane
@@ -27,6 +28,5 @@ magic: all
 	tmux send-keys -t $(TMUX_SESSION):0.1 "cd cpu && ./cpu" C-m
 	tmux send-keys -t $(TMUX_SESSION):0.2 "cd filesystem && ./filesystem" C-m
 	tmux send-keys -t $(TMUX_SESSION):0.3 "cd kernel && ./kernel $(CODE_TO_RUN)" C-m
-	# Attach to the session
 	tmux attach-session -t $(TMUX_SESSION)
 

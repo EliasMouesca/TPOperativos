@@ -7,6 +7,6 @@
   "block_size": 64,
   "block_count": 1024,
   "block_access_delay": 15000,
-  "log_level": "ERROR"
+  "log_level": "TRACE"
 }
 
