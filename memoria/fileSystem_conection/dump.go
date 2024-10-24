@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// TODO: Esto le tiene que pedir a filesystem que... vos sabés, haga el dump
 func DumpMemoryHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		logger.Error("Método no permitido")

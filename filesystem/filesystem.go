@@ -1,19 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/utils/dino"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
-	"log"
 	"net/http"
+	"os"
 )
 
-type BodyRequest struct {
-	Message string `json:"message"`
-	Origin  string `json:"origin"`
-}
+var config fsConfig
 
 func init() {
 	loggerLevel := "INFO"
@@ -21,53 +17,57 @@ func init() {
 	if err != nil {
 		fmt.Println("No se pudo crear el logger - ", err)
 	}
+
+	data, err := os.ReadFile("config.json")
+	if err != nil {
+		logger.Error("No se pudo leer la config - ", err)
+	}
+
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		logger.Error("Error parseando la config - ", err)
+	}
+
+	err = logger.SetLevel(config.LogLevel)
+	if err != nil {
+		logger.Error("Error seteando el log level - ", err)
+	}
+
 }
 
 func main() {
 	dino.Pterodactyl()
 	logger.Info("--- Comienzo ejecución del filesystem ---")
 
-	generateRequest("memoria", "8083")
+	var err error
 
-	filesystemPort := "8082"
-	http.HandleFunc("/filesystem/accion", doSomething)
 	http.HandleFunc("/", notFound)
+	http.HandleFunc("POST /memoryDump", persistMemoryDump)
 
-	logger.Info("Corriendo filesystem en el puerto %v", filesystemPort)
-	log.Fatal(http.ListenAndServe("localhost:"+filesystemPort, nil))
-
-}
-
-func generateRequest(receiver string, port string) {
-	// Defino la structura que acepta memoria
-	receiverStruct := BodyRequest{
-		Message: "Hola " + receiver,
-		Origin:  "Filesystem",
-	}
-
-	// Serializo la estructura de memoria a JSON
-	receiverjson, err := json.Marshal(receiverStruct)
+	self := fmt.Sprintf("%v:%v", config.SelfAddress, config.SelfPort)
+	logger.Debug("Corriendo filesystem en %v", self)
+	err = http.ListenAndServe(self, nil)
 	if err != nil {
-		logger.Error("Error al serializar json - %v", err.Error())
-	}
-	// Convertir los bytes JSON a un io.Reader
-	receiverRequest := bytes.NewBuffer(receiverjson)
-	// POST
-	receiverResponse, err := http.Post("http://localhost:"+port+"/memoria/accion", "application/json", receiverRequest)
-	if err != nil {
-		logger.Error("Error al conectar con memoria - %v", err.Error())
-	} else {
-		logger.Info("Conección con memoria sastifactoria - %v", receiverResponse.StatusCode)
+		logger.Fatal("ListenAndServe terminó con un error - %v", err)
 	}
 }
 
-func doSomething(w http.ResponseWriter, r *http.Request) {
-	logger.Info("Request recibida: %v, desde %v", r.RequestURI, r.RemoteAddr)
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("Hola recibi la request"))
+func assertBitmapExists() error {
+	filename := "bitmap.dat"
+	_, err := os.Stat(filename)
 	if err != nil {
-		logger.Error("No se pudo escribir la respuesta - %v", err.Error())
+		if !os.IsNotExist(err) {
+			return err
+		}
+
 	}
+
+	return nil
+}
+
+func assertBloquesExists() error {
+
+	return nil
 }
 
 func notFound(w http.ResponseWriter, r *http.Request) {
