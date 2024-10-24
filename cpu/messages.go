@@ -22,7 +22,7 @@ func memoryUpdateExecutionContext(thread types.Thread, ectx types.ExecutionConte
 	logger.Info("T%v P%v - Actualizo contexto de ejecución", thread.TID, thread.PID)
 	url := fmt.Sprintf("http://%v:%v/memoria/saveContext?tid=%v&pid=%v", config.MemoryAddress, config.MemoryPort, thread.TID, thread.PID)
 	err := sendThisToThere(url, ectx)
-	logger.Debug("Se a avisado a Memoria del update execution context")
+	logger.Debug("Se ha avisado a Memoria del update execution context")
 	return err
 }
 
