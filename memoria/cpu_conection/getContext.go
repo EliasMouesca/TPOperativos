@@ -2,7 +2,7 @@ package cpu_conection
 
 import (
 	"encoding/json"
-	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -34,7 +34,7 @@ func GetContextHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
 
-	context, exists := memoria_helpers.ExecContext[thread]
+	context, exists := memoriaGlobals.ExecContext[thread]
 	if !exists {
 		logger.Error("No se pudo encontrar el contexto")
 		http.Error(w, "No se pudo encontrar el contexto", http.StatusNotFound)
@@ -56,5 +56,5 @@ func GetContextHandler(w http.ResponseWriter, r *http.Request) {
 
 	//log obligatorio
 	logger.Info("Contexto Solicitado - (PID:TID) - (%v,%v)", pidS, tidS)
-	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
+	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 }

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -32,7 +32,7 @@ func TestExcecutionContext(t *testing.T) {
 
 	// GETCONTEXT TEST (with no contexts saved)
 	baseURL := fmt.Sprintf("http://%v:%v/memoria/getContext",
-		memoria_helpers.Config.SelfAddress, memoria_helpers.Config.SelfPort)
+		memoriaGlobals.Config.SelfAddress, memoriaGlobals.Config.SelfPort)
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		logger.Error("Error al parsear la URL")
@@ -54,7 +54,7 @@ func TestExcecutionContext(t *testing.T) {
 
 	// SAVECONTEXT TEST
 
-	baseURL = fmt.Sprintf("http://%v:%v/memoria/saveContext", memoria_helpers.Config.SelfAddress, memoria_helpers.Config.SelfPort)
+	baseURL = fmt.Sprintf("http://%v:%v/memoria/saveContext", memoriaGlobals.Config.SelfAddress, memoriaGlobals.Config.SelfPort)
 	u, err = url.Parse(baseURL)
 	if err != nil {
 		t.Error(err)
@@ -78,7 +78,7 @@ func TestExcecutionContext(t *testing.T) {
 	}
 
 	// GETCONTEXT TEST (with context saved)
-	baseURL = fmt.Sprintf("http://%v:%v/memoria/getContext", memoria_helpers.Config.SelfAddress, memoria_helpers.Config.SelfPort)
+	baseURL = fmt.Sprintf("http://%v:%v/memoria/getContext", memoriaGlobals.Config.SelfAddress, memoriaGlobals.Config.SelfPort)
 	u, err = url.Parse(baseURL)
 	if err != nil {
 		t.Error(err)

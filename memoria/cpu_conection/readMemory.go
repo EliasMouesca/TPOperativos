@@ -2,6 +2,7 @@ package cpu_conection
 
 import (
 	"encoding/json"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -25,7 +26,7 @@ func ReadMemoryHandler(w http.ResponseWriter, r *http.Request) {
 	// Que es el Tamaño????????
 	// Log obligatorio
 	logger.Info("## Lectura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS, "")
-	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
+	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 
 	dir, err := strconv.Atoi(dirS)
 	if err != nil {

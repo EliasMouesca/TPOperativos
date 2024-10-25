@@ -2,7 +2,7 @@ package cpu_conection
 
 import (
 	"encoding/json"
-	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"io"
@@ -47,12 +47,12 @@ func SaveContextHandler(w http.ResponseWriter, r *http.Request) {
 	pid, err := strconv.Atoi(pidS)
 	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
 
-	_, exists := memoria_helpers.ExecContext[thread]
+	_, exists := memoriaGlobals.ExecContext[thread]
 	if !exists {
 		logger.Trace("No existe el thread buscado, se creará un nuevo contexto")
 	}
-	memoria_helpers.ExecContext[thread] = contexto
-	logger.Debug("Contexto guardado exitosamente: %v", memoria_helpers.ExecContext[thread])
+	memoriaGlobals.ExecContext[thread] = contexto
+	logger.Debug("Contexto guardado exitosamente: %v", memoriaGlobals.ExecContext[thread])
 
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte("Contexto guardado exitosamente"))
@@ -64,5 +64,5 @@ func SaveContextHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Log obligatorio
 	logger.Info("## Contexto Actualizado - (PID:TID) - (%v:%v)", pidS, tidS)
-	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
+	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 }

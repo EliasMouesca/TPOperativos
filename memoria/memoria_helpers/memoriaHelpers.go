@@ -2,6 +2,7 @@ package memoria_helpers
 
 import (
 	"fmt"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -28,7 +29,7 @@ func ReadMemory(dir int) ([4]byte, error) {
 
 func GetInstruction(thread types.Thread, pc int) (instruction string, err error) {
 	// Verificar si el hilo tiene instrucciones
-	instructions, exists := CodeRegionForThreads[thread]
+	instructions, exists := memoriaGlobals.CodeRegionForThreads[thread]
 	if !exists {
 		logger.Error("Memoria no sabe que este thread exista ! (PID:%d, TID:%d)", thread.PID, thread.TID)
 		return "", fmt.Errorf("no se encontraron instrucciones para el hilo (PID:%d, TID:%d)", thread.PID, thread.TID)

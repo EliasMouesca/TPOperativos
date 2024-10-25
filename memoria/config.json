@@ -12,7 +12,7 @@
   "port_filesystem": 8084,
   "scheme": "FIJAS",
   "search_algorithm": "FIRST",
-  "partitions": [512, 16, 32, 16, 256, 64, 128],
+  partitions: [512, 16, 32, 16, 256, 64, 128],
   "log_level": "TRACE"
 }
 

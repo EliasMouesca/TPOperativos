@@ -2,6 +2,7 @@ package cpu_conection
 
 import (
 	"encoding/json"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
@@ -44,7 +45,7 @@ func GetInstructionHandler(w http.ResponseWriter, r *http.Request) {
 	// Log obligatorio
 	logger.Info("## Obtener instrucción - (PID:TID) - (%v:%v) - Instrucción: %v", pid, tid, instruccion)
 
-	time.Sleep(time.Duration(memoria_helpers.Config.ResponseDelay))
+	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 
 	// Devolver la instrucción y actualizar el PC
 	// Esto no se hace así, porque el que recibe esto no tiene ni puta idea de que recibió,

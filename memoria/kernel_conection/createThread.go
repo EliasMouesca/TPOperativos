@@ -3,7 +3,7 @@ package kernel_conection
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"io"
@@ -40,7 +40,7 @@ func CreateThreadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Guardar el contexto en ExecContext, usando PID y TID como clave
 	context := types.ExecutionContext{}
-	memoria_helpers.ExecContext[thread] = context
+	memoriaGlobals.ExecContext[thread] = context
 	logger.Info("Contexto creado para el hilo - (PID:TID): (%v, %v)", pid, tid)
 
 	// Leer el archivo y cargarlo a memoria
@@ -59,8 +59,8 @@ func CreateThreadHandler(w http.ResponseWriter, r *http.Request) {
 		if isNotAnInstruction(instructionRead) {
 			continue
 		}
-		memoria_helpers.CodeRegionForThreads[thread] = append(
-			memoria_helpers.CodeRegionForThreads[thread], instructionRead)
+		memoriaGlobals.CodeRegionForThreads[thread] = append(
+			memoriaGlobals.CodeRegionForThreads[thread], instructionRead)
 	}
 
 	// Check for errors during scanning

@@ -2,6 +2,7 @@ package kernel_conection
 
 import (
 	"encoding/json"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -27,6 +28,10 @@ func FinishProcessHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Extraer PID del cuerpo JSON enviado por ProcessToExit
 	pidS := requestData.Thread.PID
+	err := memoriaGlobals.SistemaParticiones.LiberarParticion(pidS)
+	if err != nil {
+		http.Error(w, "No se pudo liberar la particion", http.StatusInternalServerError)
+	}
 
 	// Log obligatorio
 	logger.Info("## Proceso Destruido - PID: %v", pidS)
