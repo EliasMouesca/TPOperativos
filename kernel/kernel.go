@@ -68,8 +68,8 @@ func main() {
 		logger.Fatal("Se requiere al menos un argumento, el archivo a ejecutar")
 	}
 
-	fileName := os.Args[1] // Primer argumento: nombre del archivo de pseudocódigo
-	processSize := "10"
+	fileName := os.Args[1]    // Primer argumento: nombre del archivo de pseudocódigo
+	processSize := os.Args[2] // Segundo argumento: tamanio del proceso
 
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		logger.Fatal("El archivo '%v' no existe!", fileName)
@@ -84,7 +84,7 @@ func main() {
 	kernelglobals.ExitStateQueue = types.Queue[*kerneltypes.TCB]{}
 
 	// Crear el primer proceso
-	logger.Debug("## Creando el primer proceso inicial (archivo: %s, tamaño: %s)", fileName, processSize)
+	logger.Debug("## Creando el proceso inicial (archivo: %s, tamaño: %s)", fileName, processSize)
 
 	// Inicializamos el planificador de corto plazo (PCP)
 	logger.Info("Iniciando el planificador de corto plazo: %v", kernelglobals.Config.SchedulerAlgorithm)

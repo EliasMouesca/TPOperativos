@@ -1,4 +1,4 @@
-package memoria_helpers
+package helpers
 
 import (
 	"fmt"

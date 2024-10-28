@@ -2,8 +2,8 @@ package cpu_conection
 
 import (
 	"encoding/json"
+	"github.com/sisoputnfrba/tp-golang/memoria/helpers"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
-	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
 	"strconv"
@@ -35,7 +35,7 @@ func ReadMemoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := memoria_helpers.ReadMemory(dir)
+	data, err := helpers.ReadMemory(dir)
 	if err != nil {
 		logger.Error("Error al leer la dirección: %v", dir)
 		http.Error(w, "No se pudo leer la dirección de memoria", http.StatusNotFound)

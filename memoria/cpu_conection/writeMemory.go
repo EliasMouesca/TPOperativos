@@ -2,8 +2,8 @@ package cpu_conection
 
 import (
 	"encoding/json"
+	"github.com/sisoputnfrba/tp-golang/memoria/helpers"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
-	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"io"
 	"net/http"
@@ -51,7 +51,7 @@ func WriteMemoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = memoria_helpers.WriteMemory(dir, data)
+	err = helpers.WriteMemory(dir, data)
 	if err != nil {
 		logger.Error("Error al escribir en memoria de usuario")
 		http.Error(w, "Error al escribir en memoria", http.StatusInternalServerError)

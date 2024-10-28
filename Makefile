@@ -1,7 +1,7 @@
 # List of projects
 PROJECTS = cpu memoria filesystem kernel 
 TERMINAL=st
-SHELL=fish
+SHELL=zsh
 CODE_TO_RUN=../demo_code/fibonacii.dino
 
 .NOTPARALLEL:

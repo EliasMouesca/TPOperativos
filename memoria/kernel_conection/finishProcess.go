@@ -28,7 +28,7 @@ func FinishProcessHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Extraer PID del cuerpo JSON enviado por ProcessToExit
 	pidS := requestData.Thread.PID
-	err := memoriaGlobals.SistemaParticiones.LiberarParticion(pidS)
+	err = memoriaGlobals.SistemaParticiones.LiberarParticion(pidS)
 	if err != nil {
 		http.Error(w, "No se pudo liberar la particion", http.StatusInternalServerError)
 	}

@@ -12,7 +12,7 @@ type Fijas struct {
 	Particiones []memoriaTypes.Particion
 }
 
-func (f *Fijas) init() {
+func (f *Fijas) Init() {
 	logger.Debug("Inicializando particiones fijas")
 	base := 0
 	for _, tamanio := range memoriaGlobals.Config.Partitions {
@@ -59,6 +59,7 @@ func (f *Fijas) LiberarParticion(pid types.Pid) error {
 		if particion.Pid == pid {
 			particion.Ocupado = false
 			encontrada = true
+			logger.Debug("Particion encontrada: Base: %v")
 			break
 		}
 	}

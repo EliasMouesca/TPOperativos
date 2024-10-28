@@ -10,10 +10,10 @@ import (
 	"github.com/sisoputnfrba/tp-golang/memoria/estrategias_asignacion/first"
 	"github.com/sisoputnfrba/tp-golang/memoria/estrategias_asignacion/worst"
 	fileSystem "github.com/sisoputnfrba/tp-golang/memoria/fileSystem_conection"
+	"github.com/sisoputnfrba/tp-golang/memoria/helpers"
 	kernel "github.com/sisoputnfrba/tp-golang/memoria/kernel_conection"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaTypes"
-	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/utils/dino"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -63,7 +63,7 @@ func init() {
 
 	memoriaGlobals.EstrategiaAsignacion = EstrategiaAsignacionMap[memoriaGlobals.Config.SearchAlgorithm]
 	memoriaGlobals.SistemaParticiones = EstrategiaParticionesMap[memoriaGlobals.Config.Scheme]
-
+	memoriaGlobals.SistemaParticiones.Init()
 }
 
 func main() {
@@ -84,7 +84,7 @@ func main() {
 	http.HandleFunc("/memoria/finishThread", kernel.FinishThreadHandler)
 
 	http.HandleFunc("/memoria/memoryDump", fileSystem.DumpMemoryHandler)
-	http.HandleFunc("/", memoria_helpers.BadRequest)
+	http.HandleFunc("/", helpers.BadRequest)
 
 	self := fmt.Sprintf("%v:%v", memoriaGlobals.Config.SelfAddress, memoriaGlobals.Config.SelfPort)
 	logger.Info("Server activo en %v", self)

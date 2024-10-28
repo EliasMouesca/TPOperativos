@@ -1,15 +1,15 @@
 package memoriaGlobals
 
 import (
+	"github.com/sisoputnfrba/tp-golang/memoria/config"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaTypes"
-	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/types"
 )
 
 var EstrategiaAsignacion memoriaTypes.EstrategiasAsignacionInterface
 var SistemaParticiones memoriaTypes.ParticionesInterface
 
-var Config memoria_helpers.MemoriaConfig
+var Config config.MemoriaConfig
 var ExecContext = make(map[types.Thread]types.ExecutionContext)
 var CodeRegionForThreads = make(map[types.Thread][]string)
 

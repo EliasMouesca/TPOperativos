@@ -2,8 +2,8 @@ package cpu_conection
 
 import (
 	"encoding/json"
+	"github.com/sisoputnfrba/tp-golang/memoria/helpers"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
-	"github.com/sisoputnfrba/tp-golang/memoria/memoria_helpers"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -35,7 +35,7 @@ func GetInstructionHandler(w http.ResponseWriter, r *http.Request) {
 	thread := types.Thread{PID: types.Pid(pid), TID: types.Tid(tid)}
 
 	// Obtener la instrucción según el PC
-	instruccion, err := memoria_helpers.GetInstruction(thread, pc)
+	instruccion, err := helpers.GetInstruction(thread, pc)
 	if err != nil {
 		logger.Error("No se pudo obtener la siguiente linea de código")
 		http.Error(w, "No se pudo obtener la siguiente linea de código", http.StatusNotFound)

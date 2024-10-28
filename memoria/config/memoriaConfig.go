@@ -1,4 +1,4 @@
-package memoria_helpers
+package config
 
 type MemoriaConfig struct {
 	SelfPort        int    `json:"self_port"`
