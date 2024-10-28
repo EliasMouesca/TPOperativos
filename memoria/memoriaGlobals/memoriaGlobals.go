@@ -12,4 +12,5 @@ var SistemaParticiones memoriaTypes.ParticionesInterface
 var Config memoria_helpers.MemoriaConfig
 var ExecContext = make(map[types.Thread]types.ExecutionContext)
 var CodeRegionForThreads = make(map[types.Thread][]string)
+
 var UserMem = make([]byte, Config.MemorySize)

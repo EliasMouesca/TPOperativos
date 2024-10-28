@@ -1,7 +1,7 @@
 package fijas
 
 import (
-	"errors"
+	"fmt"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaTypes"
 	"github.com/sisoputnfrba/tp-golang/types"
@@ -30,29 +30,28 @@ func (f *Fijas) init() {
 }
 
 func (f *Fijas) AsignarProcesoAParticion(pid types.Pid, size int) error {
-	err, particionEncontrada := memoriaGlobals.EstrategiaAsignacion.BuscarParticion(size)
+	err, particionEncontrada := memoriaGlobals.EstrategiaAsignacion.BuscarParticion(size, &f.Particiones)
 	if err != nil {
 		logger.Error("La estrategia de asignacion no ha podido asignar el proceso a una particion")
 	}
 
-	particion := f.obtenerParticion(particionEncontrada.Base, particionEncontrada.Limite)
-
-	particion.Ocupado = true
-	particion.Pid = pid
+	particionEncontrada.Ocupado = true
+	particionEncontrada.Pid = pid
 	logger.Debug("Proceso (< %v >) asignado en particiones fijas", pid)
 
 	return nil
 }
 
-func (f *Fijas) obtenerParticion(base int, limite int) *memoriaTypes.Particion {
-	for i := range f.Particiones {
-		particion := &f.Particiones[i]
-		if particion.Base == base && particion.Limite == limite {
-			return particion
-		}
-	}
-	return nil
-}
+// No hace falta
+//func (f *Fijas) obtenerParticion(base int, limite int) *memoriaTypes.Particion {
+//	for i := range f.Particiones {
+//		particion := &f.Particiones[i]
+//		if particion.Base == base && particion.Limite == limite {
+//			return particion
+//		}
+//	}
+//	return nil
+//}
 
 func (f *Fijas) LiberarParticion(pid types.Pid) error {
 	encontrada := false
@@ -64,7 +63,7 @@ func (f *Fijas) LiberarParticion(pid types.Pid) error {
 		}
 	}
 	if !encontrada {
-		return errors.New("no se pudo liberar la particion del proceso")
+		return fmt.Errorf("no se encontro particion que contenga el proceso PID: < %v >", pid)
 	}
 	logger.Debug("Proceso (< %v >) liberado", pid)
 	return nil

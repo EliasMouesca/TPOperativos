@@ -6,7 +6,7 @@ import (
 	cpu "github.com/sisoputnfrba/tp-golang/memoria/cpu_conection"
 	"github.com/sisoputnfrba/tp-golang/memoria/esquemas_particiones/dinamicas"
 	"github.com/sisoputnfrba/tp-golang/memoria/esquemas_particiones/fijas"
-	"github.com/sisoputnfrba/tp-golang/memoria/estrategias_asignacion"
+	"github.com/sisoputnfrba/tp-golang/memoria/estrategias_asignacion/best"
 	"github.com/sisoputnfrba/tp-golang/memoria/estrategias_asignacion/first"
 	"github.com/sisoputnfrba/tp-golang/memoria/estrategias_asignacion/worst"
 	fileSystem "github.com/sisoputnfrba/tp-golang/memoria/fileSystem_conection"
@@ -22,7 +22,7 @@ import (
 
 var EstrategiaAsignacionMap = map[string]memoriaTypes.EstrategiasAsignacionInterface{
 	"FIRST": &first.First{},
-	"BEST":  &estrategias_asignacion.Best{},
+	"BEST":  &best.Best{},
 	"WORST": &worst.Worst{},
 }
 var EstrategiaParticionesMap = map[string]memoriaTypes.ParticionesInterface{

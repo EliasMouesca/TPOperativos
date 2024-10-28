@@ -5,24 +5,23 @@ import (
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaTypes"
 )
 
-type First struct {
-}
+type First struct{}
 
-func BuscarParticion(size int, f []memoriaTypes.Particion) (error, memoriaTypes.Particion) {
-	var particionSeleccionada memoriaTypes.Particion
+func (s *First) BuscarParticion(size int, f *[]memoriaTypes.Particion) (error, *memoriaTypes.Particion) {
+	var particionSeleccionada *memoriaTypes.Particion
 	encontrada := false
 
-	for _, particion := range f {
+	for i, particion := range *f {
 		tamanoParticion := particion.Limite - particion.Base
 		if !particion.Ocupado && tamanoParticion >= size {
-			particionSeleccionada = particion
+			particionSeleccionada = &(*f)[i]
 			encontrada = true
 			break
 		}
 	}
 
 	if !encontrada {
-		return errors.New("no se encontró una partición adecuada"), memoriaTypes.Particion{}
+		return errors.New("no se encontró una partición adecuada"), nil
 	}
 
 	return nil, particionSeleccionada

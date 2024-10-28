@@ -27,18 +27,16 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extraer el PID y el tamaño desde el cuerpo JSON
-	pidS := requestData.Arguments[0]
-	sizeS := requestData.Arguments[1]
-	pid, _ := strconv.Atoi(pidS)
-	size, _ := strconv.Atoi(sizeS)
+	pid, _ := strconv.Atoi(requestData.Arguments[0])
+	size, _ := strconv.Atoi(requestData.Arguments[1])
 
 	err = memoriaGlobals.SistemaParticiones.AsignarProcesoAParticion(types.Pid(pid), size)
 	if err != nil {
-		logger.Error("Error al asignar el proceso (<%v>) de tamanio %v a una particion de memoria", pidS, sizeS)
+		logger.Error("Error al asignar el proceso < %v > de tamaño %v a una particion de memoria", pid, size)
 	}
 
 	// Log obligatorio
-	logger.Info("## Proceso Creado - FileName: %v - Tamaño: %v", pidS, sizeS)
+	logger.Info("## Proceso Creado - PID: < %v > - Tamaño: < %v >", pid, size)
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("Proceso creado correctamente"))
