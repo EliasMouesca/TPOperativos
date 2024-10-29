@@ -45,24 +45,13 @@ func GetInstructionHandler(w http.ResponseWriter, r *http.Request) {
 	// Log obligatorio
 	logger.Info("## Obtener instrucción - (PID:TID) - (%v:%v) - Instrucción: %v", pid, tid, instruccion)
 
-	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
-
-	// Devolver la instrucción y actualizar el PC
-	// Esto no se hace así, porque el que recibe esto no tiene ni puta idea de que recibió,
-	// Me voy a tener que ir a fijar directo en tu código como alguna clase de mono?? Jaja chiste, saludos eli
-	/*response := struct {
-		Instruction string `json:"instruction"`
-		PC          int    `json:"pc"`
-	}{
-		Instruction: instruccion,
-		PC:          int(newPC), // El PC avanza para la siguiente instrucción
-	}*/
-
+	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(instruccion)
 	if err != nil {
 		logger.Error("Error al escribir el response - %v", err.Error())
 		http.Error(w, "Error al escribir el response", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
+
+	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 }

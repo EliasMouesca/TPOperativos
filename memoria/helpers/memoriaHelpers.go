@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/types"
@@ -17,13 +18,34 @@ func BadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func WriteMemory(dir int, data [4]byte) error {
+func WriteMemory(dir int, data []byte) error {
+	var err error
+
+	if ValidMemAddress(dir) {
+		err = errors.New("No existe la dirección física solicitada")
+		return err
+	}
+
+	var cuatroMordidas []byte
+	for i := 0; i <= 3; i++ {
+		cuatroMordidas[i] = memoriaGlobals.UserMem[dir+i]
+	}
 	return nil
 }
 
-func ReadMemory(dir int) ([4]byte, error) {
-	// cuatro mordidas, ja ja    ~eli
-	cuatroMordidas := [4]byte{byte(123), byte(255), byte(111), byte(222)}
+func ReadMemory(dir int) ([]byte, error) {
+	var err error
+
+	if ValidMemAddress(dir) {
+		err = errors.New("No existe la dirección física solicitada")
+		return nil, err
+	}
+
+	var cuatroMordidas []byte
+
+	for i := 0; i <= 3; i++ {
+		cuatroMordidas[i] = memoriaGlobals.UserMem[dir+i]
+	}
 	return cuatroMordidas, nil
 }
 
@@ -35,12 +57,6 @@ func GetInstruction(thread types.Thread, pc int) (instruction string, err error)
 		return "", fmt.Errorf("no se encontraron instrucciones para el hilo (PID:%d, TID:%d)", thread.PID, thread.TID)
 	}
 
-	// puede pasar esto? creeria que no. Lo dejo por las dudas
-	// Esto no puede pasar
-	/*if pc == -1 {
-		pc = InstructionPointer[thread]
-	}*/
-
 	// Verificar si el PC está dentro de los límites de las instrucciones
 	if pc > len(instructions) {
 		logger.Error("Se pidió la instrucción número '%d' del proceso (PID:%d, TID:%d), la cual no existe",
@@ -49,11 +65,15 @@ func GetInstruction(thread types.Thread, pc int) (instruction string, err error)
 	}
 
 	// Obtener la instrucción actual en la posición del PC
-	instruction = instructions[pc]
-
-	// Actualizar el PC para el siguiente ciclo
-	//newPC := pc + 1     // Lo hace CPU !
-	//InstructionPointer[thread] = newPC
+	instruction = instructions[pc-1]
+	//TODO: esto puede romper todo, creemos que es (pc - 1)
 
 	return instruction, nil
+}
+
+func ValidMemAddress(dir int) bool {
+	if dir > 0 && dir+3 <= len(memoriaGlobals.UserMem) {
+		return false
+	}
+	return true
 }

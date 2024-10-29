@@ -289,6 +289,7 @@ func UnlockIO() {
 
 		time.Sleep(time.Duration(timeBlocked) * time.Millisecond)
 
+		//TODO: creo que se pueden sacar estos mutex, nose si habria que bloquear el time.sleep
 		kernelsync.MutexPlanificadorLP.Lock()
 		err := kernelglobals.BlockedStateQueue.Remove(tcbBlock)
 		kernelsync.MutexPlanificadorLP.Unlock()

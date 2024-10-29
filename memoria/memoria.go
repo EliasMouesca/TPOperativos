@@ -72,9 +72,9 @@ func main() {
 	// TRUE RESPONSE
 	http.HandleFunc("/memoria/getContext", cpu.GetContextHandler)
 	http.HandleFunc("/memoria/saveContext", cpu.SaveContextHandler)
+	http.HandleFunc("/memoria/getInstruction", cpu.GetInstructionHandler)
 
 	// STUB FORMAT RESPONSE
-	http.HandleFunc("/memoria/getInstruction", cpu.GetInstructionHandler)
 	http.HandleFunc("/memoria/readMem", cpu.ReadMemoryHandler)
 	http.HandleFunc("/memoria/writeMem", cpu.WriteMemoryHandler)
 
