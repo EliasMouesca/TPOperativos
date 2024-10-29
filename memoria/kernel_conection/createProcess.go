@@ -26,14 +26,12 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO: aca no estan recibiendo el archivo de instrucciones del proceso/hilo main,
-	// en create thread reciben los archivos de los hilos pero nunca del hilo main, se soluciona facil,
-	// en planificadorALargoPlazo en newProcessCreate se agrega esto 	kernelsync.ChannelThreadCreate <- args
-	// que lo recibe despues newThreadCreate.
-	// quiza me equivoco :) -> Balbo
-
 	// Extraer el PID y el tamaño desde el cuerpo JSON
 	pid := requestData.Thread.PID
+	// tid := 0
+	// pseudoCodigoAEjecutar := requestData.Arguments[0]
+	// despues habria que leer el archivo de instrucciones y cargarlo, como hicieron en createThread.go -> Balbo
+	// otra opcion seria en largo plazo enviarle a memoria la request de crear el hilo main en la funcion newProcessToReady
 	size, _ := strconv.Atoi(requestData.Arguments[1])
 	logger.Debug("************* Llega el PID: %v", pid)
 	logger.Debug("************* Tamanio: %v", size)
