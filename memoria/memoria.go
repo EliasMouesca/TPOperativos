@@ -73,11 +73,10 @@ func main() {
 	http.HandleFunc("/memoria/getContext", cpu.GetContextHandler)
 	http.HandleFunc("/memoria/saveContext", cpu.SaveContextHandler)
 	http.HandleFunc("/memoria/getInstruction", cpu.GetInstructionHandler)
-
-	// STUB FORMAT RESPONSE
 	http.HandleFunc("/memoria/readMem", cpu.ReadMemoryHandler)
 	http.HandleFunc("/memoria/writeMem", cpu.WriteMemoryHandler)
 
+	// STUB FORMAT RESPONSE
 	http.HandleFunc("/memoria/createProcess", kernel.CreateProcessHandler)
 	http.HandleFunc("/memoria/finishProcess", kernel.FinishProcessHandler)
 	http.HandleFunc("/memoria/createThread", kernel.CreateThreadHandler)
