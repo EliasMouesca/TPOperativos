@@ -22,6 +22,9 @@
 > Dinosaurios con sombreros!
 >                   - anónimo
 
+> Si anda dos veces seguidas, no es una condición de carrera.
+>                   - anónimo
+
 ## Checkpoint
 
 Para cada checkpoint de control obligatorio, se debe crear un tag en el
