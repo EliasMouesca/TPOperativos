@@ -1,11 +1,11 @@
 PROCESS_CREATE ../demo_code/easy.dino 300 1
-PROCESS_CREATE ../demo_code/easy.dino 100 1
+PROCESS_CREATE ../demo_code/easy2.dino 100 1
 PROCESS_CREATE ../demo_code/fin.dino 100 1
-PROCESS_CREATE ../demo_code/easy.dino 200 1
+PROCESS_CREATE ../demo_code/easy2.dino 200 1
 PROCESS_CREATE ../demo_code/fin.dino 100 1
-PROCESS_CREATE ../demo_code/easy.dino 24 1
+PROCESS_CREATE ../demo_code/easy2.dino 24 1
 
-PROCESS_CREATE ../demo_code/easy.dino 400 1
-PROCESS_CREATE ../demo_code/easy.dino 100 1
+PROCESS_CREATE ../demo_code/easy2.dino 550 1
+PROCESS_CREATE ../demo_code/easy2.dino 100 1
 
 PROCESS_EXIT

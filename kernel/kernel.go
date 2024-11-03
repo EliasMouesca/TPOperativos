@@ -145,7 +145,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 	if !exists {
 		return errors.New("la syscall pedida no es una syscall que el kernel entienda")
 	}
-
+	<-kernelsync.PlanificacionFinalizada
 	// Verificar si hay un thread en ejecución
 	if kernelglobals.ExecStateThread != nil {
 		logger.Info("## (<%v>:<%v>) - Solicitó syscall: <%v>",

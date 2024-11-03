@@ -104,16 +104,18 @@ func ProcessExit(args []string) error {
 
 		// 2. Verificar y eliminar hilos en la cola de Blocked
 		// TODO: Esto está mal, dejar de usar la queue así !
-		for !kernelglobals.BlockedStateQueue.IsEmpty() {
-			blockedTCB, err := kernelglobals.BlockedStateQueue.GetAndRemoveNext()
-			if err != nil {
-				logger.Error("Error al obtener el siguiente TCB de BlockedStateQueue - %v", err)
-				break
-			}
+		for _, blockedTCB := range kernelglobals.BlockedStateQueue.GetElements() {
+			//for i := 0; i < kernelglobals.BlockedStateQueue.Size(); i++ {
+			//blockedTCB, err := kernelglobals.BlockedStateQueue.GetAndRemoveNext()
+			//if err != nil {
+			//    logger.Error("Error al obtener el siguiente TCB de BlockedStateQueue - %v", err)
+			//    break
+			//}
 			// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
 			if blockedTCB.FatherPCB.PID == pcb.PID {
 				//kernelglobals.ExitStateQueue.Add(blockedTCB)
 				agregarAExitStateQueue(blockedTCB)
+				kernelglobals.BlockedStateQueue.Remove(blockedTCB)
 				logger.Info("(<%d:%d>) Se quita de blocked el hilo", pcb.PID, blockedTCB.TID)
 			} else {
 				// Si no es, se vuelve a insertar en la cola de bloqueados

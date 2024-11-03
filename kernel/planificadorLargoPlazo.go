@@ -43,12 +43,13 @@ func NewProcessToReady() {
 			Type:      types.CreateProcess,
 			Arguments: []string{fileName, processSize},
 		}
-
+		logger.Debug("enviandooooooooooooooooooo")
 		err := sendMemoryRequest(request)
+		logger.Debug("------------------ERROR: %v", err)
 		if err != nil {
 			logger.Error("Error al enviar request a memoria: %v", err)
-
-			if errors.Is(err, types.ErrorRequestType[types.Compactacion]) {
+			logger.Debug("------------------ERROR: %v", err)
+			if errors.Is(err, errors.New("memoria: Se debe compactar")) {
 				logger.Debug("Memoria necesita compactar para crear el proceso...")
 				requestCompact := types.RequestToMemory{
 					Thread:    types.Thread{},
@@ -77,11 +78,14 @@ func NewProcessToReady() {
 					for {
 						<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
 						var err1 error
+						logger.Debug("Termino un proceso, intentando crear proceso pendiente: %v", pid)
 						err1 = sendMemoryRequest(request)
 						if err1 == nil {
 							logger.Debug("Se librero un proceso y ahora hay espacio para crear el proceso con PID: %v", request.Thread.PID)
 							agregarProcesoAReady(pid, prioridad)
 							break
+						} else {
+							
 						}
 					}
 				}(request, pid, prioridad)
@@ -90,7 +94,6 @@ func NewProcessToReady() {
 			logger.Debug("Hay espacio disponible en memoria")
 			agregarProcesoAReady(pid, prioridad)
 		}
-
 	}
 }
 
@@ -377,6 +380,11 @@ func sendMemoryRequest(request types.RequestToMemory) error {
 func handleMemoryResponseError(response *http.Response, TypeRequest string) error {
 	logger.Debug("Memoria respondio a: %v con: %v", TypeRequest, response.StatusCode)
 	if response.StatusCode != http.StatusOK {
+		if response.StatusCode == http.StatusConflict { // Conflict es compactacion.
+			logger.Debug("jiqwdjoiwqjoiwdjoiwjoidw: %v", types.ErrorRequestType[types.Compactacion])
+			err := types.ErrorRequestType[types.Compactacion]
+			return err
+		}
 		err := types.ErrorRequestType[TypeRequest]
 		return err
 	}

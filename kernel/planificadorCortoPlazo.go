@@ -88,7 +88,7 @@ func planificadorCortoPlazo() {
 				}
 			}
 		}()
-
+		kernelsync.PlanificacionFinalizada <- true
 		logger.Trace("Finalizó la planificación")
 	}
 }

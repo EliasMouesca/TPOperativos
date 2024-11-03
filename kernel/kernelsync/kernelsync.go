@@ -42,3 +42,4 @@ var SemIo = make(chan int)
 // SyscallFinalizada La idea es: no pongas otro proceso a ejecutar si la syscall que llamaron no terminó !!
 // en una PC de verdad no tenés una CPU para syscalls y otra para proces, xd
 var SyscallFinalizada = make(chan any)
+var PlanificacionFinalizada = make(chan any)

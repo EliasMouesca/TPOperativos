@@ -2,5 +2,7 @@ SET AX 1
 SET BX 2
 LOG AX
 LOG BX
-PROCESS_EXIT
-
+MUTEX_CREATE recurso1
+MUTEX_LOCK recurso1
+THREAD_CREATE ../demo_code/thread.dino 1
+THREAD_EXIT
