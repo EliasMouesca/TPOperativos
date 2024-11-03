@@ -1,13 +1,17 @@
 package fileSystem_conection
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/sisoputnfrba/tp-golang/memoria/helpers"
+	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
+	"time"
 )
 
-// TODO: Esto le tiene que pedir a filesystem que... vos sabés, haga el dump
 func DumpMemoryHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		logger.Error("Método no permitido")
@@ -15,8 +19,6 @@ func DumpMemoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logger.Debug("Request recibida de: %v", r.RemoteAddr)
-
-	// Leer el cuerpo de la solicitud (debe contener un JSON con la información del hilo)
 	var requestData types.RequestToMemory
 	err := json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
@@ -25,16 +27,66 @@ func DumpMemoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extraer PID y TID del cuerpo JSON enviado
-	pid := requestData.Arguments[0]
-	tid := requestData.Arguments[1]
+	pid := requestData.Thread.PID
+	tid := requestData.Thread.TID
+	logger.Debug("Request de proceso: %v", pid)
+	particion, err := memoriaGlobals.SistemaParticiones.ObtenerParticionDeProceso(pid)
+	if err != nil {
+		logger.Debug("No se ha encontrado la particion para el memory dump...")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	size := particion.Base - particion.Limite
+	var contenidoMemProceso []byte
+	for i := 0; i < int(size); i += 4 {
+		cuatroMordidas, err := helpers.ReadMemory(particion.Base + i)
+		if err != nil {
+			return
+		}
+		contenidoMemProceso = append(contenidoMemProceso, cuatroMordidas...)
+	}
+
+	request := types.RequestToDumpMemory{
+		Contenido: contenidoMemProceso,
+		Nombre:    fmt.Sprintf("<%d>-<%d>-<%s>.dmp", pid, tid, time.Now().Format("2006-01-02T15:04:05")),
+		Size:      size,
+	}
+
+	err = enviarAFileSystem(request)
+	if err != nil {
+		logger.Debug("No se ha enviado la request de memory dump a filesystem: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 
 	// Log obligatorio
 	logger.Info("## Memory Dump solicitado - (PID:TID) - (%v:%v)", pid, tid)
 
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write([]byte("Memory dump solicitado correctamente"))
+}
+
+func enviarAFileSystem(request types.RequestToDumpMemory) error {
+	// Convertir el request a JSON
+	jsonData, err := json.Marshal(request)
 	if err != nil {
-		logger.Error("Error escribiendo response: %v", err)
+		return err
 	}
+
+	// Definir la URL de destino
+	url := fmt.Sprintf("http://%v:%v/filesystem/memoryDump", memoriaGlobals.Config.IpFilesystem, memoriaGlobals.Config.PortFilesystem)
+
+	// Enviar la solicitud POST
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	logger.Debug("DumpMemory enviado a FileSystem: %v", request)
+	// Puedes verificar el código de estado de la respuesta si es necesario
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error en la solicitud: %v", resp.Status)
+	}
+
+	return nil
 }

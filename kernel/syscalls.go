@@ -475,9 +475,10 @@ func DumpMemory(args []string) error {
 	}
 	pcb := execTCB.FatherPCB
 
-	pid := strconv.Itoa(int(execTCB.FatherPCB.PID))
-	tid := strconv.Itoa(int(execTCB.TID))
-
+	//pid := strconv.Itoa(int(execTCB.FatherPCB.PID))
+	//tid := strconv.Itoa(int(execTCB.TID))
+	pid := execTCB.FatherPCB.PID
+	tid := execTCB.TID
 	// Mover el hilo actual a la cola de bloqueados antes de hacer el request a memoria
 	logger.Info("## (<%v:%v>) Se movio a la cola de Bloqueados", pid, tid)
 	kernelglobals.ExecStateThread = nil
@@ -485,8 +486,8 @@ func DumpMemory(args []string) error {
 
 	// Crear el request para la memoria
 	request := types.RequestToMemory{
-		Type:      types.MemoryDump,
-		Arguments: []string{pid, tid},
+		Type:   types.MemoryDump,
+		Thread: types.Thread{PID: pid, TID: tid},
 	}
 
 	// Enviar request a memoria

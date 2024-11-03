@@ -42,7 +42,7 @@ func main() {
 	var err error
 
 	http.HandleFunc("/", notFound)
-	http.HandleFunc("POST /memoryDump", persistMemoryDump)
+	http.HandleFunc("POST /filesystem/memoryDump", persistMemoryDump)
 
 	self := fmt.Sprintf("%v:%v", config.SelfAddress, config.SelfPort)
 	logger.Debug("Corriendo filesystem en %v", self)

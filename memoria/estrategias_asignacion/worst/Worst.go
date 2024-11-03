@@ -14,15 +14,18 @@ func (w *Worst) BuscarParticion(size int, f *[]memoriaTypes.Particion) (error, *
 	maxSize := 0
 
 	for i, particion := range *f {
-		tamanoParticion := particion.Limite - particion.Base
-		if maxSize == 0 {
-			maxSize = tamanoParticion
+		if !particion.Ocupado {
+			tamanoParticion := particion.Limite - particion.Base
+			if maxSize == 0 {
+				maxSize = tamanoParticion
+			}
+			if tamanoParticion >= size && tamanoParticion >= maxSize {
+				particionSeleccionada = &(*f)[i]
+				maxSize = tamanoParticion
+				encontrada = true
+			}
 		}
-		if !particion.Ocupado && tamanoParticion >= size && tamanoParticion > maxSize {
-			particionSeleccionada = &(*f)[i]
-			maxSize = tamanoParticion
-			encontrada = true
-		}
+
 	}
 
 	if !encontrada {

@@ -7,4 +7,5 @@ type ParticionesInterface interface {
 	LiberarParticion(pid types.Pid) error
 	Init()
 	Compactar()
+	ObtenerParticionDeProceso(pid types.Pid) (Particion, error)
 }

@@ -176,5 +176,13 @@ func (d *Dinamicas) LiberarParticion(pid types.Pid) error {
 	logger.Debug("Proceso (< %v >) liberado", pid)
 	logger.Debug("Particiones actuales: %v", d.Particiones)
 	return nil
+}
 
+func (d *Dinamicas) ObtenerParticionDeProceso(pid types.Pid) (memoriaTypes.Particion, error) {
+	for _, particion := range d.Particiones {
+		if particion.Pid == pid {
+			return particion, nil
+		}
+	}
+	return memoriaTypes.Particion{}, fmt.Errorf("no se encontro una particion con el proceso PID: %v", pid)
 }

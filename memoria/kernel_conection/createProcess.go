@@ -27,7 +27,6 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Solicitud inválida", http.StatusBadRequest)
 		return
 	}
-
 	// Extraer el PID y el tamaño desde el cuerpo JSON
 	pid := requestData.Thread.PID
 	mainThread := types.Thread{
@@ -36,6 +35,13 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	size, _ := strconv.Atoi(requestData.Arguments[1])
 	pseudoCodigoAEjecutar := requestData.Arguments[0]
+
+	if size%4 != 0 {
+		logger.Error("El tamaño del proceso no es multiplo de 4")
+		http.Error(w, "El tamaño del proceso no es multiplo de 4", http.StatusBadRequest)
+		return
+	}
+
 	context := types.ExecutionContext{}
 	memoriaGlobals.ExecContext[mainThread] = context
 	logger.Info("Contexto creado para el hilo - (PID:TID): (%v, %v)", pid, 0)

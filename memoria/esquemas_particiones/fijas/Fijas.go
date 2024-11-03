@@ -30,19 +30,19 @@ func (f *Fijas) Init() {
 
 		base += tamanio
 	}
-
 }
 
 func (f *Fijas) AsignarProcesoAParticion(pid types.Pid, size int) error {
 	err, particionEncontrada := memoriaGlobals.EstrategiaAsignacion.BuscarParticion(size, &f.Particiones)
 	if err != nil {
 		logger.Error("La estrategia de asignacion no ha podido asignar el proceso a una particion")
+		return err
 	}
 
 	particionEncontrada.Ocupado = true
 	particionEncontrada.Pid = pid
 	logger.Debug("Proceso (< %v >) asignado en particiones fijas", pid)
-
+	logger.Debug("Particiones luego de asignar: %v", f.Particiones)
 	return nil
 }
 
@@ -59,11 +59,13 @@ func (f *Fijas) AsignarProcesoAParticion(pid types.Pid, size int) error {
 
 func (f *Fijas) LiberarParticion(pid types.Pid) error {
 	encontrada := false
-	for _, particion := range f.Particiones {
+	for i := range f.Particiones {
+		particion := f.Particiones[i]
 		if particion.Pid == pid {
-			particion.Ocupado = false
+			f.Particiones[i].Ocupado = false
+			f.Particiones[i].Pid = 0
 			encontrada = true
-			logger.Debug("Particion encontrada: Base: %v")
+			logger.Debug("Particion encontrada: Base: %v", particion.Base)
 			break
 		}
 	}
@@ -71,5 +73,15 @@ func (f *Fijas) LiberarParticion(pid types.Pid) error {
 		return fmt.Errorf("no se encontro particion que contenga el proceso PID: < %v >", pid)
 	}
 	logger.Debug("Proceso (< %v >) liberado", pid)
+	logger.Debug("Particiones luego de liberar: %v", f.Particiones)
 	return nil
+}
+
+func (f *Fijas) ObtenerParticionDeProceso(pid types.Pid) (memoriaTypes.Particion, error) {
+	for _, particion := range f.Particiones {
+		if particion.Pid == pid {
+			return particion, nil
+		}
+	}
+	return memoriaTypes.Particion{}, fmt.Errorf("no se encontro una particion con el proceso PID: %v", pid)
 }
