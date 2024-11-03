@@ -43,49 +43,28 @@ func NewProcessToReady() {
 			Type:      types.CreateProcess,
 			Arguments: []string{fileName, processSize},
 		}
-		logger.Debug("enviandooooooooooooooooooo")
 		err := sendMemoryRequest(request)
-		logger.Debug("------------------ERROR: %v", err)
 		if err != nil {
 			logger.Error("Error al enviar request a memoria: %v", err)
-			logger.Debug("------------------ERROR: %v", err)
 			if errors.Is(err, errors.New("memoria: Se debe compactar")) {
-				logger.Debug("Memoria necesita compactar para crear el proceso...")
-				requestCompact := types.RequestToMemory{
-					Thread:    types.Thread{},
-					Type:      types.Compactacion,
-					Arguments: []string{},
-				}
-
-				kernelsync.MutexCPU.Lock()
-				var errCompact error
-				errCompact = sendMemoryRequest(requestCompact)
-				if errCompact != nil {
-					logger.Error("Error al enviar request de compactar a memoria: %v", errCompact)
-					kernelsync.MutexCPU.Unlock()
-					return
-				}
-				kernelsync.MutexCPU.Unlock()
-				logger.Debug("Se compacto, entonces mandamos a crear el proceso otra vez")
-				var errNewRequest error
-				errNewRequest = sendMemoryRequest(request)
-				if errNewRequest != nil {
-					logger.Error("Error al enviar request a memoria: %v", errNewRequest)
-					return
-				}
+				solicitarCompactacion(request, prioridad)
 			} else {
 				go func(request types.RequestToMemory, pid int, prioridad int) {
 					for {
 						<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
-						var err1 error
 						logger.Debug("Termino un proceso, intentando crear proceso pendiente: %v", pid)
-						err1 = sendMemoryRequest(request)
+						err1 := sendMemoryRequest(request)
 						if err1 == nil {
 							logger.Debug("Se librero un proceso y ahora hay espacio para crear el proceso con PID: %v", request.Thread.PID)
 							agregarProcesoAReady(pid, prioridad)
 							break
 						} else {
-							
+							// Si entra aca y no al if este, es que no hay espacio dispoible ni compactando entocnes sigue
+							// esperando a que se libere otro proceso
+							if errors.Is(err1, types.ErrorRequestType[types.Compactacion]) {
+								solicitarCompactacion(request, prioridad)
+								break
+							}
 						}
 					}
 				}(request, pid, prioridad)
@@ -95,6 +74,32 @@ func NewProcessToReady() {
 			agregarProcesoAReady(pid, prioridad)
 		}
 	}
+}
+func solicitarCompactacion(request types.RequestToMemory, prioridad int) {
+	logger.Debug("Memoria necesita compactar para crear el proceso...")
+	requestCompact := types.RequestToMemory{
+		Thread:    request.Thread,
+		Type:      types.Compactacion,
+		Arguments: []string{},
+	}
+
+	kernelsync.MutexCPU.Lock()
+
+	errCompact := sendMemoryRequest(requestCompact)
+	if errCompact != nil {
+		logger.Error("Error al enviar request de compactar a memoria: %v", errCompact)
+		kernelsync.MutexCPU.Unlock()
+		return
+	}
+	kernelsync.MutexCPU.Unlock()
+	logger.Debug("Se compacto, entonces mandamos a crear el proceso otra vez")
+
+	errNewRequest := sendMemoryRequest(request)
+	if errNewRequest != nil {
+		logger.Error("Error al enviar request a memoria: %v", errNewRequest)
+		return
+	}
+	agregarProcesoAReady(int(request.Thread.PID), prioridad)
 }
 
 func agregarProcesoAReady(pid int, prioridad int) {
@@ -351,7 +356,7 @@ func UnlockIO() {
 }
 
 func sendMemoryRequest(request types.RequestToMemory) error {
-	logger.Debug("Enviando request a memoria: %v para el THREAD: %v", request.Type, request.Thread)
+	logger.Debug("Enviando request a  memoria: %v para el THREAD: %v", request.Type, request.Thread)
 
 	// Serializar mensaje
 	jsonRequest, err := json.Marshal(request)
