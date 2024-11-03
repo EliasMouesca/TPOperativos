@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
@@ -43,64 +44,105 @@ func NewProcessToReady() {
 			Arguments: []string{fileName, processSize},
 		}
 
-		// Loop hasta que memoria confirme que tiene espacio
-		for {
-			err := sendMemoryRequest(request)
-			if err != nil {
-				logger.Error("Error al enviar request a memoria: %v", err)
-				<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
+		err := sendMemoryRequest(request)
+		if err != nil {
+			logger.Error("Error al enviar request a memoria: %v", err)
+
+			if errors.Is(err, types.ErrorRequestType[types.Compactacion]) {
+				logger.Debug("Memoria necesita compactar para crear el proceso...")
+				requestCompact := types.RequestToMemory{
+					Thread:    types.Thread{},
+					Type:      types.Compactacion,
+					Arguments: []string{},
+				}
+
+				kernelsync.MutexCPU.Lock()
+				var errCompact error
+				errCompact = sendMemoryRequest(requestCompact)
+				if errCompact != nil {
+					logger.Error("Error al enviar request de compactar a memoria: %v", errCompact)
+					kernelsync.MutexCPU.Unlock()
+					return
+				}
+				kernelsync.MutexCPU.Unlock()
+				logger.Debug("Se compacto, entonces mandamos a crear el proceso otra vez")
+				var errNewRequest error
+				errNewRequest = sendMemoryRequest(request)
+				if errNewRequest != nil {
+					logger.Error("Error al enviar request a memoria: %v", errNewRequest)
+					return
+				}
 			} else {
-				logger.Debug("Hay espacio disponible en memoria")
-				break
+				go func(request types.RequestToMemory, pid int, prioridad int) {
+					for {
+						<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
+						var err1 error
+						err1 = sendMemoryRequest(request)
+						if err1 == nil {
+							logger.Debug("Se librero un proceso y ahora hay espacio para crear el proceso con PID: %v", request.Thread.PID)
+							agregarProcesoAReady(pid, prioridad)
+							break
+						}
+					}
+				}(request, pid, prioridad)
 			}
+		} else {
+			logger.Debug("Hay espacio disponible en memoria")
+			agregarProcesoAReady(pid, prioridad)
 		}
 
-		pcbPtr := buscarPCBPorPID(types.Pid(pid))
-		if pcbPtr == nil {
-			logger.Error("No se encontró el PCB con PID <%d> en la lista global", pid)
-		}
-
-		// Crear el hilo principal (mainThread) ahora que el proceso tiene espacio en memoria
-		mainThread := kerneltypes.TCB{
-			TID:       0,
-			Prioridad: prioridad,
-			FatherPCB: pcbPtr,
-		}
-
-		// Agregar el mainThread a la lista de TCBs en el kernel
-		kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
-
-		// Obtener el puntero del hilo principal para encolarlo en Ready
-		mainThreadPtr := buscarTCBPorTID(0, pcbPtr.PID)
-
-		// Mover el mainThread a la cola de Ready
-		kernelglobals.ShortTermScheduler.AddToReady(mainThreadPtr)
-		logger.Info("## (<%d:0>) Se movio a la cola Ready", pid)
-
-		// Señalización para indicar que el proceso ha sido agregado exitosamente a Ready
-		kernelsync.SemProcessCreateOK <- struct{}{}
 	}
+}
+
+func agregarProcesoAReady(pid int, prioridad int) {
+	logger.Debug("Entra a crear proceso aux el PID: %v", pid)
+	pcbPtr := buscarPCBPorPID(types.Pid(pid))
+	if pcbPtr == nil {
+		logger.Error("No se encontró el PCB con PID <%d> en la lista global", pid)
+	}
+
+	// Crear el hilo principal (mainThread) ahora que el proceso tiene espacio en memoria
+	mainThread := kerneltypes.TCB{
+		TID:       0,
+		Prioridad: prioridad,
+		FatherPCB: pcbPtr,
+	}
+
+	// Agregar el mainThread a la lista de TCBs en el kernel
+	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
+	logger.Debug("Se agrega a EVERYTCB el TCB con TID: %v del Proceso con PID: %v", mainThread.TID, pid)
+	// Obtener el puntero del hilo principal para encolarlo en Ready
+	mainThreadPtr := buscarTCBPorTID(0, pcbPtr.PID)
+
+	// Mover el mainThread a la cola de Ready
+	kernelglobals.ShortTermScheduler.AddToReady(mainThreadPtr)
+	logger.Info("## (<%d:0>) Se movio a la cola Ready", pid)
+
+	// Señalización para indicar que el proceso ha sido agregado exitosamente a Ready
+	kernelsync.SemProcessCreateOK <- struct{}{}
 }
 
 func ProcessToExit() {
 	for {
 		// Recibir la señal de finalización de un proceso
 		PID := <-kernelsync.ChannelFinishprocess
-
-		// Simular la comunicación con memoria (puede ser mockeado o real)
+		logger.Debug("entra a process to exit despues del channel")
 		request := types.RequestToMemory{
 			Thread:    types.Thread{PID: PID},
 			Type:      types.FinishProcess,
 			Arguments: []string{},
 		}
-		logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", PID)
 
-		// Simular el request a memoria (puede reemplazarse con la función real si está disponible)
+		logger.Debug("Informando a Memoria sobre la finalización del proceso con PID %d", PID)
 		err := sendMemoryRequest(request)
 		if err != nil {
-			logger.Error("Error en el request: %v", err)
+			logger.Error("Error al terminar un proceso: %v", err)
+			return
 		}
-		kernelsync.InitProcess <- 0
+
+		logger.Debug("Se informo a memoria correctamente")
+		kernelsync.InitProcess <- struct{}{}
+		logger.Debug("*** Termino un ciclo de process to exit ***")
 	}
 }
 
@@ -306,7 +348,7 @@ func UnlockIO() {
 }
 
 func sendMemoryRequest(request types.RequestToMemory) error {
-	logger.Debug("Preguntando a memoria si tiene espacio disponible. ")
+	logger.Debug("Enviando request a memoria: %v para el THREAD: %v", request.Type, request.Thread)
 
 	// Serializar mensaje
 	jsonRequest, err := json.Marshal(request)
@@ -315,18 +357,12 @@ func sendMemoryRequest(request types.RequestToMemory) error {
 	}
 
 	// Hacer request a memoria
-	memoria := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/memoria/%s", kernelglobals.Config.MemoryAddress, kernelglobals.Config.MemoryPort, request.Type)
-	logger.Debug("Enviando request a memoria")
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonRequest))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
+	logger.Debug("Enviando request a memoria: %v", url)
 
-	// Recibo repuesta de memoria
-	resp, err := memoria.Do(req)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonRequest))
 	if err != nil {
+		logger.Error("Error al realizar request memoria: %v", err)
 		return err
 	}
 
@@ -339,6 +375,7 @@ func sendMemoryRequest(request types.RequestToMemory) error {
 
 // esta funcion es auxiliar de sendMemoryRequest
 func handleMemoryResponseError(response *http.Response, TypeRequest string) error {
+	logger.Debug("Memoria respondio a: %v con: %v", TypeRequest, response.StatusCode)
 	if response.StatusCode != http.StatusOK {
 		err := types.ErrorRequestType[TypeRequest]
 		return err

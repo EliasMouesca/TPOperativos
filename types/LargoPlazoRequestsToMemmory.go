@@ -14,6 +14,7 @@ const (
 	CreateThread  = "createThread"
 	FinishThread  = "finishThread"
 	MemoryDump    = "memoryDump"
+	Compactacion  = "compactar"
 )
 
 type RequestToMemory struct {
@@ -23,9 +24,9 @@ type RequestToMemory struct {
 }
 
 var ErrorRequestType = map[string]error{
-	CreateProcess: errors.New("Memoria: No hay espacio disponible en memoria "),
-	FinishProcess: errors.New("Memoria: No se puedo finalizar el proceso"),
-	CreateThread:  errors.New("Memoria: No se puedo crear el hilo"),
-	FinishThread:  errors.New("Memoria: No se pudo finalizar el hilo"),
-	// DumpMemory:
+	CreateProcess: errors.New("memoria: No hay espacio disponible en memoria "),
+	FinishProcess: errors.New("memoria: No se puedo finalizar el proceso"),
+	CreateThread:  errors.New("memoria: No se puedo crear el hilo"),
+	FinishThread:  errors.New("memoria: No se pudo finalizar el hilo"),
+	Compactacion:  errors.New("memoria: Se debe compactar"),
 }

@@ -81,6 +81,7 @@ func main() {
 	http.HandleFunc("/memoria/finishProcess", kernel.FinishProcessHandler)
 	http.HandleFunc("/memoria/createThread", kernel.CreateThreadHandler)
 	http.HandleFunc("/memoria/finishThread", kernel.FinishThreadHandler)
+	http.HandleFunc("/memoria/compactar", kernel.CompactarHandler)
 
 	http.HandleFunc("/memoria/memoryDump", fileSystem.DumpMemoryHandler)
 	http.HandleFunc("/", helpers.BadRequest)

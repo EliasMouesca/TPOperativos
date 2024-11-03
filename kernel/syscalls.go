@@ -64,8 +64,9 @@ func ProcessCreate(args []string) error {
 
 	// Enviar los argumentos al canal para que NewProcessToReady los procese
 	kernelsync.ChannelProcessArguments <- args
-
-	<-kernelsync.SemProcessCreateOK
+	go func() {
+		<-kernelsync.SemProcessCreateOK
+	}()
 
 	return nil
 }
@@ -74,16 +75,16 @@ func ProcessExit(args []string) error {
 	// Esta syscall finalizará el PCB correspondiente al TCB que ejecutó la instrucción,
 	// enviando todos sus TCBs asociados a la cola de EXIT. Esta instrucción sólo será llamada por el TID 0
 	// del proceso y le deberá indicar a la memoria la finalización de dicho proceso.
-
 	tcb := kernelglobals.ExecStateThread
 	pcb := tcb.FatherPCB
 
 	// Enviar la señal a la memoria sobre la finalización del proceso
-	kernelsync.ChannelFinishprocess <- pcb.PID
+
+	logger.Debug("Entra a process exit")
 
 	// Verificar que el hilo que llama sea el main (TID 0)
 	if tcb.TID != 0 {
-		return errors.New("El hilo que quiso eliminar el proceso no es el hilo main")
+		return errors.New("el hilo que quiso eliminar el proceso no es el hilo main")
 	}
 
 	// Eliminar todos los hilos del PCB de las colas de Ready
@@ -93,7 +94,7 @@ func ProcessExit(args []string) error {
 		if existsInReady {
 			err := kernelglobals.ShortTermScheduler.ThreadRemove(tid, pcb.PID)
 			//kernelglobals.ExitStateQueue.Add(tcb)
-			agregarAExitStateQueue(tcb)
+			err = agregarAExitStateQueue(tcb)
 			if err != nil {
 				logger.Error("Error al eliminar el TID <%d> del PCB con PID <%d> de las colas de Ready - %v", tid, pcb.PID, err)
 			}
@@ -138,6 +139,10 @@ func ProcessExit(args []string) error {
 			}
 		}
 	}
+	logger.Debug("proces exit antes del channel")
+	go func() {
+		kernelsync.ChannelFinishprocess <- pcb.PID
+	}()
 
 	// Finalmente, mover el hilo principal (ExecStateThread) a ExitStateQueue
 	kernelglobals.ExitStateQueue.Add(tcb)

@@ -10,7 +10,6 @@ import (
 )
 
 type Dinamicas struct {
-	// TODO: Si la lista fueran punteros a particiones seria todo mas facil :)
 	Particiones []memoriaTypes.Particion
 }
 
@@ -29,18 +28,10 @@ func (d *Dinamicas) AsignarProcesoAParticion(pid types.Pid, size int) error {
 	err, particionEncontrada := memoriaGlobals.EstrategiaAsignacion.BuscarParticion(size, &d.Particiones)
 	logger.Debug("Particion encontrada: %v", particionEncontrada)
 	if err != nil {
-		logger.Debug("------ no es nil")
+		logger.Debug("Error en buscarParticion")
 		if d.hayEspacioLibreSuficiente(size) {
 			logger.Debug("si hay espacio suficiente")
-			// TODO: Que onda esto?
-			// notificarKernelNecesidadDeCompactar
-			// if kernel me dijo que si
-			d.CompactarParticiones()
-			logger.Debug("Particiones actuales: %v", d.Particiones)
-			err, particionEncontrada = memoriaGlobals.EstrategiaAsignacion.BuscarParticion(size, &d.Particiones)
-			if err != nil {
-				return errors.New("no hay espacio de memoria luego de compactar")
-			}
+			return errors.New(types.Compactacion)
 		} else {
 			logger.Error("La estrategia de asignacion no ha podido asignar el proceso a una particion")
 			return err
@@ -48,14 +39,14 @@ func (d *Dinamicas) AsignarProcesoAParticion(pid types.Pid, size int) error {
 	}
 
 	tamParticion := particionEncontrada.Limite - particionEncontrada.Base
+	var nuevasParticiones []memoriaTypes.Particion
 
 	for i, particion := range d.Particiones {
 		if particion.Base == particionEncontrada.Base {
 			// Si a la particion encontrada le sobra espacio
 			if tamParticion > size { // Chequeo si el tamanio de la particion es mayor a lo que el proceso requiere
-				nuevasParticiones := append(
-					// Lo que estaba antes de la particion
-					d.Particiones[:i],
+				nuevasParticiones = append(
+					nuevasParticiones, // vacia
 					memoriaTypes.Particion{ // Particion del proceso
 						Base:    particionEncontrada.Base,
 						Limite:  size + particionEncontrada.Base,
@@ -68,9 +59,16 @@ func (d *Dinamicas) AsignarProcesoAParticion(pid types.Pid, size int) error {
 						Ocupado: false,
 					},
 				)
-				d.Particiones = append(nuevasParticiones, d.Particiones[i+1:]...)
 
+				logger.Debug("Nuevas particiones: %v", nuevasParticiones)
+				logger.Debug("Particiones antes de agregar: %v", d.Particiones)
+
+				nuevasParticiones = append(nuevasParticiones, d.Particiones[i+1:]...)
+				d.Particiones = append(d.Particiones[:i], nuevasParticiones...)
+
+				logger.Debug("Particiones luego de agregar las nuevas: %v", d.Particiones)
 				logger.Debug("Se fracciono la particion Base: %v Limite: %v ", particionEncontrada.Base, particionEncontrada.Limite)
+
 				// Si llega al else la particion encontrada tiene el justo tamaño del proceso asi que se le asgina y listo
 			} else if tamParticion == size {
 				particionEncontrada.Ocupado = true
@@ -81,7 +79,7 @@ func (d *Dinamicas) AsignarProcesoAParticion(pid types.Pid, size int) error {
 
 	}
 	logger.Debug("Se asigno el proceso PID: < %v > a la particion Base: %v Limite %v", pid, particionEncontrada.Base, particionEncontrada.Base+size)
-
+	logger.Debug("Particiones: %v", d.Particiones)
 	return nil
 }
 
@@ -101,7 +99,7 @@ func (d *Dinamicas) hayEspacioLibreSuficiente(espacioRequerido int) bool {
 	return false
 }
 
-func (d *Dinamicas) CompactarParticiones() {
+func (d *Dinamicas) Compactar() {
 	logger.Debug("Entra a compactar")
 	var particionesOcupadas []memoriaTypes.Particion
 	espacioLibreTotal := 0
@@ -141,6 +139,7 @@ func (d *Dinamicas) CompactarParticiones() {
 }
 
 func (d *Dinamicas) LiberarParticion(pid types.Pid) error {
+	logger.Debug("Particiones: %v", d.Particiones)
 	encontrada := false
 	for i := range d.Particiones {
 		particion := d.Particiones[i]

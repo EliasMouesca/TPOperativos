@@ -65,7 +65,7 @@ func GetInstruction(thread types.Thread, pc int) (instruction string, err error)
 	}
 
 	// Obtener la instrucción actual en la posición del PC
-	instruction = instructions[pc-1]
+	instruction = instructions[pc]
 	//TODO: esto puede romper todo, creemos que es (pc - 1)
 
 	return instruction, nil

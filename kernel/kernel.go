@@ -193,7 +193,7 @@ func initFirstProcess(fileName, processSize string) {
 		err := sendMemoryRequest(request)
 		if err != nil {
 			logger.Error("Error al enviar request a memoria: %v", err)
-			<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
+			//<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
 		} else {
 			logger.Debug("Hay espacio disponible en memoria")
 			break

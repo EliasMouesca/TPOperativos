@@ -1,11 +1,13 @@
 package kernel_conection
 
 import (
+	"bufio"
 	"encoding/json"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -28,16 +30,46 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Extraer el PID y el tamaño desde el cuerpo JSON
 	pid := requestData.Thread.PID
-	// tid := 0
-	// pseudoCodigoAEjecutar := requestData.Arguments[0]
-	// despues habria que leer el archivo de instrucciones y cargarlo, como hicieron en createThread.go -> Balbo
-	// otra opcion seria en largo plazo enviarle a memoria la request de crear el hilo main en la funcion newProcessToReady
+	mainThread := types.Thread{
+		PID: pid,
+		TID: types.Tid(0),
+	}
 	size, _ := strconv.Atoi(requestData.Arguments[1])
-	logger.Debug("************* Llega el PID: %v", pid)
-	logger.Debug("************* Tamanio: %v", size)
+	pseudoCodigoAEjecutar := requestData.Arguments[0]
+	context := types.ExecutionContext{}
+	memoriaGlobals.ExecContext[mainThread] = context
+	logger.Info("Contexto creado para el hilo - (PID:TID): (%v, %v)", pid, 0)
+
+	// Leer el archivo y cargarlo a memoria
+	file, err := os.Open(pseudoCodigoAEjecutar)
+	if err != nil {
+		logger.Error("No se pudo abrir el archivo de pseudocódigo - %v", err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	if scanner == nil {
+		logger.Error("No se pudo crear el scanner")
+	}
+
+	for scanner.Scan() {
+		instructionRead := scanner.Text()
+		if isNotAnInstruction(instructionRead) {
+			continue
+		}
+		memoriaGlobals.CodeRegionForThreads[mainThread] = append(
+			memoriaGlobals.CodeRegionForThreads[mainThread], instructionRead)
+	}
+
 	err = memoriaGlobals.SistemaParticiones.AsignarProcesoAParticion(types.Pid(pid), size)
 	if err != nil {
 		logger.Error("Error al asignar el proceso < %v > de tamaño %v a una particion de memoria", pid, size)
+		if err.Error() == types.Compactacion {
+			logger.Debug("Se debe compactar")
+			w.WriteHeader(http.StatusConflict)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	// Log obligatorio

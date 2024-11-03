@@ -12,6 +12,10 @@ type Fijas struct {
 	Particiones []memoriaTypes.Particion
 }
 
+func (f *Fijas) Compactar() {
+
+}
+
 func (f *Fijas) Init() {
 	logger.Debug("Inicializando particiones fijas")
 	base := 0

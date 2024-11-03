@@ -9,13 +9,14 @@ import (
 )
 
 func FinishProcessHandler(w http.ResponseWriter, r *http.Request) {
+	logger.Debug("********Entra a finish process handler")
 	// Verificar que sea un POST en lugar de GET
 	if r.Method != "POST" {
 		logger.Error("Método no permitido")
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		return
 	}
-	logger.Debug("Request recibida de: %v", r.RemoteAddr)
+	logger.Debug("Request de finishProcess recibida de: %v", r.RemoteAddr)
 
 	// Leer el cuerpo de la solicitud (debe contener un JSON con la información del proceso)
 	var requestData types.RequestToMemory
@@ -28,17 +29,21 @@ func FinishProcessHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Extraer PID del cuerpo JSON enviado por ProcessToExit
 	pidS := requestData.Thread.PID
-	err = memoriaGlobals.SistemaParticiones.LiberarParticion(pidS)
-	if err != nil {
+	var errLiberar error
+	errLiberar = memoriaGlobals.SistemaParticiones.LiberarParticion(pidS)
+	if errLiberar != nil {
+		logger.Error("Error al liberar particion: %v ", errLiberar.Error())
 		http.Error(w, "No se pudo liberar la particion", http.StatusInternalServerError)
+		return
 	}
 
 	// Log obligatorio
 	logger.Info("## Proceso Destruido - PID: %v", pidS)
-
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write([]byte("Proceso destruido correctamente"))
-	if err != nil {
-		logger.Error("Error escribiendo response: %v", err)
-	}
+
+	//_, err = w.Write([]byte("Proceso destruido correctamente"))
+	//if err != nil {
+	//	logger.Error("Error escribiendo response: %v", err)
+	//}
+	logger.Debug("******* FIN de Finish process handler")
 }
