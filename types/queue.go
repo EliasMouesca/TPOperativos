@@ -17,6 +17,16 @@ type Queue[T Nulleable[T]] struct {
 	Priority int
 }
 
+func (c *Queue[T]) Contains(t T) bool {
+	for _, e := range c.elements {
+		if e.Equal(t) {
+			return true
+		}
+	}
+	// Si llega acá es porque la queue está vacia => No contiene el elemento
+	return false
+}
+
 func (c *Queue[T]) GetElements() []T {
 	return c.elements
 }
