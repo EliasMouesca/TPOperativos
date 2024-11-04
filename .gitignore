@@ -5,4 +5,4 @@ memoria/memoria
 kernel/kernel
 filesystem/filesystem
 WindowsPowerShell
-.dmp
+*.dmp
