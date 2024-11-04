@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
@@ -18,7 +19,7 @@ func BadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func WriteMemory(dir int, data []byte) error {
+func WriteMemory(dir int, data [4]byte) error {
 	var err error
 
 	if ValidMemAddress(dir) {
@@ -26,27 +27,27 @@ func WriteMemory(dir int, data []byte) error {
 		return err
 	}
 
-	var cuatroMordidas []byte
 	for i := 0; i <= 3; i++ {
-		cuatroMordidas[i] = memoriaGlobals.UserMem[dir+i]
+		data[i] = memoriaGlobals.UserMem[dir+i]
 	}
 	return nil
 }
 
-func ReadMemory(dir int) ([]byte, error) {
+func ReadMemory(dir int) (uint32, error) {
 	var err error
-
 	if ValidMemAddress(dir) {
 		err = errors.New("No existe la dirección física solicitada")
-		return nil, err
+		return 0, err
 	}
 
-	var cuatroMordidas []byte
+	var cuatroMordidas [4]byte
 
 	for i := 0; i <= 3; i++ {
 		cuatroMordidas[i] = memoriaGlobals.UserMem[dir+i]
 	}
-	return cuatroMordidas, nil
+
+	data := binary.BigEndian.Uint32(cuatroMordidas[:])
+	return data, nil
 }
 
 func GetInstruction(thread types.Thread, pc int) (instruction string, err error) {
