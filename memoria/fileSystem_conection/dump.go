@@ -49,7 +49,7 @@ func DumpMemoryHandler(w http.ResponseWriter, r *http.Request) {
 
 	request := types.RequestToDumpMemory{
 		Contenido: contenidoMemProceso,
-		Nombre:    fmt.Sprintf("<%d>-<%d>-<%s>.dmp", pid, tid, time.Now().Format("2006-01-02T15:04:05")),
+		Nombre:    fmt.Sprintf("%d-%d-%s.dmp", pid, tid, time.Now().Format("2006-01-02T15:04:05")),
 		Size:      size,
 	}
 

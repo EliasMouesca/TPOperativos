@@ -1,3 +1,4 @@
 package types
 
-type Block
+type Block struct {
+}
