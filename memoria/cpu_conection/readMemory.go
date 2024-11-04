@@ -1,6 +1,7 @@
 package cpu_conection
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"github.com/sisoputnfrba/tp-golang/memoria/helpers"
 	"github.com/sisoputnfrba/tp-golang/memoria/memoriaGlobals"
@@ -35,12 +36,14 @@ func ReadMemoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := helpers.ReadMemory(dir)
+	cautroMordidas, err := helpers.ReadMemory(dir)
 	if err != nil {
 		logger.Error("Error al leer la dirección: %v", dir)
 		http.Error(w, "No se pudo leer la dirección de memoria", http.StatusNotFound)
 		return
 	}
+
+	data := binary.BigEndian.Uint32(cautroMordidas[:])
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

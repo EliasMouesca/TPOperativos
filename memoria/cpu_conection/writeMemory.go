@@ -52,7 +52,7 @@ func WriteMemoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var cuatromordidas [4]byte
+	var cuatromordidas []byte
 	// Bit más significativo va a l principio del
 	binary.BigEndian.PutUint32(cuatromordidas[:], data)
 
