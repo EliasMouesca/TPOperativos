@@ -11,6 +11,10 @@ import (
 
 var config fsConfig
 
+// TODO Usar memmap()
+// TODO Chequear que no haya ya un archivo con el mismo nombre cuando mandan memdump
+// TODO Hacer que el handler use el fs
+
 func init() {
 	loggerLevel := "INFO"
 	err := logger.ConfigureLogger("filesystem.log", loggerLevel)
@@ -59,8 +63,16 @@ func main() {
 
 // Funciones init e initialize kajajsjasj y.. bueno
 func initialize() error {
+	var err error
+
+	// Creamos el mount dir
+	err = os.MkdirAll(config.MountDir+"/files", 0755)
+	if err != nil {
+		logger.Fatal("No se pudo crear el mountpoint - %v", err)
+	}
+
 	// Existe "bitmap.dat"?
-	infoBitmap, errBitmap := os.Stat(bitmapFilename)
+	infoBitmap, errBitmap := os.Stat(config.MountDir + "/" + bitmapFilename)
 	if errBitmap != nil {
 		if !os.IsNotExist(errBitmap) {
 			return errBitmap
@@ -68,7 +80,7 @@ func initialize() error {
 	}
 
 	// Existe "bloques.dat"?
-	infoBloques, errBloques := os.Stat(bloquesFilename)
+	infoBloques, errBloques := os.Stat(config.MountDir + "/" + bloquesFilename)
 	if errBloques != nil {
 		if !os.IsNotExist(errBloques) {
 			return errBloques
@@ -89,7 +101,7 @@ func initialize() error {
 
 		// Creamos el archivo bitmap
 		logger.Debug("Creando el archivo '%s'", bitmapFilename)
-		bitmapFile, err := os.OpenFile(bitmapFilename, os.O_RDWR|os.O_CREATE, 0644)
+		bitmapFile, err = os.OpenFile(config.MountDir+"/"+bitmapFilename, os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
@@ -101,9 +113,15 @@ func initialize() error {
 			return err
 		}
 
+		// Hacemos seek al comienzo porque este archivo no se va a cerrar hasta que cerremos el programa
+		_, err = bitmapFile.Seek(0, 0)
+		if err != nil {
+			return nil
+		}
+
 		// "bloques.dat"
 		logger.Debug("Creando el archivo '%s'", bloquesFilename)
-		bloquesFile, err = os.OpenFile(bloquesFilename, os.O_RDWR|os.O_CREATE, 0644)
+		bloquesFile, err = os.OpenFile(config.MountDir+"/"+bloquesFilename, os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
@@ -112,6 +130,11 @@ func initialize() error {
 		_, err = bloquesFile.Write(buffer)
 		if err != nil {
 			return err
+		}
+
+		_, err = bloquesFile.Seek(0, 0)
+		if err != nil {
+			return nil
 		}
 
 		return nil
@@ -126,13 +149,12 @@ func initialize() error {
 	}
 
 	// Los abrimos
-	var err error
-	bitmapFile, err = os.OpenFile(bitmapFilename, os.O_RDWR, 0644)
+	bitmapFile, err = os.OpenFile(config.MountDir+"/"+bitmapFilename, os.O_RDWR, 0644)
 	if err != nil {
 		return err
 	}
 
-	bloquesFile, err = os.OpenFile(bloquesFilename, os.O_RDWR, 0644)
+	bloquesFile, err = os.OpenFile(config.MountDir+"/"+bloquesFilename, os.O_RDWR, 0644)
 	if err != nil {
 		return err
 	}
