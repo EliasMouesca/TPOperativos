@@ -26,6 +26,7 @@ func writeFilePhysically(filename string, data []byte) error {
 }
 
 // TODO: Chequear que no haya ya un archivo con el mismo nombre
+// writeFile recibe el nombre, la data y crea el archivo
 func writeFile(filename string, data []byte) error {
 	size := len(data)
 
@@ -33,7 +34,6 @@ func writeFile(filename string, data []byte) error {
 	if size > config.BlockSize*(config.BlockCount-1) {
 		return errors.New("archivo demasiado grande")
 	}
-
 	// Si lo que quieren guardar es más grande que usar todos los bloques que podemos direccionar con un bloque => impostor among us
 	if size > (config.BlockSize/4)*config.BlockSize {
 		return errors.New("archivo demasiado grande")
@@ -50,9 +50,11 @@ func writeFile(filename string, data []byte) error {
 
 	logger.Trace("Persistiendo %v bytes", len(bloquesDato))
 
-	// Guardamos los indices de los bloquesDato en el bloqueIndice
+	// Por cada bloque dato, guarda su índice en el bloque índice Y escribí la data en el bloque dato
 	for i, bloqueDato := range bloquesDato {
+		// -- Escribimos en el bloque índice --
 		buffer := make([]byte, 4)
+		// Por qué little endian? -> es más fácil de leer en la terminal. No importa igual pq nunca hacemos la operacion de lectura.
 		binary.LittleEndian.PutUint32(buffer, bloqueDato)
 		bytesWritten, err := bloquesFile.WriteAt(buffer, int64(int(bloqueIndice)*config.BlockSize+4*i))
 		if err != nil || bytesWritten != 4 {
@@ -62,9 +64,11 @@ func writeFile(filename string, data []byte) error {
 			logger.Fatal("Al menos un bloque no se pudo escribir - %v", err)
 		}
 
+		//-- Escribimos en el bloque dato --
 		// Escribí en donde corresponda (bloqueDato * blockSize) un cacho de la data.
-		// De que tamaño el cacho? -> del tamaño de un bloque o de lo que te quede por escribir, lo que sea más chico
 		bytesWritten, err = bloquesFile.WriteAt(
+			// El cacho de bytes a escribir va desde el número de bloque (i) * el tamaño de bloque
+			// hasta el siguiente bloque o el limite de la slice, lo que sea más chico.
 			data[i*config.BlockSize:min((i+1)*config.BlockSize, len(data))],
 			int64(int(bloqueDato)*config.BlockSize))
 		if err != nil {
@@ -84,15 +88,19 @@ func writeFile(filename string, data []byte) error {
 		return err
 	}
 
+	logger.Info("## Archivo Creado: %s - Tamaño: %v", filename, len(data))
+
 	return nil
 }
 
+// allocateBlocks recibe cuantos bloques querés y te devuelve una lista con los que te asginó o error.
+// Esta función hace tanto el chequeo como la asignación.
 func allocateBlocks(numberOfBlocksToAllocate int) ([]uint32, error) {
 	logger.Trace("Asignando %v bloques", numberOfBlocksToAllocate)
 	bitmapMutex.Lock()
 	defer bitmapMutex.Unlock()
 
-	// Leemos el bitmap, después hay que persistirlo si lo cambiamos
+	// Hacemos una copai del bitmap en memoria, después hay que persistirla si queremos guardar los cambios
 	bitmap, err := io.ReadAll(bitmapFile)
 	if err != nil {
 		return nil, err
@@ -100,16 +108,21 @@ func allocateBlocks(numberOfBlocksToAllocate int) ([]uint32, error) {
 
 	selectedBlocks := make([]uint32, 0, numberOfBlocksToAllocate)
 
+	// Por cada byte en el bitmap...
 	for byteInBitmap := 0; byteInBitmap < len(bitmap); byteInBitmap++ {
 		logger.Trace("Probando byte: %v", byteInBitmap)
+		// Por cada bit en un byte...
 		for bit := 0; bit < 8; bit++ {
 			logger.Trace("Probando bit: %v", bit)
+			// Si el bit está seteado en 0
 			if (bitmap[byteInBitmap] & (1 << bit)) == 0 {
 				logger.Trace("Bloque seleccionado: %v", byteInBitmap*8+bit)
+				// Ponelo en 1
 				bitmap[byteInBitmap] |= 1 << bit
+				// y agregalo a la lista de los seleccionados
 				selectedBlocks = append(selectedBlocks, uint32(byteInBitmap*8+bit))
 			}
-
+			// Si ya tenemos los que necesitamos, salí
 			if len(selectedBlocks) >= numberOfBlocksToAllocate {
 				goto OutsideTheForLoops
 			}
@@ -117,20 +130,30 @@ func allocateBlocks(numberOfBlocksToAllocate int) ([]uint32, error) {
 	}
 
 	// Si llego hasta acá y no saltó a "OutsideTheForLoops" es porque leyó el bitmap
-	// y no encontró suficientes bloques libres. Simplemente nos vamos sin persistir y chau.
+	// y no encontró suficientes bloques libres. Simplemente nos vamos sin guardar y chau.
+	logger.Debug("No hay espacio suficiente")
 	return nil, errors.New("no hay espacio suficiente")
 
 OutsideTheForLoops:
-	// Esto escribe varias veces la misma posición si es que dos bloques fueron asignados en el mismo byte, pero bueno
+	// TODO: Esto escribe varias veces la misma posición si es que dos bloques fueron asignados en el mismo byte.
+	// Por cada bloque elegido, actualizá el archivo del bitmap
 	for _, block := range selectedBlocks {
 		// ie. El bloque es el 38 (= 4 * 8 + 6), entonces el byte en el que esta guardado es el 4
 		blockByte := block / 8
 		// Actualizamos ese byte
 		_, err := bitmapFile.WriteAt([]byte{bitmap[blockByte]}, int64(blockByte))
+
+		// Si algo falló rompé t0do pq el sistema quedó en un estado inconsistente
 		if err != nil {
 			// por qué es fatal? -> porque puede salir bien la primera y fallar la segunda => estado inconsistente => xd
 			logger.Fatal("No se pudieron persistir las asignaciones de bloques")
 		}
+
+		// TODO: A este log le falta información que no logeamos pq no la tenemos en este punto! Nombre del archivo y cantidad de bloques libres
+		logger.Info("## Bloque asignado: %v", block)
 	}
+
+	logger.Debug("MemoryDump completado")
+
 	return selectedBlocks, nil
 }

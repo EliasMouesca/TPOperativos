@@ -11,10 +11,7 @@ import (
 
 var config fsConfig
 
-// TODO Usar memmap()
 // TODO Chequear que no haya ya un archivo con el mismo nombre cuando mandan memdump
-// TODO Hacer que el handler use el fs
-
 func init() {
 	loggerLevel := "INFO"
 	err := logger.ConfigureLogger("filesystem.log", loggerLevel)
