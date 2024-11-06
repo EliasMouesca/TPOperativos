@@ -2,7 +2,7 @@
 PROJECTS=cpu memoria filesystem kernel 
 #TERMINAL=st
 #SHELL=fish
-CODE_TO_RUN=../demo_code/dumpmemory.dino
+CODE_TO_RUN=../pruebas/PLANI_PROC
 
 .NOTPARALLEL:
 
@@ -27,6 +27,6 @@ magic: all
 	tmux send-keys -t $(TMUX_SESSION):0.0 "cd memoria && ./memoria" C-m
 	tmux send-keys -t $(TMUX_SESSION):0.1 "cd cpu && ./cpu" C-m
 	tmux send-keys -t $(TMUX_SESSION):0.2 "cd filesystem && ./filesystem" C-m
-	tmux send-keys -t $(TMUX_SESSION):0.3 "sleep 1; cd kernel && ./kernel $(CODE_TO_RUN) 12" C-m
+	tmux send-keys -t $(TMUX_SESSION):0.3 "sleep 1; cd kernel && ./kernel $(CODE_TO_RUN) 32" C-m
 	tmux attach-session -t $(TMUX_SESSION)
 

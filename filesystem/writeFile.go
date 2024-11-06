@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+func Min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func writeFilePhysically(filename string, data []byte) error {
 	logger.Trace("Se está creando el archivo '%s' físicamente en la computadora, fopen(), fwrite()...", filename)
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
@@ -72,7 +79,7 @@ func writeFile(filename string, data []byte) error {
 		bytesWritten, err = bloquesFile.WriteAt(
 			// El cacho de bytes a escribir va desde el número de bloque (i) * el tamaño de bloque
 			// hasta el siguiente bloque o el limite de la slice, lo que sea más chico.
-			data[i*config.BlockSize:min((i+1)*config.BlockSize, len(data))],
+			data[i*config.BlockSize:Min((i+1)*config.BlockSize, len(data))],
 			int64(int(bloqueDato)*config.BlockSize))
 		if err != nil {
 			logger.Fatal("Al menos un bloque no se pudo escribir - %v", err)
