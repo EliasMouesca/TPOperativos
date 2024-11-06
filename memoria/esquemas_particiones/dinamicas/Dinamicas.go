@@ -24,17 +24,17 @@ func (d *Dinamicas) Init() {
 	})
 }
 
-func (d *Dinamicas) AsignarProcesoAParticion(pid types.Pid, size int) error {
+func (d *Dinamicas) AsignarProcesoAParticion(pid types.Pid, size int) (base uint32, err error) {
 	err, particionEncontrada := memoriaGlobals.EstrategiaAsignacion.BuscarParticion(size, &d.Particiones)
 	logger.Debug("Particion encontrada: %v", particionEncontrada)
 	if err != nil {
 		logger.Debug("Error en buscarParticion")
 		if d.hayEspacioLibreSuficiente(size) {
 			logger.Debug("si hay espacio suficiente")
-			return errors.New(types.Compactacion)
+			return 0, errors.New(types.Compactacion)
 		} else {
 			logger.Error("La estrategia de asignacion no ha podido asignar el proceso a una particion")
-			return err
+			return 0, err
 		}
 	}
 
@@ -80,7 +80,7 @@ func (d *Dinamicas) AsignarProcesoAParticion(pid types.Pid, size int) error {
 	}
 	logger.Debug("Se asigno el proceso PID: < %v > a la particion Base: %v Limite %v", pid, particionEncontrada.Base, particionEncontrada.Base+size)
 	logger.Debug("Particiones: %v", d.Particiones)
-	return nil
+	return uint32(particionEncontrada.Base), nil
 }
 
 func (d *Dinamicas) hayEspacioLibreSuficiente(espacioRequerido int) bool {

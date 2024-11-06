@@ -42,10 +42,6 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	context := types.ExecutionContext{}
-	memoriaGlobals.ExecContext[mainThread] = context
-	logger.Info("Contexto creado para el hilo - (PID:TID): (%v, %v)", pid, 0)
-
 	// Leer el archivo y cargarlo a memoria
 	file, err := os.Open(pseudoCodigoAEjecutar)
 	if err != nil {
@@ -66,7 +62,7 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 			memoriaGlobals.CodeRegionForThreads[mainThread], instructionRead)
 	}
 
-	err = memoriaGlobals.SistemaParticiones.AsignarProcesoAParticion(types.Pid(pid), size)
+	base, err := memoriaGlobals.SistemaParticiones.AsignarProcesoAParticion(types.Pid(pid), size)
 	if err != nil {
 		logger.Error("Error al asignar el proceso < %v > de tamaño %v a una particion de memoria", pid, size)
 		if err.Error() == types.Compactacion {
@@ -77,6 +73,13 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	logger.Trace("MemoryBase: %v; MemorySize: %v", base, size)
+	context := types.ExecutionContext{}
+	context.MemoryBase = base
+	context.MemorySize = uint32(size)
+	memoriaGlobals.ExecContext[mainThread] = context
+	logger.Info("Contexto creado para el hilo - (PID:TID): (%v, %v): %v", pid, 0, context)
 
 	// Log obligatorio
 	logger.Info("## Proceso Creado - PID: < %v > - Tamaño: < %v >", pid, size)

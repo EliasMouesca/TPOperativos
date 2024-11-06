@@ -212,19 +212,19 @@ func initFirstProcess(fileName, processSize string) {
 	// Agregar el TCB a la lista global de TCBs en el kernel
 	kernelglobals.EveryTCBInTheKernel = append(kernelglobals.EveryTCBInTheKernel, mainThread)
 
-	// LE AVISO A MEMORIA QUE SE CREO UN NUEVO HILO
-	request2 := types.RequestToMemory{
-		Thread:    types.Thread{PID: mainThread.FatherPCB.PID, TID: mainThread.TID},
-		Type:      types.CreateThread,
-		Arguments: []string{fileName},
-	}
-
-	// Enviar la solicitud a memoria
-	err2 := sendMemoryRequest(request2)
-	if err2 != nil {
-		logger.Error("Error en el request a memoria: %v", err2)
-		return
-	}
+	//// LE AVISO A MEMORIA QUE SE CREO UN NUEVO HILO
+	//request2 := types.RequestToMemory{
+	//	Thread:    types.Thread{PID: mainThread.FatherPCB.PID, TID: mainThread.TID},
+	//	Type:      types.CreateThread,
+	//	Arguments: []string{fileName},
+	//}
+	//
+	//// Enviar la solicitud a memoria
+	//err2 := sendMemoryRequest(request2)
+	//if err2 != nil {
+	//	logger.Error("Error en el request a memoria: %v", err2)
+	//	return
+	//}
 
 	// Hacer que este thread sea el que está en ejecución
 	newThread := buscarTCBPorTID(mainThread.TID, pcb.PID)

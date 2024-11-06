@@ -24,7 +24,7 @@ func persistMemoryDump(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(dumpRequest.Contenido) == dumpRequest.Size {
+	if len(dumpRequest.Contenido) != dumpRequest.Size {
 		w.WriteHeader(http.StatusBadRequest)
 		logger.Error("Se solicitó una dump request que tiene un tamaño distinto al del slice enviado")
 		w.Write([]byte("El tamaño del slice y el tamaño envíado en la request no coinciden!"))

@@ -39,17 +39,18 @@ var instructionSet = map[string]Instruction{
 }
 
 func writeMemInstruction(context *types.ExecutionContext, arguments []string) error {
-	dataRegister, err := context.GetRegister(arguments[0])
+	dataRegister, err := context.GetRegister(arguments[1])
 	if err != nil {
 		return err
 	}
 
-	virtualAddressRegister, err := context.GetRegister(arguments[1])
+	virtualAddressRegister, err := context.GetRegister(arguments[0])
 	if err != nil {
 		return err
 	}
 
 	physicalAddress := context.MemoryBase + *virtualAddressRegister
+	logger.Debug("Physical address: %v, Tamaño: %v", physicalAddress, context.MemorySize)
 
 	if *virtualAddressRegister >= context.MemorySize {
 		logger.Debug("Se trató de escribir una dirección no perteneciente al proceso! Interrumpiendo...")

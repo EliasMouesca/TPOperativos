@@ -68,7 +68,7 @@ func init() {
 
 func main() {
 	logger.Info("--- Comienzo ejecución MEMORIA ---")
-
+	memoriaGlobals.UserMem = make([]byte, memoriaGlobals.Config.MemorySize)
 	// TRUE RESPONSE
 	http.HandleFunc("/memoria/getContext", cpu.GetContextHandler)
 	http.HandleFunc("/memoria/saveContext", cpu.SaveContextHandler)

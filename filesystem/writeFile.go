@@ -48,7 +48,7 @@ func writeFile(filename string, data []byte) error {
 	bloqueIndice := bloques[0]
 	bloquesDato := bloques[1:]
 
-	logger.Trace("Persistiendo %v bytes", len(bloquesDato))
+	logger.Trace("Persistiendo %v bytes: %v", len(bloquesDato), data)
 
 	// Por cada bloque dato, guarda su índice en el bloque índice Y escribí la data en el bloque dato
 	for i, bloqueDato := range bloquesDato {

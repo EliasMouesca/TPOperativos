@@ -32,18 +32,18 @@ func (f *Fijas) Init() {
 	}
 }
 
-func (f *Fijas) AsignarProcesoAParticion(pid types.Pid, size int) error {
+func (f *Fijas) AsignarProcesoAParticion(pid types.Pid, size int) (base uint32, err error) {
 	err, particionEncontrada := memoriaGlobals.EstrategiaAsignacion.BuscarParticion(size, &f.Particiones)
 	if err != nil {
 		logger.Error("La estrategia de asignacion no ha podido asignar el proceso a una particion")
-		return err
+		return 0, err
 	}
 
 	particionEncontrada.Ocupado = true
 	particionEncontrada.Pid = pid
 	logger.Debug("Proceso (< %v >) asignado en particiones fijas", pid)
 	logger.Debug("Particiones luego de asignar: %v", f.Particiones)
-	return nil
+	return uint32(particionEncontrada.Base), nil
 }
 
 // No hace falta

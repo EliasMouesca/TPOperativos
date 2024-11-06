@@ -37,16 +37,19 @@ func DumpMemoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	size := particion.Base - particion.Limite
+	size := particion.Limite - particion.Base
 	var contenidoMemProceso []byte
-	for i := 0; i < int(size); i += 4 {
+	for i := 0; i < size; i += 4 {
 		cuatroMordidas, err := helpers.ReadMemory(particion.Base + i)
 		if err != nil {
+			logger.Error("Error al leer memoria: %v", err)
 			return
 		}
 		contenidoMemProceso = append(contenidoMemProceso, cuatroMordidas...)
 	}
+	logger.Trace("Bytes leidos: %v", contenidoMemProceso)
 
+	logger.Trace("Size: %v, len: %v", size, len(contenidoMemProceso))
 	request := types.RequestToDumpMemory{
 		Contenido: contenidoMemProceso,
 		Nombre:    fmt.Sprintf("%d-%d-%s.dmp", pid, tid, time.Now().Format("2006-01-02T15:04:05")),

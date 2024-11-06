@@ -21,29 +21,31 @@ func BadRequest(w http.ResponseWriter, r *http.Request) {
 func WriteMemory(dir int, data []byte) error {
 	var err error
 
-	if ValidMemAddress(dir) {
-		err = errors.New("No existe la dirección física solicitada")
+	if !ValidMemAddress(dir) {
+		err = errors.New("no existe la dirección física solicitada")
 		return err
 	}
 
 	for i := 0; i <= 3; i++ {
-		data[i] = memoriaGlobals.UserMem[dir+i]
+		memoriaGlobals.UserMem[dir+i] = data[i]
 	}
 	return nil
 }
 
 func ReadMemory(dir int) ([]byte, error) {
 	var err error
-	if ValidMemAddress(dir) {
-		err = errors.New("No existe la dirección física solicitada")
+	if !ValidMemAddress(dir) {
+		err = errors.New("no existe la dirección física solicitada")
 		return nil, err
 	}
 
-	var cuatroMordidas []byte
+	var cuatroMordidas = make([]byte, 4)
 
 	for i := 0; i <= 3; i++ {
 		cuatroMordidas[i] = memoriaGlobals.UserMem[dir+i]
 	}
+
+	logger.Trace("cuatroMordidas: %v", cuatroMordidas)
 
 	return cuatroMordidas, nil
 }
@@ -71,8 +73,7 @@ func GetInstruction(thread types.Thread, pc int) (instruction string, err error)
 }
 
 func ValidMemAddress(dir int) bool {
-	if dir > 0 && dir+3 <= len(memoriaGlobals.UserMem) {
-		return false
-	}
-	return true
+	logger.Trace("Es '%v' una dirección válida? -> %v", dir,
+		!(dir < 0 || dir+3 >= len(memoriaGlobals.UserMem)))
+	return !(dir < 0 || dir+3 >= len(memoriaGlobals.UserMem))
 }

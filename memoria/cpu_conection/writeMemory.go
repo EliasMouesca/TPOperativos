@@ -26,7 +26,7 @@ func WriteMemoryHandler(w http.ResponseWriter, r *http.Request) {
 	pidS := query.Get("pid")
 
 	// Log obligatorio
-	logger.Info("## Escritura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS, "")
+	logger.Info("## Escritura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS, "4 bytes")
 	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 
 	dir, err := strconv.Atoi(dirS)
@@ -52,15 +52,18 @@ func WriteMemoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var cuatromordidas []byte
+	var cuatromordidas = make([]byte, 4)
+	logger.Trace("Momento Big Endian, data: %v", data)
 	// Bit más significativo va a l principio del
-	binary.BigEndian.PutUint32(cuatromordidas[:], data)
+	binary.BigEndian.PutUint32(cuatromordidas, data)
+	logger.Trace("Despues Big Endian, data: %v, 4b: %v", data, cuatromordidas)
 
 	err = helpers.WriteMemory(dir, cuatromordidas)
 	if err != nil {
-		logger.Error("Error al escribir en memoria de usuario")
+		logger.Error("Error al escribir en memoria de usuario - %v", err)
 		http.Error(w, "Error al escribir en memoria", http.StatusInternalServerError)
 		return
 	}
+	logger.Trace("Escritura todo bien %v", cuatromordidas)
 	w.WriteHeader(http.StatusOK)
 }
