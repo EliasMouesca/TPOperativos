@@ -6,7 +6,7 @@
   "mount_dir": "disk",
   "block_size": 64,
   "block_count": 1024,
-  "block_access_delay": 15000,
+  "block_access_delay": 5000,
   "log_level": "TRACE"
 }
 

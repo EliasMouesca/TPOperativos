@@ -7,6 +7,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"io"
 	"os"
+	"time"
 )
 
 func writeFilePhysically(filename string, data []byte) error {
@@ -48,10 +49,12 @@ func writeFile(filename string, data []byte) error {
 	bloqueIndice := bloques[0]
 	bloquesDato := bloques[1:]
 
-	logger.Trace("Persistiendo %v bytes: %v", len(bloquesDato), data)
+	logger.Trace("Persistiendo %v bloques: %v", len(bloquesDato), data)
 
 	// Por cada bloque dato, guarda su índice en el bloque índice Y escribí la data en el bloque dato
 	for i, bloqueDato := range bloquesDato {
+		time.Sleep(time.Duration(config.BlockAccessDelay) * time.Millisecond)
+		//time.Sleep(5 * time.Second)
 		// -- Escribimos en el bloque índice --
 		buffer := make([]byte, 4)
 		// Por qué little endian? -> es más fácil de leer en la terminal. No importa igual pq nunca hacemos la operacion de lectura.
