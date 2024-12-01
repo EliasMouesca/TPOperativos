@@ -13,5 +13,5 @@
   "scheme": "FIJAS",
   "search_algorithm": "FIRST",
   "partitions": [32, 32, 32, 32, 32, 32, 32, 32],
-  "log_level": "TRACE"
+  "log_level": "DEBUG"
 }

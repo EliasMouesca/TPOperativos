@@ -227,9 +227,6 @@ func loopInstructionCycle() {
 	receivedInterrupt := <-interruptionChannel
 	currentThread = nil
 
-	// Libera la CPU
-	cpuMutex.Unlock()
-
 	// Kernel tu proceso terminó
 	err := kernelYourProcessFinished(finishedThread, receivedInterrupt)
 	if err != nil {
@@ -242,6 +239,8 @@ func loopInstructionCycle() {
 		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())
 	}
 
+	// Libera la CPU
+	cpuMutex.Unlock()
 	MutexInterruption.Unlock()
 }
 

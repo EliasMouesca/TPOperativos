@@ -71,15 +71,16 @@ func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
 
 	var nextTcb *kerneltypes.TCB
 	var err error
-	for i := range cmm.ReadyQueue {
-		if !cmm.ReadyQueue[i].IsEmpty() {
-			nextTcb, err = cmm.ReadyQueue[i].GetAndRemoveNext()
+	for _, cola := range cmm.ReadyQueue {
+		if !cola.IsEmpty() {
+			nextTcb, err = cola.GetAndRemoveNext()
 			if err != nil {
 				return nil, err
 			}
+			return nextTcb, nil
 		}
 	}
-	return nextTcb, nil
+	return nil, errors.New("no hay ningun hilo en ready")
 }
 
 func (cmm *ColasMultiNivel) AddToReady(tcb *kerneltypes.TCB) error {
@@ -150,6 +151,10 @@ func (cmm *ColasMultiNivel) addNewQueue(tcb *kerneltypes.TCB) error {
 	// Si la prioridad es la menor (número más alto), se agrega al final
 	if !insertedAt {
 		cmm.ReadyQueue = append(cmm.ReadyQueue, newQueue)
+	}
+
+	for i, v := range cmm.ReadyQueue {
+		logger.Warn("Cola %v, prioridad: %v", i, v.Priority)
 	}
 
 	return nil
