@@ -11,6 +11,8 @@ import (
 )
 
 func GetContextHandler(w http.ResponseWriter, r *http.Request) {
+	defer time.Sleep(time.Millisecond * time.Duration(memoriaGlobals.Config.ResponseDelay))
+
 	logger.Trace("Memoria entró a GetContextHandler()")
 	if r.Method != "GET" {
 		logger.Error("Metodo no permitido")
@@ -56,5 +58,4 @@ func GetContextHandler(w http.ResponseWriter, r *http.Request) {
 
 	//log obligatorio
 	logger.Info("Contexto Solicitado - (PID:TID) - (%v,%v)", pidS, tidS)
-	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 }

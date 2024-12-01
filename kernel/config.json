@@ -5,7 +5,7 @@
   "port_memory": 8083,
   "ip_cpu": "127.0.0.1",
   "port_cpu": 8080,
-  "scheduler_algorithm": "FIFO",
+  "scheduler_algorithm": "P",
   "quantum": 1750,
   "log_level": "TRACE"
 }

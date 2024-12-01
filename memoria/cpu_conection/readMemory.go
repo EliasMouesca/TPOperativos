@@ -27,7 +27,6 @@ func ReadMemoryHandler(w http.ResponseWriter, r *http.Request) {
 	// Que es el Tamaño????????
 	// Log obligatorio
 	logger.Info("## Lectura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS, "")
-	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 
 	dir, err := strconv.Atoi(dirS)
 	if err != nil {
@@ -53,4 +52,5 @@ func ReadMemoryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al escribir el response", http.StatusInternalServerError)
 		return
 	}
+	time.Sleep(time.Millisecond * time.Duration(memoriaGlobals.Config.ResponseDelay))
 }

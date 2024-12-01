@@ -59,7 +59,7 @@ func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
 	if !cmm.isRRRunning {
 		cmm.isRRRunning = true
 
-		//go func(){} TODO: ESTO ESTA ROMPIENDO CUANDO SE QUIERE PLANIFICAR UN NUEVO HILO Y NO HAY NINGUNO EJECUTANDO
+		//go func(){} TODO: Esto esta rompiendo cuando se quiere planificar un nuevo hilo y no hay ninguno ejecutando
 		go func() {
 			err := roundRobin()
 			if err != nil {
@@ -166,7 +166,9 @@ func (cmm *ColasMultiNivel) getNextTcb() (*kerneltypes.TCB, error) {
 }
 
 func roundRobin() error {
+	logger.Warn("Round robin")
 	<-kernelsync.QuantumChannel
+	logger.Debug("Enviando fin de quantum a CPU...")
 	err := shorttermscheduler.CpuInterrupt(
 		types.Interruption{
 			Type:        types.InterruptionEndOfQuantum,

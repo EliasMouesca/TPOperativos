@@ -26,7 +26,7 @@ func planificadorCortoPlazo() {
 	// Mientras vivas, corré lo siguiente
 	for {
 		logger.Trace("Empezando nueva planificación")
-		logCurrentState("DESPUËS DE EMPEZAR A PLANIFICAR")
+		logCurrentState("DESPUÉS DE EMPEZAR A PLANIFICAR")
 		logger.Trace("Length PendingThreadsChannel %v", len(kernelsync.PendingThreadsChannel))
 
 		// Bloqueate hasta que alguien te mande algo por este channel -> quién manda por este channel? -> AddToReady()
@@ -77,17 +77,20 @@ func planificadorCortoPlazo() {
 
 		logger.Debug("## (<%v>:<%v>) Ejecutando hilo", tcbToExecute.FatherPCB.PID, tcbToExecute.TID)
 
-		go func() {
-			timer := time.NewTimer(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
+		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
+			go func() {
+				timer := time.NewTimer(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
 
-			select {
-			case <-timer.C:
-				// El temporizador expiró, envía al canal
-				if tcbToExecute == kernelglobals.ExecStateThread {
-					kernelsync.QuantumChannel <- struct{}{} // Enviar un valor vacío al canal
+				select {
+				case <-timer.C:
+					// El temporizador expiró, envía al canal
+					if tcbToExecute == kernelglobals.ExecStateThread {
+						logger.Debug("Fin de quantum!")
+						kernelsync.QuantumChannel <- struct{}{} // Enviar un valor vacío al canal
+					}
 				}
-			}
-		}()
+			}()
+		}
 		kernelsync.PlanificacionFinalizada <- true
 		logger.Trace("Finalizó la planificación")
 	}

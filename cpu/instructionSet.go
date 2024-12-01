@@ -240,7 +240,6 @@ func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
 	if err != nil {
 		return fmt.Errorf("error al empaquetar syscall: %v", err)
 	}
-	MutexInterruption.Unlock()
 	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonData)))
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error al enviar syscall al kernel: %v", err)

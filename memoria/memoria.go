@@ -69,14 +69,13 @@ func init() {
 func main() {
 	logger.Info("--- Comienzo ejecución MEMORIA ---")
 	memoriaGlobals.UserMem = make([]byte, memoriaGlobals.Config.MemorySize)
-	// TRUE RESPONSE
+
 	http.HandleFunc("/memoria/getContext", cpu.GetContextHandler)
 	http.HandleFunc("/memoria/saveContext", cpu.SaveContextHandler)
 	http.HandleFunc("/memoria/getInstruction", cpu.GetInstructionHandler)
 	http.HandleFunc("/memoria/readMem", cpu.ReadMemoryHandler)
 	http.HandleFunc("/memoria/writeMem", cpu.WriteMemoryHandler)
 
-	// STUB FORMAT RESPONSE
 	http.HandleFunc("/memoria/createProcess", kernel.CreateProcessHandler)
 	http.HandleFunc("/memoria/finishProcess", kernel.FinishProcessHandler)
 	http.HandleFunc("/memoria/createThread", kernel.CreateThreadHandler)

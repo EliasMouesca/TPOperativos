@@ -12,6 +12,7 @@ import (
 )
 
 func GetInstructionHandler(w http.ResponseWriter, r *http.Request) {
+	defer time.Sleep(time.Millisecond * time.Duration(memoriaGlobals.Config.ResponseDelay))
 	if r.Method != "GET" {
 		logger.Error("Metodo no permitido")
 		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
@@ -52,6 +53,4 @@ func GetInstructionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al escribir el response", http.StatusInternalServerError)
 		return
 	}
-
-	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 }
