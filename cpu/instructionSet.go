@@ -230,16 +230,33 @@ func checkArguments(args []string, correctNumberOfArgs int) error {
 
 // A partir de acá las syscalls
 func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
-	interruptionChannel <- types.Interruption{
+	interruption := types.Interruption{
 		Type:        types.InterruptionSyscall,
 		Description: "Interrupción por syscall",
 	}
+	if len(interruptionChannel) > 0 {
+		// Si queremos hacer una syscall y el kernel ya mando desalojo o fin de quantum, atende primero la syscall
+		// y agregamos a deuda la de desalojo
+		desalojoInterruption := <-interruptionChannel
+		interruptionChannel <- interruption
 
+		interrupcionInsatisfecha := types.InterrupcionInsatisfecha{
+			currentThread,
+			desalojoInterruption,
+		}
+
+		deudaInterrupciones = append(deudaInterrupciones, interrupcionInsatisfecha)
+	} else {
+		interruptionChannel <- interruption
+	}
 	url := fmt.Sprintf("http://%v:%v/kernel/syscall", config.KernelAddress, config.KernelPort)
 	jsonData, err := json.Marshal(syscall)
 	if err != nil {
 		return fmt.Errorf("error al empaquetar syscall: %v", err)
 	}
+
+	MutexInterruption.Unlock()
+
 	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonData)))
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error al enviar syscall al kernel: %v", err)

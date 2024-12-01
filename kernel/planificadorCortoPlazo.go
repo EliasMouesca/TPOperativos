@@ -91,7 +91,11 @@ func planificadorCortoPlazo() {
 				}
 			}()
 		}
-		kernelsync.PlanificacionFinalizada <- true
+		go func() {
+			logger.Debug("Antes de mandar true a channel de planifterminada")
+			kernelsync.PlanificacionFinalizada <- true
+			logger.Debug("Despues de mandar true a channel de planifterminada")
+		}()
 		logger.Trace("Finalizó la planificación")
 	}
 }
