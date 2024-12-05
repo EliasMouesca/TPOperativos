@@ -14,6 +14,9 @@ type Prioridades struct {
 	ReadyThreads []*kerneltypes.TCB
 }
 
+func (p *Prioridades) Init() {
+}
+
 func (prioridades *Prioridades) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
 	for _, v := range prioridades.ReadyThreads {
 		if v.TID == tid && v.FatherPCB.PID == pid {

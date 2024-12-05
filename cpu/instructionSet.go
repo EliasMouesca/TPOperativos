@@ -39,18 +39,17 @@ var instructionSet = map[string]Instruction{
 }
 
 func writeMemInstruction(context *types.ExecutionContext, arguments []string) error {
-	dataRegister, err := context.GetRegister(arguments[1])
+	dataRegister, err := context.GetRegister(arguments[0])
 	if err != nil {
 		return err
 	}
 
-	virtualAddressRegister, err := context.GetRegister(arguments[0])
+	virtualAddressRegister, err := context.GetRegister(arguments[1])
 	if err != nil {
 		return err
 	}
 
 	physicalAddress := context.MemoryBase + *virtualAddressRegister
-	logger.Debug("Physical address: %v, Tamaño: %v", physicalAddress, context.MemorySize)
 
 	if *virtualAddressRegister >= context.MemorySize {
 		logger.Debug("Se trató de escribir una dirección no perteneciente al proceso! Interrumpiendo...")
@@ -230,32 +229,20 @@ func checkArguments(args []string, correctNumberOfArgs int) error {
 
 // A partir de acá las syscalls
 func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
-	interruption := types.Interruption{
+	interruptionChannel <- types.Interruption{
 		Type:        types.InterruptionSyscall,
 		Description: "Interrupción por syscall",
 	}
-	if len(interruptionChannel) > 0 {
-		// Si queremos hacer una syscall y el kernel ya mando desalojo o fin de quantum, atende primero la syscall
-		// y agregamos a deuda la de desalojo
-		desalojoInterruption := <-interruptionChannel
-		interruptionChannel <- interruption
 
-		interrupcionInsatisfecha := types.InterrupcionInsatisfecha{
-			currentThread,
-			desalojoInterruption,
-		}
-
-		deudaInterrupciones = append(deudaInterrupciones, interrupcionInsatisfecha)
-	} else {
-		interruptionChannel <- interruption
-	}
 	url := fmt.Sprintf("http://%v:%v/kernel/syscall", config.KernelAddress, config.KernelPort)
 	jsonData, err := json.Marshal(syscall)
 	if err != nil {
 		return fmt.Errorf("error al empaquetar syscall: %v", err)
 	}
 
+	logger.Debug("Liberando MutexInterruption")
 	MutexInterruption.Unlock()
+	logger.Debug("MutexInterruption liberado")
 
 	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonData)))
 	if err != nil || resp.StatusCode != http.StatusOK {

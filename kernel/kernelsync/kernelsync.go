@@ -13,7 +13,9 @@ var MutexCPU sync.Mutex
 var PendingThreadsChannel = make(chan any)
 
 // QuantumChannel se manda una señal por acá cuando se acabó el quantum
-var QuantumChannel = make(chan any)
+var SyscallChannel = make(chan any, 1)
+
+var DebeEmpezarNuevoQuantum = make(chan any)
 
 // MutexPlanificadorLP Sync de Planificador a largo plazo
 var MutexPlanificadorLP sync.Mutex

@@ -15,6 +15,13 @@ type ColasMultiNivel struct {
 	isRRRunning bool
 }
 
+func (cmm *ColasMultiNivel) Init() {
+	go func() {
+		err := EsperarYAvisarFinDeQuantum()
+		logger.Error("Error: %v", err)
+	}()
+}
+
 func (cmm *ColasMultiNivel) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
 	for _, queue := range cmm.ReadyQueue {
 		for _, tcb := range queue.GetElements() {
@@ -55,19 +62,7 @@ func (cmm *ColasMultiNivel) ThreadRemove(tid types.Tid, pid types.Pid) error {
 }
 
 func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
-
-	if !cmm.isRRRunning {
-		cmm.isRRRunning = true
-
-		//go func(){} TODO: Esto esta rompiendo cuando se quiere planificar un nuevo hilo y no hay ninguno ejecutando
-		go func() {
-			err := roundRobin()
-			if err != nil {
-				logger.Error("Error en roundRobin: %v", err)
-			}
-			cmm.isRRRunning = false
-		}()
-	}
+	logger.Debug("Planificando en CMN")
 
 	var nextTcb *kerneltypes.TCB
 	var err error
@@ -77,6 +72,7 @@ func (cmm *ColasMultiNivel) Planificar() (*kerneltypes.TCB, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			return nextTcb, nil
 		}
 	}
@@ -110,6 +106,7 @@ func (cmm *ColasMultiNivel) AddToReady(tcb *kerneltypes.TCB) error {
 
 	logger.Info("Se agrego a Ready de CMN el TID: %v", tcb.TID)
 	go func() {
+		logger.Debug("Se manda que hay hilos pendientes por el PendingThreadsChannel")
 		kernelsync.PendingThreadsChannel <- true
 	}()
 
@@ -157,26 +154,5 @@ func (cmm *ColasMultiNivel) addNewQueue(tcb *kerneltypes.TCB) error {
 		logger.Warn("Cola %v, prioridad: %v", i, v.Priority)
 	}
 
-	return nil
-}
-
-func (cmm *ColasMultiNivel) getNextTcb() (*kerneltypes.TCB, error) {
-
-	return nil, errors.New("se quizo hacer un getNextTcb y no habia ningun tcb en ready")
-}
-
-func roundRobin() error {
-	logger.Warn("Round robin")
-	<-kernelsync.QuantumChannel
-	logger.Debug("Enviando fin de quantum a CPU...")
-	err := shorttermscheduler.CpuInterrupt(
-		types.Interruption{
-			Type:        types.InterruptionEndOfQuantum,
-			Description: "Interrupcion por fin de Quantum",
-		})
-	if err != nil {
-		logger.Error("Failed to interrupt the CPU (end of quantum) - %v", err)
-		return err
-	}
 	return nil
 }

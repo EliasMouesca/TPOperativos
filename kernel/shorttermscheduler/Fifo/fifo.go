@@ -13,6 +13,9 @@ type Fifo struct {
 	LastScheduled *kerneltypes.TCB
 }
 
+func (f *Fifo) Init() {
+}
+
 func (f *Fifo) ThreadExists(tid types.Tid, pid types.Pid) (bool, error) {
 	for _, v := range f.Ready.GetElements() {
 		if v.TID == tid && v.FatherPCB.PID == pid {

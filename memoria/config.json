@@ -3,7 +3,7 @@
   "self_address": "127.0.0.1",
   "memory_size": 1024,
   "instruction_path": "/home/utnso/scripts-pruebas",
-  "response_delay": 1000,
+  "response_delay": 500,
   "ip_kernel": "127.0.0.1",
   "port_kernel": 8081,
   "ip_cpu": "127.0.0.1",

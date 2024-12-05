@@ -14,6 +14,9 @@ import (
 	"sync"
 )
 
+// TODO: Testear _algo_ lel
+// TODO: Terminar los helpers
+
 // Configuración general de la CPU
 var config CpuConfig
 var MutexInterruption = sync.Mutex{}
@@ -26,7 +29,6 @@ var currentThread *types.Thread = nil
 
 // Si a este canal se le pasa una interrupción, la CPU se detiene y llama al kernel pasándole la interrupción que se haya cargado
 var interruptionChannel = make(chan types.Interruption, 1)
-var deudaInterrupciones = make([]types.InterrupcionInsatisfecha, 0)
 
 // Un mutex para la CPU porque se hay partes del código que asumen que la CPU es única por eso tenemos que excluir mutuamente
 // las distintas requests que llegen (aunque el kernel en realidad nunca debería mandar a ejecutar un segundo hilo si
@@ -82,10 +84,11 @@ func main() {
 }
 
 func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
-	logger.Debug("Llega interrupcion de kernel")
+	logger.Debug("Llega interrupt")
 	hiloEjecutando := currentThread
 
 	MutexInterruption.Lock()
+	logger.Debug("koqwdqowkpqkowpd: %v", currentThread)
 	// Log request
 	logger.Debug("Request %v - %v %v", r.RemoteAddr, r.Method, r.URL)
 
@@ -111,7 +114,7 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 	if hiloEjecutando == nil {
 		logger.Debug("No hay nada para interrumpir! Saliendo...")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Kernel, todavía no me mandaste a ejecutar nada"))
+		w.Write([]byte("Kernel, mi amor, todavía no me mandaste a ejecutar nada, qué querés que interrumpa???"))
 		return
 	}
 
@@ -123,14 +126,9 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("La CPU recibió la interrupción"))
 	} else {
-		logger.Debug("Ya se dio otra interrupción previamente, incrementando deuda : %v", interruption.Description)
-		interrupcionInsatisfecha := types.InterrupcionInsatisfecha{
-			Thread:       hiloEjecutando,
-			Interruption: interruption,
-		}
-		deudaInterrupciones = append(deudaInterrupciones, interrupcionInsatisfecha)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("La CPU ya recibió otra interrupción, incrementando deuda"))
+		logger.Debug("Ya se dio otra interrupción previamente, ignorando...")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("La CPU ya recibió otra interrupción y se va a detener al final del ciclo"))
 	}
 	MutexInterruption.Unlock()
 }
@@ -151,11 +149,11 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 
 	// Esperá a que la CPU esté libre, no pinta andar cambiándole el contexto y el currentThread al proceso que se está ejecutando
 	cpuMutex.Lock()
+
 	// Obtenemos el contexto de ejecución
 	logger.Debug("Proceso (<%d:%d>) admitido en la CPU", thread.PID, thread.TID)
-	currentThread = &thread
-
 	logger.Debug("Obteniendo contexto de ejecución")
+
 	currentExecutionContext, err = memoryGiveMeExecutionContext(thread)
 	if err != nil {
 		logger.Error("No se pudo obtener el contexto de ejecución del T%v P%v - %v", thread.TID, thread.PID, err.Error())
@@ -167,6 +165,7 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 
 	// Si hasta acá las cosas salieron bien, poné a ejecutar el proceso
 	logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", thread.TID, thread.PID)
+	currentThread = &thread
 	go loopInstructionCycle()
 
 	// Repondemos al kernel: "Tu proceso se está ejecutando, sé feliz"
@@ -178,27 +177,10 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 }
 
 func loopInstructionCycle() {
-	var instructionToParse string
-	var instruction Instruction
-	var arguments []string
-	var err error
-
 	for {
-		logger.Trace("Tomando MutexInterruption...")
 		MutexInterruption.Lock()
-		logger.Trace("MutexInterruption tomado")
-
-		for i, d := range deudaInterrupciones {
-			if d.Thread.Equals(currentThread) {
-				logger.Warn("Tenia deuda pendiente y se va a atender: %v", d.Interruption.Description)
-				interruptionChannel <- d.Interruption
-				deudaInterrupciones = append(deudaInterrupciones[:i], deudaInterrupciones[i+1:]...)
-				goto CheckInterrupt
-			}
-		}
-
 		// Fetch
-		instructionToParse, err = fetch()
+		instructionToParse, err := fetch()
 		if err != nil {
 			logger.Fatal("No se pudo obtener instrucción a ejecutar - %v", err.Error())
 		}
@@ -206,7 +188,7 @@ func loopInstructionCycle() {
 		currentExecutionContext.Pc += 1
 
 		// Decode
-		instruction, arguments, err = decode(instructionToParse)
+		instruction, arguments, err := decode(instructionToParse)
 		if err != nil {
 			logger.Error("No se pudo decodificar la instrucción - %v", err.Error())
 
@@ -228,32 +210,25 @@ func loopInstructionCycle() {
 			}
 		}
 
-	CheckInterrupt:
-
 		// Checkinterrupt
+		logger.Debug("No hay interrupcion en interruptionChannel, continua ejecucion")
 		if len(interruptionChannel) > 0 {
-			interruption := <-interruptionChannel
-			interruptionChannel <- interruption
-			if interruption.Type == types.InterruptionEviction || interruption.Type == types.InterruptionEndOfQuantum {
-				MutexInterruption.Unlock()
-			}
 			logger.Debug("Hay interrupcion en interruptionChannel")
 			break
 		} else {
 			MutexInterruption.Unlock()
-			logger.Debug("No hay interrupcion en interruptionChannel, continua ejecucion")
 		}
+
 	}
 
 	MutexInterruption.Lock()
-	logger.Debug("MutexInterruption tomado")
 	finishedThread := *currentThread
 	finishedExecutionContext := currentExecutionContext
 	receivedInterrupt := <-interruptionChannel
-	//currentThread = nil
-	logger.Debug("La interrupcion recibida es: %v", receivedInterrupt.Description)
+	currentThread = nil
+
 	// Kernel tu proceso terminó
-	err = kernelYourProcessFinished(finishedThread, receivedInterrupt)
+	err := kernelYourProcessFinished(finishedThread, receivedInterrupt)
 	if err != nil {
 		// Yo creo que esto es suficientemente grave como para terminar la ejecución
 		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())
