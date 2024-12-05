@@ -276,7 +276,7 @@ func ThreadJoin(args []string) error {
 
 	kernelglobals.BlockedStateQueue.Add(execTCB)
 	logger.Info("## (<%v>:<%v>)- Bloqueado por: <PTHREAD_JOIN>", currentPCB.PID, execTCB.TID)
-
+	logger.Debug("(%v : %v)- PTHREAD_JOIN a (%v : %v) ", currentPCB.PID, execTCB.TID, tcbToJoin.FatherPCB.PID, tcbToJoin.TID)
 	kernelglobals.ExecStateThread = nil
 	logger.Info("## (<%v>:<%v>) Se saco de Exec", currentPCB.PID, execTCB.TID)
 
@@ -616,22 +616,27 @@ func buscarTCBPorTID(tid types.Tid, pid types.Pid) *kerneltypes.TCB {
 func agregarAExitStateQueue(tcb *kerneltypes.TCB) error {
 	logger.Debug("Buscando: (%v : %v)", tcb.FatherPCB.PID, tcb.TID)
 	logger.Debug("EvereyTCBInTheKernel")
+
 	for _, tcb1 := range kernelglobals.EveryTCBInTheKernel {
 		logger.Debug("(%v: %v)", tcb1.FatherPCB.PID, tcb1.TID)
 	}
-
-	var existe bool
-	existe = false
-	for i := range kernelglobals.ExitStateQueue.GetElements() {
-		if kernelglobals.EveryTCBInTheKernel[i].Equal(tcb) {
-			existe = true
+	estaEnExit := false
+	for _, tcb1 := range kernelglobals.ExitStateQueue.GetElements() {
+		if tcb1.Equal(tcb) {
+			estaEnExit = true
 			break
 		}
 	}
-	if !existe {
+	if !estaEnExit {
 		kernelglobals.ExitStateQueue.Add(tcb)
+		for i, tid := range tcb.FatherPCB.TIDs {
+			if tid == tcb.TID {
+				tcb.FatherPCB.TIDs = append(tcb.FatherPCB.TIDs[:i], tcb.FatherPCB.TIDs[i+1:]...)
+				break
+			}
+		}
 	} else {
-		return errors.New("No existe el hilo en EveryTCBInTheKernel")
+		logger.Warn("ya estaba en exit y se quizo volver a agregar")
 	}
 	return nil
 }

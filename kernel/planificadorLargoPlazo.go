@@ -244,7 +244,7 @@ func ThreadToExit() {
 		}
 
 		// Desbloquear hilos que estaban bloqueados esperando el término de este TID
-		moveBlockedThreadsByJoin(tid)
+		moveBlockedThreadsByJoin(tid, pid)
 
 		// Liberar los mutexes que tenía el hilo que se está finalizando
 		releaseMutexes(tid)
@@ -258,7 +258,7 @@ func ThreadToExit() {
 	}
 }
 
-func moveBlockedThreadsByJoin(tidFinalizado int) {
+func moveBlockedThreadsByJoin(tidFinalizado int, pidFinalizado int) {
 	// Obtener el tamaño inicial de la cola de bloqueados
 	blockedQueueSize := kernelglobals.BlockedStateQueue.Size()
 	for i := 0; i < blockedQueueSize; i++ {
@@ -270,7 +270,9 @@ func moveBlockedThreadsByJoin(tidFinalizado int) {
 		}
 
 		// Verificar que el campo JoinedTCB no sea nil antes de acceder a su TID
-		if tcb.JoinedTCB != nil && tcb.JoinedTCB.TID == types.Tid(tidFinalizado) {
+		if tcb.JoinedTCB != nil && tcb.JoinedTCB.TID == types.Tid(tidFinalizado) &&
+			tcb.FatherPCB.PID == types.Pid(pidFinalizado) {
+
 			tcb.JoinedTCB = nil // Resetear el campo JoinedTCB
 
 			// Agregar el hilo a la cola de Ready
