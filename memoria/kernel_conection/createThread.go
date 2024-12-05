@@ -39,7 +39,13 @@ func CreateThreadHandler(w http.ResponseWriter, r *http.Request) {
 	logger.Info("## Hilo Creado - (PID:TID) - (%v,%v)", pid, tid)
 
 	// Guardar el contexto en ExecContext, usando PID y TID como clave
-	context := types.ExecutionContext{}
+	// La memorySize y base es lo mismo que el del padre
+	padreContex := memoriaGlobals.ExecContext[types.Thread{PID: thread.PID}]
+	context := types.ExecutionContext{
+		MemorySize: padreContex.MemorySize,
+		MemoryBase: padreContex.MemoryBase,
+	}
+
 	memoriaGlobals.ExecContext[thread] = context
 	logger.Info("Contexto creado para el hilo - (PID:TID): (%v, %v)", pid, tid)
 

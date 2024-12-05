@@ -43,6 +43,7 @@ func planificadorCortoPlazo() {
 			//}()
 			logger.Trace("DEVUELVO HILO SIN PLANIFICAR!")
 		} else {
+			logger.Debug("Espernaod que haya hilos en ready")
 			<-kernelsync.PendingThreadsChannel
 			logger.Trace("Hay hilos en ready para planificar")
 

@@ -10,7 +10,7 @@ import (
 )
 
 func BadRequest(w http.ResponseWriter, r *http.Request) {
-	logger.Info("Request inválida: %v", r.RemoteAddr)
+	logger.Error("Request inválida: %v", r.RemoteAddr)
 	w.WriteHeader(http.StatusBadRequest)
 	_, err := w.Write([]byte("Request mal formada"))
 	if err != nil {

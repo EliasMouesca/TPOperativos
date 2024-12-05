@@ -267,7 +267,7 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 
 	// Encontrá nuestro TCB
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
-		if tcb.TID == thread.TID {
+		if tcb.TID == thread.TID && tcb.FatherPCB.PID == thread.PID {
 			// Si la INT fue eviction o EOQ -> vuelve a ready
 			if interruption.Type == types.InterruptionEviction ||
 				interruption.Type == types.InterruptionEndOfQuantum {
@@ -281,8 +281,12 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 				kernelsync.SyscallFinalizada <- true
 
 			} else if interruption.Type != types.InterruptionSyscall {
+				logger.Debug("Matando hilo: %v", tcb.TID)
 				// Sino, muere (ie: sysegv, div por 0, ...)
 				killTcb(&tcb)
+				kernelsync.SyscallChannel <- struct{}{}
+				kernelglobals.ExecStateThread = nil
+				kernelsync.SyscallFinalizada <- true
 
 			} else if interruption.Type == types.InterruptionSyscall {
 				// Si volvio por fin de syscall antes de que termine el quantum, este se resetea

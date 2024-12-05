@@ -171,10 +171,10 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 		cpuMutex.Unlock()
 		return
 	}
-
 	// Si hasta acá las cosas salieron bien, poné a ejecutar el proceso
 	logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", thread.TID, thread.PID)
 	currentThread = &thread
+	logger.Debug("(%v : %v) MemoryBase: %v  MemorySize: %v", currentThread.PID, currentThread.TID, currentExecutionContext.MemoryBase, currentExecutionContext.MemorySize)
 	go loopInstructionCycle()
 
 	// Repondemos al kernel: "Tu proceso se está ejecutando, sé feliz"

@@ -39,23 +39,27 @@ var instructionSet = map[string]Instruction{
 }
 
 func writeMemInstruction(context *types.ExecutionContext, arguments []string) error {
-	dataRegister, err := context.GetRegister(arguments[0])
+	dataRegister, err := context.GetRegister(arguments[1])
 	if err != nil {
 		return err
 	}
 
-	virtualAddressRegister, err := context.GetRegister(arguments[1])
+	virtualAddressRegister, err := context.GetRegister(arguments[0])
 	if err != nil {
 		return err
 	}
 
 	physicalAddress := context.MemoryBase + *virtualAddressRegister
-
+	logger.Debug("Escribiendo en physicalAddres: %v", physicalAddress)
 	if *virtualAddressRegister >= context.MemorySize {
-		logger.Debug("Se trató de escribir una dirección no perteneciente al proceso! Interrumpiendo...")
+		logger.Warn("Se trató de escribir una dirección no perteneciente al proceso! Interrumpiendo...")
 		interruptionChannel <- types.Interruption{
 			Type:        types.InterruptionSegFault,
 			Description: "La dirección no forma parte del espacio del memoria del proceso"}
+
+		logger.Debug("Intentadno liberar mutexInterruption")
+		MutexInterruption.Unlock()
+		logger.Debug("Liberado mutexInterruption")
 		return nil
 	}
 
@@ -72,22 +76,29 @@ func writeMemInstruction(context *types.ExecutionContext, arguments []string) er
 
 func readMemInstruction(context *types.ExecutionContext, arguments []string) error {
 	dataRegister, err := context.GetRegister(arguments[0])
+	logger.Debug("DataRegister: %v", *dataRegister)
 	if err != nil {
 		return err
 	}
 
 	virtualAddressRegister, err := context.GetRegister(arguments[1])
+	logger.Debug("VirtualAddressRegister: %v", *virtualAddressRegister)
 	if err != nil {
 		return err
 	}
-
+	logger.Debug("MemoryBase: %v", context.MemoryBase)
 	physicalAddress := context.MemoryBase + *virtualAddressRegister
+	logger.Debug("Physical Address: %v", physicalAddress)
 
 	if *virtualAddressRegister >= context.MemorySize {
-		logger.Debug("Se trató de leer una dirección no perteneciente al proceso! Interrumpiendo...")
+		logger.Warn("Se trató de leer una dirección no perteneciente al proceso! Interrumpiendo...")
 		interruptionChannel <- types.Interruption{
 			Type:        types.InterruptionSegFault,
 			Description: "La dirección no forma parte del espacio del memoria del proceso"}
+
+		logger.Debug("Intentadno liberar mutexInterruption")
+		MutexInterruption.Unlock()
+		logger.Debug("Liberado mutexInterruption")
 		return nil
 	}
 

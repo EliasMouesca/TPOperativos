@@ -153,7 +153,7 @@ func ProcessExit(args []string) error {
 	}
 
 	if kernelglobals.NewStateQueue.Contains(tcb) {
-		kernelglobals.BlockedStateQueue.Remove(tcb)
+		kernelglobals.NewStateQueue.Remove(tcb)
 		logger.Info("(<%d:%d>) Se manda a exit", pcb.PID, tcb.TID)
 	}
 
@@ -614,11 +614,18 @@ func buscarTCBPorTID(tid types.Tid, pid types.Pid) *kerneltypes.TCB {
 }
 
 func agregarAExitStateQueue(tcb *kerneltypes.TCB) error {
+	logger.Debug("Buscando: (%v : %v)", tcb.FatherPCB.PID, tcb.TID)
+	logger.Debug("EvereyTCBInTheKernel")
+	for _, tcb1 := range kernelglobals.EveryTCBInTheKernel {
+		logger.Debug("(%v: %v)", tcb1.FatherPCB.PID, tcb1.TID)
+	}
+
 	var existe bool
 	existe = false
 	for i := range kernelglobals.ExitStateQueue.GetElements() {
-		if kernelglobals.EveryTCBInTheKernel[i].TID == tcb.TID {
+		if kernelglobals.EveryTCBInTheKernel[i].Equal(tcb) {
 			existe = true
+			break
 		}
 	}
 	if !existe {

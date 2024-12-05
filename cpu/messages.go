@@ -41,7 +41,7 @@ func memoryGiveMeInstruction(thread types.Thread, pc uint32) (instruction string
 
 func memoryRead(thread types.Thread, physicalDirection uint32) (uint32, error) {
 	logger.Info("T%v P%v - LEER -> %v", thread.TID, thread.PID, physicalDirection)
-	url := fmt.Sprintf("http://%v:%v/readMem?tid=%v&pid=%v&addr=%v",
+	url := fmt.Sprintf("http://%v:%v/memoria/readMem?tid=%v&pid=%v&addr=%v",
 		config.MemoryAddress, config.MemoryPort, thread.TID, thread.PID, physicalDirection)
 	var valueRead uint32
 	err := receiveThatFromHere(url, &valueRead)
