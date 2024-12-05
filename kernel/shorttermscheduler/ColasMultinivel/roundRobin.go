@@ -11,7 +11,6 @@ import (
 
 func EsperarYAvisarFinDeQuantum() error {
 	for {
-
 		logger.Debug("Inciando round robin, esperando para iniciar quantum")
 		<-kernelsync.DebeEmpezarNuevoQuantum
 		logger.Info("-- Empieza nuevo Quantum --")

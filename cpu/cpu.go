@@ -86,9 +86,10 @@ func main() {
 func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Llega interrupt")
 	hiloEjecutando := currentThread
-
+	logger.Debug("Intentando tomar MutexInterruption")
 	MutexInterruption.Lock()
-	logger.Debug("koqwdqowkpqkowpd: %v", currentThread)
+	logger.Debug("MutexInterruption tomado")
+	logger.Debug("Current trhead: %v", currentThread)
 	// Log request
 	logger.Debug("Request %v - %v %v", r.RemoteAddr, r.Method, r.URL)
 
@@ -122,7 +123,11 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 	if len(interruptionChannel) == 0 {
 		logger.Debug("Enviando interrupción por el canal de interrupciones: %v", interruption.Description)
 		interruptionChannel <- interruption
-		kernelYourProcessFinished(*hiloEjecutando, interruption)
+		logger.Debug("Interrupcion enviada por el canal de interrupciones")
+		if interruption.Type != types.InterruptionEndOfQuantum {
+			kernelYourProcessFinished(*hiloEjecutando, interruption)
+		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("La CPU recibió la interrupción"))
 	} else {
@@ -130,7 +135,10 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("La CPU ya recibió otra interrupción y se va a detener al final del ciclo"))
 	}
+
+	logger.Debug("Liberando MutexInterruption")
 	MutexInterruption.Unlock()
+	logger.Debug("MutexInterruption liberado")
 }
 
 func executeThread(w http.ResponseWriter, r *http.Request) {
@@ -148,8 +156,9 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Esperá a que la CPU esté libre, no pinta andar cambiándole el contexto y el currentThread al proceso que se está ejecutando
+	logger.Debug("Intentando tomar cpuMutex")
 	cpuMutex.Lock()
-
+	logger.Debug("cpuMutex tomado")
 	// Obtenemos el contexto de ejecución
 	logger.Debug("Proceso (<%d:%d>) admitido en la CPU", thread.PID, thread.TID)
 	logger.Debug("Obteniendo contexto de ejecución")
@@ -178,7 +187,21 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 
 func loopInstructionCycle() {
 	for {
+		logger.Debug("Intentando tomar el MutexInterruption")
 		MutexInterruption.Lock()
+		logger.Debug("MutexInterruption tomado")
+
+		// Checkinterrupt
+		logger.Debug("Chequando interrupciones len(interruptionChannel): %v", len(interruptionChannel))
+		if len(interruptionChannel) > 0 {
+			logger.Debug("Liberando MutexInterruption")
+			MutexInterruption.Unlock()
+			logger.Debug("MutexInterruption liberado")
+
+			logger.Debug("Hay interrupcion en interruptionChannel")
+			break
+		}
+
 		// Fetch
 		instructionToParse, err := fetch()
 		if err != nil {
@@ -211,17 +234,27 @@ func loopInstructionCycle() {
 		}
 
 		// Checkinterrupt
-		logger.Debug("No hay interrupcion en interruptionChannel, continua ejecucion")
-		if len(interruptionChannel) > 0 {
-			logger.Debug("Hay interrupcion en interruptionChannel")
-			break
-		} else {
+		//logger.Debug("Chequando interrupciones len(interruptionChannel): %v", len(interruptionChannel))
+		//if len(interruptionChannel) > 0 {
+		//	logger.Debug("Hay interrupcion en interruptionChannel")
+		//	break
+		//} else {
+		//	logger.Debug("No hay interrupcion en interruptionChannel, continua ejecucion")
+		//	logger.Debug("Liberando MutexInterruption")
+		//	MutexInterruption.Unlock()
+		//	logger.Debug("MutexInterruption liberado")
+		//}
+		if len(interruptionChannel) == 0 {
+			logger.Debug("Liberando MutexInterruption")
 			MutexInterruption.Unlock()
+			logger.Debug("MutexInterruption liberado")
 		}
-
 	}
 
+	logger.Debug("Intentando tomar el MutexInterruption")
 	MutexInterruption.Lock()
+	logger.Debug("MutexInterruption tomado")
+
 	finishedThread := *currentThread
 	finishedExecutionContext := currentExecutionContext
 	receivedInterrupt := <-interruptionChannel
@@ -240,8 +273,13 @@ func loopInstructionCycle() {
 	}
 
 	// Libera la CPU
+	logger.Debug("Liberando cpuMutex")
 	cpuMutex.Unlock()
+	logger.Debug("cpuMutex liberado")
+	logger.Debug("Liberando MutexInterruption")
 	MutexInterruption.Unlock()
+	logger.Debug("MutexInterruption liberado")
+
 }
 
 func fetch() (instructionToParse string, err error) {
