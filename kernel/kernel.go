@@ -159,6 +159,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 		logger.Error("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
 		return nil
 	}
+
 	kernelsync.MutexExecThread.Lock()
 	err := syscallFunc(syscall.Arguments)
 	kernelsync.MutexExecThread.Unlock()

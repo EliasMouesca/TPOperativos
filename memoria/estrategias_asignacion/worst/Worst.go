@@ -16,7 +16,7 @@ func (w *Worst) BuscarParticion(size int, f *[]memoriaTypes.Particion) (error, *
 	for i, particion := range *f {
 		if !particion.Ocupado {
 			tamanoParticion := particion.Limite - particion.Base
-			if maxSize == 0 {
+			if maxSize == 0 && tamanoParticion >= size {
 				maxSize = tamanoParticion
 			}
 			if tamanoParticion >= size && tamanoParticion >= maxSize {

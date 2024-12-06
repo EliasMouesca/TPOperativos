@@ -11,7 +11,7 @@
   "ip_filesystem": "127.0.0.1",
   "port_filesystem": 8082,
   "scheme": "FIJAS",
-  "search_algorithm": "FIRST",
+  "search_algorithm": "WORST",
   "partitions": [32,16,64,128,16],
-  "log_level": "TRACE"
+  "log_level": "INFO"
 }

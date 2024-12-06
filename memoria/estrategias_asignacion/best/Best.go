@@ -15,11 +15,11 @@ func (b *Best) BuscarParticion(size int, f *[]memoriaTypes.Particion) (error, *m
 
 	for i, particion := range *f {
 		tamanoParticion := particion.Limite - particion.Base
-		if minSize == 0 {
+		if minSize == 0 && tamanoParticion >= size && !particion.Ocupado {
 			minSize = tamanoParticion
 			logger.Debug("MinSize inical: %v", minSize)
 		}
-		if !particion.Ocupado && tamanoParticion >= size && tamanoParticion <= minSize {
+		if minSize != 0 && !particion.Ocupado && tamanoParticion >= size && tamanoParticion <= minSize {
 			// TODO: Esto es feo si, pero particion es una copia del slice asi que la forma de
 			// devolver un puntero al slice que le pasamos por parametro viene a ser esta :)
 			particionSeleccionada = &(*f)[i]

@@ -546,13 +546,13 @@ func IO(args []string) error {
 	logger.Info("## (<%v>:<%v>) - Bloqueado por: <IO>", execTCB.FatherPCB.PID, execTCB.TID)
 
 	kernelglobals.ExecStateThread = nil
-
 	go func() {
 		logger.Debug("Antes de pasar argumentos al ChannelIO")
 		kernelsync.ChannelIO <- execTCB
 		kernelsync.ChannelIO2 <- threadBlockedTime
 		logger.Debug("Despues de pasar argumentos al ChannelIO")
 	}()
+
 	return nil
 }
 

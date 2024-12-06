@@ -149,7 +149,9 @@ func ProcessToExit() {
 		}
 
 		logger.Debug("Se informo a memoria correctamente")
-		kernelsync.InitProcess <- struct{}{}
+		go func() {
+			kernelsync.InitProcess <- struct{}{}
+		}()
 		logger.Debug("*** Termino un ciclo de process to exit ***")
 		kernelsync.ChannelFinishProcess2 <- true
 	}
@@ -352,15 +354,17 @@ func UnlockIO() {
 			logger.Error("No se pudo mover el tcb a la cola Ready. - %v", err)
 		}
 
-		logger.Debug("-- Probando cosas raras --")
-		kernelsync.SyscallFinalizada <- true
-		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
-			// Termino de ejecutar la Syscall => Reinicia el Quantum
-			go func() {
-				logger.Warn("Reiniciamos timer por syscall")
-				kernelsync.SyscallChannel <- struct{}{}
-			}()
-		}
+		//logger.Debug("-- Probando cosas raras --")
+
+		//kernelsync.SyscallFinalizada <- true
+		//if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
+		//	// Termino de ejecutar la Syscall => Reinicia el Quantum
+		//	go func() {
+		//		logger.Warn("Reiniciamos timer por syscall")
+		//		kernelsync.SyscallChannel <- struct{}{}
+		//	}()
+		//}
+
 		logger.Info("“## (<%v>:<%v>) finalizó IO y pasa a READY", tcbBlock.FatherPCB.PID, tcbBlock.TID)
 	}
 }
@@ -396,7 +400,6 @@ func handleMemoryResponseError(response *http.Response, TypeRequest string) erro
 	logger.Debug("Memoria respondio a: %v con: %v", TypeRequest, response.StatusCode)
 	if response.StatusCode != http.StatusOK {
 		if response.StatusCode == http.StatusConflict { // Conflict es compactacion.
-			logger.Debug("jiqwdjoiwqjoiwdjoiwjoidw: %v", types.ErrorRequestType[types.Compactacion])
 			err := types.ErrorRequestType[types.Compactacion]
 			return err
 		}

@@ -42,7 +42,7 @@ func (f *Fijas) AsignarProcesoAParticion(pid types.Pid, size int) (base uint32, 
 	particionEncontrada.Ocupado = true
 	particionEncontrada.Pid = pid
 	logger.Debug("Proceso (< %v >) asignado en particiones fijas", pid)
-	logger.Debug("Particiones luego de asignar: %v", f.Particiones)
+	logger.Info("Particiones luego de asignar: %v", f.Particiones)
 	return uint32(particionEncontrada.Base), nil
 }
 
@@ -73,7 +73,7 @@ func (f *Fijas) LiberarParticion(pid types.Pid) error {
 		return fmt.Errorf("no se encontro particion que contenga el proceso PID: < %v >", pid)
 	}
 	logger.Debug("Proceso (< %v >) liberado", pid)
-	logger.Debug("Particiones luego de liberar: %v", f.Particiones)
+	logger.Info("Particiones luego de liberar: %v", f.Particiones)
 	return nil
 }
 
