@@ -79,7 +79,7 @@ func (d *Dinamicas) AsignarProcesoAParticion(pid types.Pid, size int) (base uint
 
 	}
 	logger.Debug("Se asigno el proceso PID: < %v > a la particion Base: %v Limite %v", pid, particionEncontrada.Base, particionEncontrada.Base+size)
-	logger.Debug("Particiones: %v", d.Particiones)
+	logger.Info("Particiones: %v", d.Particiones)
 	return uint32(particionEncontrada.Base), nil
 }
 
@@ -135,7 +135,7 @@ func (d *Dinamicas) Compactar() {
 
 	// Actualiza la lista de particiones
 	d.Particiones = particionesOcupadas
-	logger.Debug("Compactación completada. Particiones actuales: %v", d.Particiones)
+	logger.Info("Compactación completada. Particiones actuales: %v", d.Particiones)
 }
 
 func (d *Dinamicas) LiberarParticion(pid types.Pid) error {
@@ -174,7 +174,7 @@ func (d *Dinamicas) LiberarParticion(pid types.Pid) error {
 	}
 
 	logger.Debug("Proceso (< %v >) liberado", pid)
-	logger.Debug("Particiones actuales: %v", d.Particiones)
+	logger.Info("Particiones actuales: %v", d.Particiones)
 	return nil
 }
 
