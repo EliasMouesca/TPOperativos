@@ -52,7 +52,10 @@ func SaveContextHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		logger.Trace("No existe el thread buscado, se creará un nuevo contexto")
 	}
+	memoriaGlobals.MutexContext.Lock()
 	memoriaGlobals.ExecContext[thread] = contexto
+	memoriaGlobals.MutexContext.Unlock()
+
 	logger.Debug("Contexto guardado exitosamente: %v", memoriaGlobals.ExecContext[thread])
 
 	w.WriteHeader(http.StatusOK)

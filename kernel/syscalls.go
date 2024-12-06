@@ -86,6 +86,8 @@ func ProcessExit(args []string) error {
 	// Enviar la señal a la memoria sobre la finalización del proceso
 	logger.Debug("Entra a process exit")
 
+	kernelsync.ChannelFinishprocess <- pcb.PID
+	<-kernelsync.ChannelFinishProcess2
 	// Eliminar todos los hilos del PCB de las colas de Ready
 	for _, tid := range pcb.TIDs {
 		// 1. Verificar y eliminar hilos de la cola de Ready
@@ -545,8 +547,12 @@ func IO(args []string) error {
 
 	kernelglobals.ExecStateThread = nil
 
-	kernelsync.ChannelIO <- execTCB
-	kernelsync.ChannelIO2 <- threadBlockedTime
+	go func() {
+		logger.Debug("Antes de pasar argumentos al ChannelIO")
+		kernelsync.ChannelIO <- execTCB
+		kernelsync.ChannelIO2 <- threadBlockedTime
+		logger.Debug("Despues de pasar argumentos al ChannelIO")
+	}()
 
 	return nil
 }

@@ -45,8 +45,9 @@ func CreateThreadHandler(w http.ResponseWriter, r *http.Request) {
 		MemorySize: padreContex.MemorySize,
 		MemoryBase: padreContex.MemoryBase,
 	}
-
+	memoriaGlobals.MutexContext.Lock()
 	memoriaGlobals.ExecContext[thread] = context
+	memoriaGlobals.MutexContext.Unlock()
 	logger.Info("Contexto creado para el hilo - (PID:TID): (%v, %v)", pid, tid)
 
 	// Leer el archivo y cargarlo a memoria

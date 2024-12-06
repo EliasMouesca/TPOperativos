@@ -151,6 +151,7 @@ func ProcessToExit() {
 		logger.Debug("Se informo a memoria correctamente")
 		kernelsync.InitProcess <- struct{}{}
 		logger.Debug("*** Termino un ciclo de process to exit ***")
+		kernelsync.ChannelFinishProcess2 <- true
 	}
 }
 
@@ -341,13 +342,13 @@ func UnlockIO() {
 
 		time.Sleep(time.Duration(timeBlocked) * time.Millisecond)
 
-		//TODO: creo que se pueden sacar estos mutex, nose si habria que bloquear el time.sleep
 		err := kernelglobals.BlockedStateQueue.Remove(tcbBlock)
 
 		if err != nil {
 			logger.Error("No se pudo remover el tcb de la BlockQueue - %v", err)
 		}
 		err = kernelglobals.ShortTermScheduler.AddToReady(tcbBlock)
+		kernelsync.SyscallFinalizada <- true
 		if err != nil {
 			logger.Error("No se pudo mover el tcb a la cola Ready. - %v", err)
 		}

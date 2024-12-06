@@ -1,7 +1,7 @@
 {
   "self_port": 8083,
   "self_address": "127.0.0.1",
-  "memory_size": 1024,
+  "memory_size": 256,
   "instruction_path": "/home/utnso/scripts-pruebas",
   "response_delay": 200,
   "ip_kernel": "127.0.0.1",
@@ -12,6 +12,6 @@
   "port_filesystem": 8082,
   "scheme": "FIJAS",
   "search_algorithm": "FIRST",
-  "partitions": [32, 32, 32, 32, 32, 32, 32, 32],
+  "partitions": [32,16,64,128,16],
   "log_level": "TRACE"
 }

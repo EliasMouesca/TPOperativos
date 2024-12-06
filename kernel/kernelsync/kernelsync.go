@@ -25,10 +25,11 @@ var WaitPlanificadorLP sync.WaitGroup
 var ChannelProcessArguments = make(chan []string)
 
 // var InitProcess = make(chan any)
-var InitProcess = make(chan struct{}, 1)
+var InitProcess = make(chan struct{})
 var SemProcessCreateOK = make(chan struct{}, 1)
 
 var ChannelFinishprocess = make(chan types.Pid)
+var ChannelFinishProcess2 = make(chan any)
 
 //var ChannelFinishprocess = make(chan struct{}, 1)
 

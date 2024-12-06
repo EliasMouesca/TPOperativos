@@ -164,7 +164,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 	if err != nil {
 		logger.Error("La syscall devolvió un error - %v", err)
 	}
-
+	logger.Debug("-- Termino de ejecutar syscall --")
 	go func() {
 		logger.Debug("Syscall Finalizada")
 		kernelsync.SyscallFinalizada <- true

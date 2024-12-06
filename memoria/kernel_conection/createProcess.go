@@ -78,7 +78,11 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 	context := types.ExecutionContext{}
 	context.MemoryBase = base
 	context.MemorySize = uint32(size)
+
+	memoriaGlobals.MutexContext.Lock()
 	memoriaGlobals.ExecContext[mainThread] = context
+	memoriaGlobals.MutexContext.Unlock()
+
 	logger.Info("Contexto creado para el hilo - (PID:TID): (%v, %v): %v", pid, 0, context)
 
 	// Log obligatorio
