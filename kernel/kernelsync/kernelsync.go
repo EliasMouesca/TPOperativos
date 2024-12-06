@@ -18,6 +18,7 @@ var SyscallChannel = make(chan any, 1)
 var DebeEmpezarNuevoQuantum = make(chan any)
 
 // MutexPlanificadorLP Sync de Planificador a largo plazo
+var MutexExecState sync.Mutex
 var MutexPlanificadorLP sync.Mutex
 var WaitPlanificadorLP sync.WaitGroup
 

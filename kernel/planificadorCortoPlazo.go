@@ -43,7 +43,7 @@ func planificadorCortoPlazo() {
 			//}()
 			logger.Trace("DEVUELVO HILO SIN PLANIFICAR!")
 		} else {
-			logger.Debug("Espernaod que haya hilos en ready")
+			logger.Debug("Esperando que haya hilos en ready")
 			<-kernelsync.PendingThreadsChannel
 			logger.Trace("Hay hilos en ready para planificar")
 
@@ -78,6 +78,7 @@ func planificadorCortoPlazo() {
 		//logger.Debug("tcbToExecute: %v", tcbToExecute.TID)
 
 		kernelglobals.ExecStateThread = tcbToExecute
+
 		logger.Debug("Asinando nuevo hilo a ExecStateThread: (TID: %v)", tcbToExecute.TID)
 		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
 			go func() {
