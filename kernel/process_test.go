@@ -4,7 +4,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/kernel/kerneltypes"
-	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Fifo"
+	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/ColasMultinivel"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"sync"
 	"testing"
@@ -20,12 +20,10 @@ func TestProcessCreate(t *testing.T) {
 	args := []string{"test_file", "500", "1"}
 
 	// Lanzar la syscall ProcessCreate en un goroutine
-	go func() {
-		err := ProcessCreate(args)
-		if err != nil {
-			t.Errorf("Error inesperado en ProcessCreate: %v", err)
-		}
-	}()
+	err := ProcessCreate(args)
+	if err != nil {
+		t.Errorf("Error inesperado en ProcessCreate: %v", err)
+	}
 
 	// Verificar que los argumentos se hayan enviado al canal
 	args = <-kernelsync.ChannelProcessArguments
@@ -84,8 +82,8 @@ func TestProcessExit(t *testing.T) {
 	kernelglobals.ExecStateThread = mainThreadPtr
 
 	// Agregar el hilo de Ready a ReadyStateQueue usando su puntero
-	kernelglobals.ShortTermScheduler = &Fifo.Fifo{
-		Ready: types.Queue[*kerneltypes.TCB]{},
+	kernelglobals.ShortTermScheduler = &ColasMultinivel.ColasMultiNivel{
+		ReadyQueue: []*types.Queue[*kerneltypes.TCB]{},
 	}
 	kernelglobals.ShortTermScheduler.AddToReady(readyThreadPtr)
 

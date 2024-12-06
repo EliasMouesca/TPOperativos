@@ -102,51 +102,6 @@ func ProcessExit(args []string) error {
 		}
 	}
 
-	/*
-			// 2. Verificar y eliminar hilos en la cola de Blocked
-			// TODO: Esto está mal, dejar de usar la queue así !
-			for _, blockedTCB := range kernelglobals.BlockedStateQueue.GetElements() {
-				//for i := 0; i < kernelglobals.BlockedStateQueue.Size(); i++ {
-				//blockedTCB, err := kernelglobals.BlockedStateQueue.GetAndRemoveNext()
-				//if err != nil {
-				//    logger.Error("Error al obtener el siguiente TCB de BlockedStateQueue - %v", err)
-				//    break
-				//}
-				// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
-				if blockedTCB.FatherPCB.PID == pcb.PID {
-					//kernelglobals.ExitStateQueue.Add(blockedTCB)
-					agregarAExitStateQueue(blockedTCB)
-					kernelglobals.BlockedStateQueue.Remove(blockedTCB)
-					logger.Info("(<%d:%d>) Se quita de blocked el hilo", pcb.PID, blockedTCB.TID)
-				} else {
-					// Si no es, se vuelve a insertar en la cola de bloqueados
-					kernelglobals.BlockedStateQueue.Add(blockedTCB)
-				}
-			}
-
-			// 3. Verificar y eliminar hilos en la cola de New
-			for !kernelglobals.NewStateQueue.IsEmpty() {
-				newTCB, err := kernelglobals.NewStateQueue.GetAndRemoveNext()
-				if err != nil {
-					logger.Error("Error al obtener el siguiente TCB de NewStateQueue - %v", err)
-					break
-				}
-				// Si es del PCB que se está finalizando, se mueve a ExitStateQueue
-				if newTCB.FatherPCB.PID == pcb.PID {
-					//kernelglobals.ExitStateQueue.Add(newTCB)
-					agregarAExitStateQueue(newTCB)
-					logger.Info("(<%d:%d>) Se manda a exit", pcb.PID, newTCB.TID)
-				} else {
-					// Si no es, se vuelve a insertar en la cola de new
-					kernelglobals.NewStateQueue.Add(newTCB)
-				}
-			}
-		}
-		logger.Debug("proces exit antes del channel")
-		go func() {
-			kernelsync.ChannelFinishprocess <- pcb.PID
-		}()
-	*/
 	if kernelglobals.BlockedStateQueue.Contains(tcb) {
 		kernelglobals.BlockedStateQueue.Remove(tcb)
 		logger.Info("(<%d:%d>) Se quita de blocked el hilo", pcb.PID, tcb.TID)
@@ -367,12 +322,12 @@ func MutexCreate(args []string) error {
 	currentPCB.CreatedMutexes = append(currentPCB.CreatedMutexes, newMutex)
 
 	// Ahora buscar el PCB en la lista de EveryPCBInTheKernel y actualizarlo
-	for i, pcb := range kernelglobals.EveryPCBInTheKernel {
-		if pcb.PID == currentPCB.PID {
-			kernelglobals.EveryPCBInTheKernel[i] = *currentPCB
-			break
-		}
-	}
+	//for i, pcb := range kernelglobals.EveryPCBInTheKernel {
+	//	if pcb.PID == currentPCB.PID {
+	//		kernelglobals.EveryPCBInTheKernel[i] = *currentPCB
+	//		break
+	//	}
+	//}
 
 	logger.Info("## Se creó el mutex <%v> para el proceso con PID <%d>", newMutex.Name, currentPCB.PID)
 
@@ -392,14 +347,16 @@ func MutexLock(args []string) error {
 		if mutex.Name == mutexName {
 			encontrado = true
 			if mutex.AssignedTCB == nil {
-				logger.Info("## El mutex <%v> ha sido asignado a (<%d:%d>)", mutexName, execTCB.FatherPCB.PID, execTCB.TID)
 				mutex.AssignedTCB = execTCB
 				execTCB.LockedMutexes = append(execTCB.LockedMutexes, mutex)
+				logger.Info("## El mutex <%v> ha sido asignado a (<%d:%d>)", mutexName, execTCB.FatherPCB.PID, execTCB.TID)
+
 			} else {
 				logger.Info("“## (<%v>:<%v>)- Bloqueado por: <MUTEX> (nombre: %v)", execTCB.FatherPCB.PID, execTCB.TID, mutexName)
 				mutex.BlockedTCBs = append(mutex.BlockedTCBs, execTCB)
 				kernelglobals.ShortTermScheduler.ThreadRemove(execTCB.TID, execTCB.FatherPCB.PID)
 				kernelglobals.BlockedStateQueue.Add(execTCB)
+
 				kernelglobals.ExecStateThread = nil
 			}
 		}
@@ -582,11 +539,9 @@ func IO(args []string) error {
 	threadBlockedTime, _ := strconv.Atoi(args[0])
 	execTCB := kernelglobals.ExecStateThread
 
-	kernelsync.MutexPlanificadorLP.Lock()
 	kernelglobals.BlockedStateQueue.Add(execTCB)
 	// Canal FIFO
 	logger.Info("## (<%v>:<%v>) - Bloqueado por: <IO>", execTCB.FatherPCB.PID, execTCB.TID)
-	kernelsync.MutexPlanificadorLP.Unlock()
 
 	kernelglobals.ExecStateThread = nil
 
