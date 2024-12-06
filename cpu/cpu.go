@@ -116,6 +116,11 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		logger.Debug("No hay nada para interrumpir! Saliendo...")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Kernel, mi amor, todavía no me mandaste a ejecutar nada, qué querés que interrumpa???"))
+
+		logger.Debug("Liberando MutexInterruption")
+		MutexInterruption.Unlock()
+		logger.Debug("MutexInterruption liberado")
+
 		return
 	}
 
@@ -124,7 +129,7 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 		logger.Debug("Enviando interrupción por el canal de interrupciones: %v", interruption.Description)
 		interruptionChannel <- interruption
 		logger.Debug("Interrupcion enviada por el canal de interrupciones")
-		if interruption.Type != types.InterruptionEndOfQuantum {
+		if interruption.Type != types.InterruptionEndOfQuantum && interruption.Type != types.InterruptionEviction {
 			kernelYourProcessFinished(*hiloEjecutando, interruption)
 		}
 
@@ -266,7 +271,7 @@ func loopInstructionCycle() {
 		// Yo creo que esto es suficientemente grave como para terminar la ejecución
 		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())
 	}
-
+	logger.Debug("Kernel avisado ahora avisamos a memoria")
 	err = memoryUpdateExecutionContext(finishedThread, finishedExecutionContext)
 	if err != nil {
 		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())

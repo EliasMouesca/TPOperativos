@@ -5,8 +5,8 @@
   "port_memory": 8083,
   "mount_dir": "disk",
   "block_size": 32,
-  "block_count": 4096,
-  "block_access_delay": 2500,
-  "log_level": "DEBUG"
+  "block_count": 200,
+  "block_access_delay": 25,
+  "log_level": "TRACE"
 }
 

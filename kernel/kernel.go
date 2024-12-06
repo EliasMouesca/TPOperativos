@@ -71,9 +71,9 @@ func main() {
 	fileName := os.Args[1]    // Primer argumento: nombre del archivo de pseudocódigo
 	processSize := os.Args[2] // Segundo argumento: tamanio del proceso
 
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		logger.Fatal("El archivo '%v' no existe!", fileName)
-	}
+	//if _, err := os.Stat(fileName); os.IsNotExist(err) {
+	//	logger.Fatal("El archivo '%v' no existe!", fileName)
+	//}
 
 	// -- INICIALIZAMOS KERNEL --
 	// Inicializar colas y planificadores globales

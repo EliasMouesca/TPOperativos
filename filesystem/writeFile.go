@@ -37,7 +37,7 @@ func writeFilePhysically(filename string, data []byte) error {
 // writeFile recibe el nombre, la data y crea el archivo
 func writeFile(filename string, data []byte) error {
 	size := len(data)
-
+	logger.Warn("Cant max bloques: %v", config.BlockCount)
 	// Si lo que quieren guardar es más grande que usar todos los bloques del disco menos uno para indexar => ?
 	if size > config.BlockSize*(config.BlockCount-1) {
 		return errors.New("archivo demasiado grande")
@@ -65,6 +65,7 @@ func writeFile(filename string, data []byte) error {
 		// -- Escribimos en el bloque índice --
 		buffer := make([]byte, 4)
 		// Por qué little endian? -> es más fácil de leer en la terminal. No importa igual pq nunca hacemos la operacion de lectura.
+		bloquesFile, err := os.OpenFile(config.MountDir+"/"+bitmapFilename, os.O_RDWR, 0644)
 		binary.LittleEndian.PutUint32(buffer, bloqueDato)
 		bytesWritten, err := bloquesFile.WriteAt(buffer, int64(int(bloqueIndice)*config.BlockSize+4*i))
 		if err != nil || bytesWritten != 4 {
@@ -76,6 +77,7 @@ func writeFile(filename string, data []byte) error {
 
 		//-- Escribimos en el bloque dato --
 		// Escribí en donde corresponda (bloqueDato * blockSize) un cacho de la data.
+
 		bytesWritten, err = bloquesFile.WriteAt(
 			// El cacho de bytes a escribir va desde el número de bloque (i) * el tamaño de bloque
 			// hasta el siguiente bloque o el limite de la slice, lo que sea más chico.
@@ -109,7 +111,12 @@ func allocateBlocks(numberOfBlocksToAllocate int) ([]uint32, error) {
 	logger.Trace("Asignando %v bloques", numberOfBlocksToAllocate)
 	bitmapMutex.Lock()
 	defer bitmapMutex.Unlock()
-
+	var err error
+	bitmapFile, err := os.OpenFile(config.MountDir+"/"+bitmapFilename, os.O_RDWR, 0644)
+	if err != nil {
+		return nil, err
+	}
+	defer bitmapFile.Close()
 	// Hacemos una copai del bitmap en memoria, después hay que persistirla si queremos guardar los cambios
 	bitmap, err := io.ReadAll(bitmapFile)
 	if err != nil {

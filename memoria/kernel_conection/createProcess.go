@@ -43,7 +43,7 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Leer el archivo y cargarlo a memoria
-	file, err := os.Open(pseudoCodigoAEjecutar)
+	file, err := os.Open(memoriaGlobals.Config.InstructionPath + pseudoCodigoAEjecutar)
 	if err != nil {
 		logger.Error("No se pudo abrir el archivo de pseudocódigo - %v", err)
 	}

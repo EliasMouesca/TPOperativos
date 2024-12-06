@@ -43,8 +43,8 @@ func main() {
 	if err != nil {
 		logger.Fatal("EL filesystem no se pudo inicializar - %v", err)
 	}
-	defer bitmapFile.Close()
-	defer bloquesFile.Close()
+	//defer bitmapFile.Close()
+	//defer bloquesFile.Close()
 
 	logger.Info("--- Comienzo ejecución del filesystem ---")
 	http.HandleFunc("/", notFound)
@@ -98,7 +98,7 @@ func initialize() error {
 
 		// Creamos el archivo bitmap
 		logger.Debug("Creando el archivo '%s'", bitmapFilename)
-		bitmapFile, err = os.OpenFile(config.MountDir+"/"+bitmapFilename, os.O_RDWR|os.O_CREATE, 0644)
+		bitmapFile, err := os.OpenFile(config.MountDir+"/"+bitmapFilename, os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
@@ -118,10 +118,13 @@ func initialize() error {
 
 		// "bloques.dat"
 		logger.Debug("Creando el archivo '%s'", bloquesFilename)
-		bloquesFile, err = os.OpenFile(config.MountDir+"/"+bloquesFilename, os.O_RDWR|os.O_CREATE, 0644)
+		bloquesFile, err := os.OpenFile(config.MountDir+"/"+bloquesFilename, os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
+
+		defer bitmapFile.Close()
+		defer bloquesFile.Close()
 
 		buffer = make([]byte, config.BlockCount*config.BlockSize)
 		_, err = bloquesFile.Write(buffer)
@@ -143,17 +146,6 @@ func initialize() error {
 		infoBloques.Size() != int64(config.BlockCount*config.BlockSize) {
 		logger.Fatal("La configuración no coincide con los archivos encontrados ('%s' y '%s')",
 			bitmapFilename, bloquesFilename)
-	}
-
-	// Los abrimos
-	bitmapFile, err = os.OpenFile(config.MountDir+"/"+bitmapFilename, os.O_RDWR, 0644)
-	if err != nil {
-		return err
-	}
-
-	bloquesFile, err = os.OpenFile(config.MountDir+"/"+bloquesFilename, os.O_RDWR, 0644)
-	if err != nil {
-		return err
 	}
 
 	return nil
