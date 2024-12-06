@@ -33,7 +33,7 @@ func (d *Dinamicas) AsignarProcesoAParticion(pid types.Pid, size int) (base uint
 			logger.Debug("si hay espacio suficiente")
 			return 0, errors.New(types.Compactacion)
 		} else {
-			logger.Error("La estrategia de asignacion no ha podido asignar el proceso a una particion")
+			logger.Warn("La estrategia de asignacion no ha podido asignar el proceso a una particion")
 			return 0, err
 		}
 	}

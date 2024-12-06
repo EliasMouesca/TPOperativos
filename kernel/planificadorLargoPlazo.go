@@ -341,16 +341,25 @@ func UnlockIO() {
 		timeBlocked := <-kernelsync.ChannelIO2
 
 		time.Sleep(time.Duration(timeBlocked) * time.Millisecond)
-
 		err := kernelglobals.BlockedStateQueue.Remove(tcbBlock)
 
 		if err != nil {
 			logger.Error("No se pudo remover el tcb de la BlockQueue - %v", err)
 		}
+
 		err = kernelglobals.ShortTermScheduler.AddToReady(tcbBlock)
-		kernelsync.SyscallFinalizada <- true
 		if err != nil {
 			logger.Error("No se pudo mover el tcb a la cola Ready. - %v", err)
+		}
+
+		logger.Debug("-- Probando cosas raras --")
+		kernelsync.SyscallFinalizada <- true
+		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
+			// Termino de ejecutar la Syscall => Reinicia el Quantum
+			go func() {
+				logger.Warn("Reiniciamos timer por syscall")
+				kernelsync.SyscallChannel <- struct{}{}
+			}()
 		}
 		logger.Info("“## (<%v>:<%v>) finalizó IO y pasa a READY", tcbBlock.FatherPCB.PID, tcbBlock.TID)
 	}

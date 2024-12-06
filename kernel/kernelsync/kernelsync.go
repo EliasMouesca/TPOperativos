@@ -47,3 +47,7 @@ var SemIo = make(chan int)
 // en una PC de verdad no tenés una CPU para syscalls y otra para proces, xd
 var SyscallFinalizada = make(chan any)
 var PlanificacionFinalizada = make(chan any)
+
+var TerminoIO = make(chan any)
+
+var MutexExecThread sync.Mutex

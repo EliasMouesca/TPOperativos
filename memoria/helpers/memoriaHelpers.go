@@ -52,6 +52,7 @@ func ReadMemory(dir int) ([]byte, error) {
 
 func GetInstruction(thread types.Thread, pc int) (instruction string, err error) {
 	// Verificar si el hilo tiene instrucciones
+
 	instructions, exists := memoriaGlobals.CodeRegionForThreads[thread]
 	if !exists {
 		logger.Error("Memoria no sabe que este thread exista ! (PID:%d, TID:%d)", thread.PID, thread.TID)
@@ -67,7 +68,6 @@ func GetInstruction(thread types.Thread, pc int) (instruction string, err error)
 
 	// Obtener la instrucción actual en la posición del PC
 	instruction = instructions[pc]
-	//TODO: esto puede romper todo, creemos que es (pc - 1)
 
 	return instruction, nil
 }

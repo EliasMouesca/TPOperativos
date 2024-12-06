@@ -35,7 +35,7 @@ func (f *Fijas) Init() {
 func (f *Fijas) AsignarProcesoAParticion(pid types.Pid, size int) (base uint32, err error) {
 	err, particionEncontrada := memoriaGlobals.EstrategiaAsignacion.BuscarParticion(size, &f.Particiones)
 	if err != nil {
-		logger.Error("La estrategia de asignacion no ha podido asignar el proceso a una particion")
+		logger.Warn("La estrategia de asignacion no ha podido asignar el proceso a una particion")
 		return 0, err
 	}
 

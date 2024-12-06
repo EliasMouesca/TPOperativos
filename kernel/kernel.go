@@ -159,8 +159,14 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 		logger.Error("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
 		return nil
 	}
-
+	kernelsync.MutexExecThread.Lock()
 	err := syscallFunc(syscall.Arguments)
+	kernelsync.MutexExecThread.Unlock()
+	if kernelglobals.ExecStateThread == nil {
+		logger.Warn("ExecStateThread post syscall: nil")
+	} else {
+		logger.Warn("ExecStateThread post syscall: (PID: %v - TID: %v)", kernelglobals.ExecStateThread.FatherPCB.PID, kernelglobals.ExecStateThread.TID)
+	}
 	if err != nil {
 		logger.Error("La syscall devolvió un error - %v", err)
 	}
@@ -168,6 +174,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 	go func() {
 		logger.Debug("Syscall Finalizada")
 		kernelsync.SyscallFinalizada <- true
+
 		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
 			// Termino de ejecutar la Syscall => Reinicia el Quantum
 			go func() {
@@ -175,6 +182,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 				kernelsync.SyscallChannel <- struct{}{}
 			}()
 		}
+
 	}()
 
 	return nil

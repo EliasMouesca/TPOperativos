@@ -34,15 +34,15 @@ func planificadorCortoPlazo() {
 		var tcbToExecute *kerneltypes.TCB
 		var err error
 
+		kernelsync.MutexExecThread.Lock()
 		if kernelglobals.ExecStateThread != nil {
+			logger.Warn("ExecStateThread: (PID: %v - TID: %v)", kernelglobals.ExecStateThread.FatherPCB.PID, kernelglobals.ExecStateThread.TID)
 			tcbToExecute = kernelglobals.ExecStateThread
-			//go func() {
-			//
-			//	kernelglobals.QuantumTimer.Stop()
-			//	kernelsync.DebeEmpezarNuevoQuantum <- true
-			//}()
+			kernelsync.MutexExecThread.Unlock()
+
 			logger.Trace("DEVUELVO HILO SIN PLANIFICAR!")
 		} else {
+			kernelsync.MutexExecThread.Unlock()
 			logger.Debug("Esperando que haya hilos en ready")
 			<-kernelsync.PendingThreadsChannel
 			logger.Trace("Hay hilos en ready para planificar")
@@ -79,7 +79,7 @@ func planificadorCortoPlazo() {
 
 		kernelglobals.ExecStateThread = tcbToExecute
 
-		logger.Debug("Asinando nuevo hilo a ExecStateThread: (TID: %v)", tcbToExecute.TID)
+		logger.Debug("Asinando nuevo hilo a ExecStateThread: (TID: %v PID: %v)", tcbToExecute.TID, tcbToExecute.FatherPCB.PID)
 		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
 			go func() {
 				logger.Debug("Mandamos que debe empezar nuevo quantum")

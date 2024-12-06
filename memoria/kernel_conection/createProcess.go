@@ -64,7 +64,7 @@ func CreateProcessHandler(w http.ResponseWriter, r *http.Request) {
 
 	base, err := memoriaGlobals.SistemaParticiones.AsignarProcesoAParticion(types.Pid(pid), size)
 	if err != nil {
-		logger.Error("Error al asignar el proceso < %v > de tamaño %v a una particion de memoria", pid, size)
+		logger.Warn("No se pudo asignar el proceso < %v > de tamaño %v a una particion de memoria", pid, size)
 		if err.Error() == types.Compactacion {
 			logger.Debug("Se debe compactar")
 			w.WriteHeader(http.StatusConflict)

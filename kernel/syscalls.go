@@ -553,7 +553,6 @@ func IO(args []string) error {
 		kernelsync.ChannelIO2 <- threadBlockedTime
 		logger.Debug("Despues de pasar argumentos al ChannelIO")
 	}()
-
 	return nil
 }
 
