@@ -1,0 +1,12 @@
+{
+  "ip_self": "127.0.0.1",
+  "port_self": 8082,
+  "ip_memory": "127.0.0.1",
+  "port_memory": 8083,
+  "mount_dir": "disk",
+  "block_size": 32,
+  "block_count": 200,
+  "block_access_delay": 25,
+  "log_level": "TRACE"
+}
+

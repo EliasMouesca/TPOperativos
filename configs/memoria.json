@@ -2,7 +2,7 @@
   "self_port": 8083,
   "self_address": "127.0.0.1",
   "memory_size": 2048,
-  "instruction_path": "../pruebas/",
+  "instruction_path": "/home/utnso/the-last-of-c-pruebas/",
   "response_delay": 10,
   "ip_kernel": "127.0.0.1",
   "port_kernel": 8081,
