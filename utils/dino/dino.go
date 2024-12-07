@@ -36,10 +36,10 @@ func Brachiosaurus(usaGalera bool) {
 }
 
 func Trex() {
-    color := "\033[93m"
-    nocolor := "\033[0m"
+	color := "\033[93m"
+	nocolor := "\033[0m"
 
-    dino := `
+	dino := `
        __----_
       /    O  \                 ,        __   ___
       vvvvvvv  \               _|       |  | |   
@@ -57,16 +57,16 @@ func Trex() {
                 <<<__/ <<<___/    (________=====-_
            `
 
-    fmt.Print(color)
-    fmt.Println(dino)
-    fmt.Print(nocolor)
+	fmt.Print(color)
+	fmt.Println(dino)
+	fmt.Print(nocolor)
 }
 
 func Triceraptops() {
-    color := "\033[95m"
-    nocolor := "\033[0m"
+	color := "\033[95m"
+	nocolor := "\033[0m"
 
-    dino := `
+	dino := `
                             ,        __   ___
                            _|       |  | |   
              )            / | °  _  |  | \--.
@@ -82,16 +82,16 @@ func Triceraptops() {
               /__|\_|       /_|__| 
            `
 
-    fmt.Print(color)
-    fmt.Println(dino)
-    fmt.Print(nocolor)
+	fmt.Print(color)
+	fmt.Println(dino)
+	fmt.Print(nocolor)
 }
 
 func Pterodactyl() {
-    color := "\033[96m"
-    nocolor := "\033[0m"
+	color := "\033[96m"
+	nocolor := "\033[0m"
 
-    dino := `
+	dino := `
                              ^            ,        __   ___
                             //           _|       |  | |   
                            /o\          / | °  _  |  | \--.
@@ -103,14 +103,13 @@ _,-". , . , . , . , . ,\. ,\|  |/, ./, . , . , . , . , ."-,_
     "--,, . , . , . , . , .(     ), . , . , . , . , .,--"
         "~-,,,,,________ . \,___,/ . ________,,,,,-~"
                         \_,/\   /\,_/    
-                           ( \ / )/
+                          \( \ / )/
                            |  V  |
                            m     m
 
            `
 
-    fmt.Print(color)
-    fmt.Println(dino)
-    fmt.Print(nocolor)
+	fmt.Print(color)
+	fmt.Println(dino)
+	fmt.Print(nocolor)
 }
-

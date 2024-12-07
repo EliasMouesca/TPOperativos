@@ -151,7 +151,7 @@ func (cmm *ColasMultiNivel) addNewQueue(tcb *kerneltypes.TCB) error {
 	}
 
 	for i, v := range cmm.ReadyQueue {
-		logger.Warn("Cola %v, prioridad: %v", i, v.Priority)
+		logger.Trace("Cola %v, prioridad: %v", i, v.Priority)
 	}
 
 	return nil

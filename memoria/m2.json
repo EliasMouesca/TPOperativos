@@ -1,17 +1,17 @@
 {
   "self_port": 8083,
   "self_address": "127.0.0.1",
-  "memory_size": 8192,
+  "memory_size": 1024,
   "instruction_path": "../pruebas/",
-  "response_delay": 50,
+  "response_delay": 200,
   "ip_kernel": "127.0.0.1",
   "port_kernel": 8081,
   "ip_cpu": "127.0.0.1",
   "port_cpu": 8080,
   "ip_filesystem": "127.0.0.1",
   "port_filesystem": 8082,
-  "scheme": "DINAMICAS",
-  "search_algorithm": "BEST",
+  "scheme": "FIJAS",
+  "search_algorithm": "FIRST",
   "partitions": [32,32,32,32,32,32,32,32],
   "log_level": "INFO"
 }

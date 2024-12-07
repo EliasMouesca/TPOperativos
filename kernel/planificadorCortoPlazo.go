@@ -36,7 +36,7 @@ func planificadorCortoPlazo() {
 
 		kernelsync.MutexExecThread.Lock()
 		if kernelglobals.ExecStateThread != nil {
-			logger.Warn("ExecStateThread: (PID: %v - TID: %v)", kernelglobals.ExecStateThread.FatherPCB.PID, kernelglobals.ExecStateThread.TID)
+			logger.Trace("ExecStateThread: (PID: %v - TID: %v)", kernelglobals.ExecStateThread.FatherPCB.PID, kernelglobals.ExecStateThread.TID)
 			tcbToExecute = kernelglobals.ExecStateThread
 			kernelsync.MutexExecThread.Unlock()
 

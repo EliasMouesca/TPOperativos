@@ -1,9 +1,9 @@
 {
   "self_port": 8083,
   "self_address": "127.0.0.1",
-  "memory_size": 8192,
+  "memory_size": 2048,
   "instruction_path": "../pruebas/",
-  "response_delay": 50,
+  "response_delay": 10,
   "ip_kernel": "127.0.0.1",
   "port_kernel": 8081,
   "ip_cpu": "127.0.0.1",

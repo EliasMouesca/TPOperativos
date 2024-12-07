@@ -164,9 +164,9 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 	err := syscallFunc(syscall.Arguments)
 	kernelsync.MutexExecThread.Unlock()
 	if kernelglobals.ExecStateThread == nil {
-		logger.Warn("ExecStateThread post syscall: nil")
+		logger.Trace("ExecStateThread post syscall: nil")
 	} else {
-		logger.Warn("ExecStateThread post syscall: (PID: %v - TID: %v)", kernelglobals.ExecStateThread.FatherPCB.PID, kernelglobals.ExecStateThread.TID)
+		logger.Trace("ExecStateThread post syscall: (PID: %v - TID: %v)", kernelglobals.ExecStateThread.FatherPCB.PID, kernelglobals.ExecStateThread.TID)
 	}
 	if err != nil {
 		logger.Error("La syscall devolvió un error - %v", err)
@@ -179,7 +179,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
 			// Termino de ejecutar la Syscall => Reinicia el Quantum
 			go func() {
-				logger.Warn("Reiniciamos timer por syscall")
+				logger.Debug("Reiniciamos timer por syscall")
 				kernelsync.SyscallChannel <- struct{}{}
 			}()
 		}
