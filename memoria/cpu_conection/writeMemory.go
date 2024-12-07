@@ -28,7 +28,6 @@ func WriteMemoryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Log obligatorio
 	logger.Info("## Escritura - (PID:TID) - (%v:%v) - Dir.Física: %v - Tamaño: %v", tidS, pidS, dirS, "4 bytes")
-	time.Sleep(time.Duration(memoriaGlobals.Config.ResponseDelay))
 
 	dir, err := strconv.Atoi(dirS)
 	if err != nil {

@@ -154,8 +154,11 @@ func (d *Dinamicas) LiberarParticion(pid types.Pid) error {
 			if i > 0 && !d.Particiones[i-1].Ocupado && i+1 < len(d.Particiones) && !d.Particiones[i+1].Ocupado {
 				// Caso 1: La partición actual y ambas adyacentes son libres
 				d.Particiones[i-1].Limite = d.Particiones[i+1].Limite
-				d.Particiones = append(d.Particiones[:i], d.Particiones[i+1:]...)
-
+				/*
+					Acá no estaría eliminando la partición i+1
+					d.Particiones = append(d.Particiones[:i], d.Particiones[i+1:]...)
+				*/
+				d.Particiones = append(d.Particiones[:i], d.Particiones[i+2:]...)
 			} else if i > 0 && !d.Particiones[i-1].Ocupado {
 				// Caso 2: La partición anterior es libre
 				d.Particiones[i-1].Limite = particion.Limite

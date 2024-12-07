@@ -28,6 +28,19 @@ func FinishThreadHandler(w http.ResponseWriter, r *http.Request) {
 	pidS := requestData.PID
 	tidS := requestData.TID
 
+	//Según la consigna, se deben borran las estructuras administrativas del thread => hay que borrar el contexto
+	/*
+		pid, err:= strconv.Atoi(pidS)
+		tid, err:= strconv.Atoi(tidS)
+		if err != nil {
+			logger.Error("Error al parsear el Thread (%v, %v) recibido - %v", pidS, tidS, err)
+			http.Error(w, "Thread inválido", http.StatusBadRequest)
+			return
+		}
+		delete(memoriaGlobals.ExecContext, types.Thread{types.Pid(pid), types.Tid(tid)})
+		logger.Trace("Contexto eliminado");
+	*/
+
 	// Log obligatorio
 	logger.Info("## Hilo Destruido - (PID:TID) - (%v,%v)", pidS, tidS)
 
