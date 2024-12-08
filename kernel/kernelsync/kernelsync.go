@@ -52,11 +52,5 @@ var TerminoIO = make(chan any)
 
 var MutexExecThread sync.Mutex
 
-type RequestToMemory struct {
-	Thread    types.Thread
-	Type      string
-	Arguments []string
-}
-
-var ProcesosEnEspera = make(chan RequestToMemory, 1)
-var SeSacoUnoDeEspera = make(chan any)
+var MutexPuedoCrearProceso sync.Mutex
+var MutexEsSuTurno sync.Mutex

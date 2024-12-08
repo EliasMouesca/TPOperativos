@@ -24,6 +24,7 @@ func (f *Fijas) Init() {
 			Base:    base,
 			Limite:  base + tamanio,
 			Ocupado: false,
+			Pid:     -1,
 		}
 
 		f.Particiones = append(f.Particiones, particion)
@@ -63,7 +64,7 @@ func (f *Fijas) LiberarParticion(pid types.Pid) error {
 		particion := f.Particiones[i]
 		if particion.Pid == pid {
 			f.Particiones[i].Ocupado = false
-			f.Particiones[i].Pid = 0
+			f.Particiones[i].Pid = -1
 			encontrada = true
 			logger.Debug("Particion encontrada: Base: %v", particion.Base)
 			break
@@ -72,7 +73,7 @@ func (f *Fijas) LiberarParticion(pid types.Pid) error {
 	if !encontrada {
 		return fmt.Errorf("no se encontro particion que contenga el proceso PID: < %v >", pid)
 	}
-	logger.Debug("Proceso (< %v >) liberado", pid)
+	logger.Info("Proceso (< %v >) liberado", pid)
 	logger.Info("Particiones luego de liberar: %v", f.Particiones)
 	return nil
 }

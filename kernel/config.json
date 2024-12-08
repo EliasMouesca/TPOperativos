@@ -7,5 +7,5 @@
   "port_cpu": 8080,
   "scheduler_algorithm": "CMN",
   "quantum": 500,
-  "log_level": "INFO"
+  "log_level": "DEBUG"
 }

@@ -21,6 +21,7 @@ func (d *Dinamicas) Init() {
 		Base:    0,
 		Limite:  memSize,
 		Ocupado: false,
+		Pid:     -1,
 	})
 }
 
@@ -147,7 +148,7 @@ func (d *Dinamicas) LiberarParticion(pid types.Pid) error {
 		if particion.Pid == pid {
 			// Marcar la partición como libre
 			d.Particiones[i].Ocupado = false
-			d.Particiones[i].Pid = 0
+			d.Particiones[i].Pid = -1
 			encontrada = true
 
 			// Consolidación de particiones libres adyacentes

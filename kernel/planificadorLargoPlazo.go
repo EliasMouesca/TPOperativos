@@ -45,90 +45,44 @@ func NewProcessToReady() {
 			Type:      types.CreateProcess,
 			Arguments: []string{fileName, processSize},
 		}
-
-		if len(kernelsync.ProcesosEnEspera) == 0 {
-			err := sendMemoryRequest(request)
-
-			logger.Warn("No hay procesos en espera, enviando a memoria...")
-
-			//err := sendMemoryRequest(request)
-			if err != nil {
-				logger.Error("Error al enviar request a memoria: %v", err)
-				if errors.Is(err, errors.New("memoria: Se debe compactar")) {
-					solicitarCompactacion(request, prioridad)
-				} else {
-					go func() {
-						logger.Warn("Agregando proceso a channel espera")
-						kernelsync.ProcesosEnEspera <- kernelsync.RequestToMemory(request)
-						logger.Warn("tamanio chanell: %v", len(kernelsync.ProcesosEnEspera))
-					}()
-					go func(request types.RequestToMemory, pid int, prioridad int) {
-						for {
-							//<- kernelsync.SeSacoUnoDeEspera
-							logger.Warn("Esperando que termine un proceso para enviar siguiente en espera")
-
-							<-kernelsync.InitProcess
-
-							// Espera a que finalice otro proceso antes de intentar de nuevo
-							logger.Debug("Termino un proceso, intentando crear proceso pendiente: %v", pid)
-							err1 := sendMemoryRequest(request)
-							if err1 == nil {
-								logger.Debug("Se librero un proceso y ahora hay espacio para crear el proceso con PID: %v", request.Thread.PID)
-								agregarProcesoAReady(pid, prioridad)
-								break
-							} else {
-								// Si entra aca y no al if este, es que no hay espacio dispoible ni compactando entocnes sigue
-								// esperando a que se libere otro proceso
-								if errors.Is(err1, types.ErrorRequestType[types.Compactacion]) {
-									solicitarCompactacion(request, prioridad)
-									break
-								}
-							}
-
-							request := <-kernelsync.ProcesosEnEspera
-
-							go func(request types.RequestToMemory, pid int, prioridad int) {
-								for {
-									//<- kernelsync.SeSacoUnoDeEspera
-									logger.Warn("Esperando que termine un proceso para enviar siguiente en espera")
-
-									<-kernelsync.InitProcess
-
-									// Espera a que finalice otro proceso antes de intentar de nuevo
-									logger.Debug("Termino un proceso, intentando crear proceso pendiente: %v", pid)
-									err1 := sendMemoryRequest(request)
-									if err1 == nil {
-										logger.Debug("Se librero un proceso y ahora hay espacio para crear el proceso con PID: %v", request.Thread.PID)
-										agregarProcesoAReady(pid, prioridad)
-										break
-									} else {
-										// Si entra aca y no al if este, es que no hay espacio dispoible ni compactando entocnes sigue
-										// esperando a que se libere otro proceso
-										if errors.Is(err1, types.ErrorRequestType[types.Compactacion]) {
-											solicitarCompactacion(request, prioridad)
-											break
-										}
-									}
-
-								}
-							}(types.RequestToMemory(request), pid, prioridad)
-
-						}
-					}(request, pid, prioridad)
-				}
+		err := sendMemoryRequest(request)
+		if err != nil {
+			logger.Warn("Error al enviar request a memoria: %v", err)
+			if errors.Is(err, errors.New("memoria: Se debe compactar")) {
+				solicitarCompactacion(request, prioridad)
 			} else {
-				logger.Debug("Hay espacio disponible en memoria")
-				agregarProcesoAReady(pid, prioridad)
+				go func(request types.RequestToMemory, pid int, prioridad int) {
+					for {
+						logger.Info("<PID: %v> Esperando a que finalice un proceso para crearse", pid)
+						<-kernelsync.InitProcess // Espera a que finalice otro proceso antes de intentar de nuevo
+						logger.Debug("Termino un proceso, intentando crear proceso pendiente: %v", pid)
+						err1 := sendMemoryRequest(request)
+						if err1 == nil {
+							logger.Debug("Se librero un proceso y ahora hay espacio para crear el proceso con PID: %v", request.Thread.PID)
+							logger.Info("Creando proceso pendiente (PID: %v)", pid)
+							agregarProcesoAReady(pid, prioridad)
+							kernelsync.MutexPuedoCrearProceso.Unlock()
+							break
+						} else {
+							// Si entra aca y no al if este, es que no hay espacio dispoible ni compactando entocnes sigue
+							// esperando a que se libere otro proceso
+							if errors.Is(err1, types.ErrorRequestType[types.Compactacion]) {
+								solicitarCompactacion(request, prioridad)
+								kernelsync.MutexPuedoCrearProceso.Unlock()
+								break
+							}
+						}
+					}
+				}(request, pid, prioridad)
 			}
 		} else {
-			go func() {
-				logger.Warn("Hay procesos en espera, agregandolo a la cola de espera.")
-				kernelsync.ProcesosEnEspera <- kernelsync.RequestToMemory(request)
-				//kernelsync.SeSacoUnoDeEspera <- true
-			}()
+			logger.Debug("Hay espacio disponible en memoria")
+			agregarProcesoAReady(pid, prioridad)
+			kernelsync.MutexPuedoCrearProceso.Unlock()
 		}
 	}
 }
+
 func solicitarCompactacion(request types.RequestToMemory, prioridad int) {
 	logger.Debug("Memoria necesita compactar para crear el proceso...")
 	requestCompact := types.RequestToMemory{

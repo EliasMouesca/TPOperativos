@@ -35,37 +35,42 @@ var PIDcount int = 0
 func ProcessCreate(args []string) error {
 	// Esta syscall recibirá 3 parámetros de la CPU: nombre del archivo, tamaño del proceso y prioridad del hilo main (TID 0).
 	// El Kernel creará un nuevo PCB y lo dejará en estado NEW.
+	go func() error {
+		// Si hay un proceso en espera para ser creado, tiene que esperar a que ese se cree
+		kernelsync.MutexPuedoCrearProceso.Lock()
+		// Se crea el PCB (sin crear el hilo principal aún)
+		var processCreate kerneltypes.PCB
+		PIDcount++
+		processCreate.PID = types.Pid(PIDcount)
+		processCreate.TIDs = []types.Tid{0} // Solo se conoce el TID 0 por ahora
+		processCreate.CreatedMutexes = []kerneltypes.Mutex{}
 
-	// Se crea el PCB (sin crear el hilo principal aún)
-	var processCreate kerneltypes.PCB
-	PIDcount++
-	processCreate.PID = types.Pid(PIDcount)
-	processCreate.TIDs = []types.Tid{0} // Solo se conoce el TID 0 por ahora
-	processCreate.CreatedMutexes = []kerneltypes.Mutex{}
+		logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", processCreate.PID)
 
-	logger.Info("## (<%d>:<0>) Se crea el proceso - Estado: NEW", processCreate.PID)
+		// Agregar el PCB a la lista de PCBs en el kernel
+		kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, processCreate)
 
-	// Agregar el PCB a la lista de PCBs en el kernel
-	kernelglobals.EveryPCBInTheKernel = append(kernelglobals.EveryPCBInTheKernel, processCreate)
+		// Buscar el PCB recien creado utilizando el PID
+		pcbPtr := buscarPCBPorPID(processCreate.PID)
+		if pcbPtr == nil {
+			logger.Error("No se encontró el PCB con PID <%d> en la lista global", processCreate.PID)
+			return errors.New("PCB no encontrado")
+		}
 
-	// Buscar el PCB recien creado utilizando el PID
-	pcbPtr := buscarPCBPorPID(processCreate.PID)
-	if pcbPtr == nil {
-		logger.Error("No se encontró el PCB con PID <%d> en la lista global", processCreate.PID)
-		return errors.New("PCB no encontrado")
-	}
+		// Mandar el proceso a la cola de NewStateQueue (solo PCB, sin TCB)
+		kernelglobals.NewPCBStateQueue.Add(pcbPtr)
 
-	// Mandar el proceso a la cola de NewStateQueue (solo PCB, sin TCB)
-	kernelglobals.NewPCBStateQueue.Add(pcbPtr)
+		//Agrego el PID a args, para despues pasarselo a memoria
+		pidStr := strconv.Itoa(int(processCreate.PID))
+		args = append(args, pidStr)
 
-	//Agrego el PID a args, para despues pasarselo a memoria
-	pidStr := strconv.Itoa(int(processCreate.PID))
-	args = append(args, pidStr)
+		// Enviar los argumentos al canal para que NewProcessToReady los procese
+		kernelsync.ChannelProcessArguments <- args
+		go func() {
+			<-kernelsync.SemProcessCreateOK
+		}()
 
-	// Enviar los argumentos al canal para que NewProcessToReady los procese
-	kernelsync.ChannelProcessArguments <- args
-	go func() {
-		<-kernelsync.SemProcessCreateOK
+		return nil
 	}()
 
 	return nil

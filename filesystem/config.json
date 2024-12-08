@@ -4,8 +4,8 @@
   "ip_memory": "127.0.0.1",
   "port_memory": 8083,
   "mount_dir": "disk",
-  "block_size": 632,
-  "block_count": 4096,
+  "block_size": 16,
+  "block_count": 1024,
   "block_access_delay": 2500,
   "log_level": "INFO"
 }
