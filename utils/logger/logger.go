@@ -45,7 +45,7 @@ var levelTags = map[int]string{
 
 // ConfigureLogger configura el logger, cuidado porque esto leakea 1 file handle...
 func ConfigureLogger(filepath string, level string) error {
-	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
 	}
