@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 func init() {
@@ -277,6 +278,9 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 	// Encontrá nuestro TCB
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
 		if tcb.TID == thread.TID && tcb.FatherPCB.PID == thread.PID {
+
+			tcb.ExitInstant = time.Now()
+
 			// Si la INT fue eviction o EOQ -> vuelve a ready
 			if interruption.Type == types.InterruptionEviction ||
 				interruption.Type == types.InterruptionEndOfQuantum {
@@ -298,6 +302,12 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 				kernelsync.SyscallFinalizada <- true
 
 			} else if interruption.Type == types.InterruptionSyscall {
+				logger.Debug("Interrupcion por syscall")
+				logger.Debug("Se pone ExecStateThread en nil por fin de quantum o desalojo => Hay que replanificar")
+				kernelglobals.ExecStateThread = nil
+
+				logger.Info("## (<%v>:<%v>) Se agrega a cola READY despues de EndOfQuantum o Desalojo", tcb.FatherPCB.PID, tcb.TID)
+				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
 				// Si volvio por fin de syscall antes de que termine el quantum, este se resetea
 				//if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
 				//	go func() {

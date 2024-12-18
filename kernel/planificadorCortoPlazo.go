@@ -10,6 +10,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/kernel/shorttermscheduler/Prioridades"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
+	"time"
 )
 
 var AlgorithmsMap = map[string]kerneltypes.ShortTermSchedulerInterface{
@@ -40,6 +41,8 @@ func planificadorCortoPlazo() {
 			tcbToExecute = kernelglobals.ExecStateThread
 			kernelsync.MutexExecThread.Unlock()
 
+			tcbToExecute.HayQuantumRestante = true
+
 			logger.Trace("DEVUELVO HILO SIN PLANIFICAR!")
 		} else {
 			kernelsync.MutexExecThread.Unlock()
@@ -49,6 +52,8 @@ func planificadorCortoPlazo() {
 
 			tcbToExecute, err = kernelglobals.ShortTermScheduler.Planificar()
 			logger.Debug("Hilo a planificar (<%v>:<%v>)", tcbToExecute.FatherPCB.PID, tcbToExecute.TID)
+
+			tcbToExecute.HayQuantumRestante = false
 
 			if err != nil {
 				logger.Error("No fue posible planificar cierto hilo - %v", err.Error())
@@ -78,6 +83,7 @@ func planificadorCortoPlazo() {
 		//logger.Debug("tcbToExecute: %v", tcbToExecute.TID)
 
 		kernelglobals.ExecStateThread = tcbToExecute
+		tcbToExecute.ExecInstant = time.Now()
 
 		logger.Debug("Asinando nuevo hilo a ExecStateThread: (TID: %v PID: %v)", tcbToExecute.TID, tcbToExecute.FatherPCB.PID)
 		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
@@ -88,7 +94,6 @@ func planificadorCortoPlazo() {
 		}
 
 		logger.Debug("## (<%v>:<%v>) Ejecutando hilo", tcbToExecute.FatherPCB.PID, tcbToExecute.TID)
-
 		go func() {
 			logger.Debug("Antes de mandar true a channel de planifterminada")
 			kernelsync.PlanificacionFinalizada <- true

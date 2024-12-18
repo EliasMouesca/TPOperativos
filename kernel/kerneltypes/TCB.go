@@ -1,6 +1,9 @@
 package kerneltypes
 
-import "github.com/sisoputnfrba/tp-golang/types"
+import (
+	"github.com/sisoputnfrba/tp-golang/types"
+	"time"
+)
 
 type TCB struct {
 	// TID del hilo
@@ -17,6 +20,15 @@ type TCB struct {
 
 	// El hilo joineado por este (pidió bloquearse hasta que <JoinedTCB> termine)
 	JoinedTCB *TCB
+
+	// Instante en el que el thread entró a la CPU
+	ExecInstant time.Time
+
+	// Instante en el que el thread salió de la CPU
+	ExitInstant time.Time
+
+	// True si el proceso se fue de la CPU antes de que se acabe su quantum
+	HayQuantumRestante bool
 }
 
 func (a *TCB) Null() *TCB {

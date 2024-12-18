@@ -19,12 +19,22 @@ func EsperarYAvisarFinDeQuantum() error {
 			logger.Debug("SyscallChannel consumido: len = %v", len(kernelsync.SyscallChannel))
 		}
 
+		var timer *time.Timer
+
+		if kernelglobals.ExecStateThread.HayQuantumRestante {
+			timer = time.NewTimer(
+				time.Duration(kernelglobals.Config.Quantum)*time.Millisecond -
+					kernelglobals.ExecStateThread.ExitInstant.Sub(kernelglobals.ExecStateThread.ExecInstant))
+		} else {
+			timer = time.NewTimer(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond)
+		}
+
 		select {
 		case <-kernelsync.SyscallChannel:
-			logger.Debug("Termina por syscall quantum cancelado")
+			logger.Warn("Termina por syscall quantum cancelado")
 
-		case <-time.NewTimer(time.Duration(kernelglobals.Config.Quantum) * time.Millisecond).C:
-			logger.Debug("Quantum completado, enviando Interrupcion a CPU por fin de quantum")
+		case <-timer.C:
+			logger.Warn("Quantum completado, enviando Interrupcion a CPU por fin de quantum")
 
 			err := shorttermscheduler.CpuInterrupt(
 				types.Interruption{
