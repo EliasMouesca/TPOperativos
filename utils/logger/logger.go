@@ -106,7 +106,7 @@ func log(level int, format string, args ...interface{}) {
 	}
 
 	//formattedTime := time.Now().Format("02/01/2006 15:04:05")
-	formattedTime := time.Now().Format("15:04:05")
+	formattedTime := time.Now().Format("15:04:05.000")
 	levelString := levelTags[level]
 	formattedMessage := fmt.Sprintf(format, args...)
 

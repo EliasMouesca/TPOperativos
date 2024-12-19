@@ -21,11 +21,15 @@ type TCB struct {
 	// El hilo joineado por este (pidió bloquearse hasta que <JoinedTCB> termine)
 	JoinedTCB *TCB
 
-	// Instante en el que el thread entró a la CPU
+	// Instante en el que el thread entró a la CPU, de la ultima vez
 	ExecInstant time.Time
 
-	// Instante en el que el thread salió de la CPU
+	// Instante en el que el thread salió de la CPU, de la ultima vez
 	ExitInstant time.Time
+
+	// Quantum restante en nanosegundos (eeem duration de go, revisar la docu)
+	// mucho cuidado! no cambiar
+	QuantumRestante time.Duration
 
 	// True si el proceso se fue de la CPU antes de que se acabe su quantum
 	HayQuantumRestante bool

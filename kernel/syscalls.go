@@ -10,6 +10,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/types/syscalls"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"strconv"
+	"time"
 )
 
 type syscallFunction func(args []string) error
@@ -239,6 +240,7 @@ func ThreadJoin(args []string) error {
 	kernelglobals.BlockedStateQueue.Add(execTCB)
 	logger.Info("## (<%v>:<%v>)- Bloqueado por: <PTHREAD_JOIN>", currentPCB.PID, execTCB.TID)
 	logger.Debug("(%v : %v)- PTHREAD_JOIN a (%v : %v) ", currentPCB.PID, execTCB.TID, tcbToJoin.FatherPCB.PID, tcbToJoin.TID)
+	kernelglobals.ExecStateThread.QuantumRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
 	kernelglobals.ExecStateThread = nil
 	logger.Info("## (<%v>:<%v>) Se saco de Exec", currentPCB.PID, execTCB.TID)
 
@@ -364,6 +366,7 @@ func MutexLock(args []string) error {
 				kernelglobals.ShortTermScheduler.ThreadRemove(execTCB.TID, execTCB.FatherPCB.PID)
 				kernelglobals.BlockedStateQueue.Add(execTCB)
 
+				kernelglobals.ExecStateThread.QuantumRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
 				kernelglobals.ExecStateThread = nil
 			}
 		}
@@ -528,6 +531,7 @@ func DumpMemory(args []string) error {
 		}
 
 		// Limpiar el hilo en ejecución
+		kernelglobals.ExecStateThread.QuantumRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
 		kernelglobals.ExecStateThread = nil
 		logger.Info("El proceso con PID <%v> y TID <%v> fue movido a EXIT por error en DumpMemory", pid, tid)
 
@@ -550,6 +554,7 @@ func IO(args []string) error {
 	// Canal FIFO
 	logger.Info("## (<%v>:<%v>) - Bloqueado por: <IO>", execTCB.FatherPCB.PID, execTCB.TID)
 
+	kernelglobals.ExecStateThread.QuantumRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
 	kernelglobals.ExecStateThread = nil
 	go func() {
 		logger.Debug("Antes de pasar argumentos al ChannelIO")

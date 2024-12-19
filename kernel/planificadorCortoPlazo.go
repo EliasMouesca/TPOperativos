@@ -43,7 +43,7 @@ func planificadorCortoPlazo() {
 
 			tcbToExecute.HayQuantumRestante = true
 
-			logger.Trace("DEVUELVO HILO SIN PLANIFICAR!")
+			logger.Debug("Devuelvo hilo sin planificar")
 		} else {
 			kernelsync.MutexExecThread.Unlock()
 			logger.Debug("Esperando que haya hilos en ready")
@@ -70,17 +70,10 @@ func planificadorCortoPlazo() {
 
 		//Crafteo proximo hilo
 		nextThread := types.Thread{TID: tcbToExecute.TID, PID: tcbToExecute.FatherPCB.PID}
-		//data, err := json.Marshal(nextThread)
 
 		logger.Debug("Enviando TCB a CPU")
 		// Envio proximo hilo a cpu
 		shorttermscheduler.CpuExecute(nextThread)
-		//url := fmt.Sprintf("http://%v:%v/cpu/execute", kernelglobals.Config.CpuAddress, kernelglobals.Config.CpuPort)
-		//_, err = http.Post(url, "application/json", bytes.NewBuffer(data))
-		//if err != nil {
-		//	logger.Error("Error en request")
-		//}
-		//logger.Debug("tcbToExecute: %v", tcbToExecute.TID)
 
 		kernelglobals.ExecStateThread = tcbToExecute
 		tcbToExecute.ExecInstant = time.Now()
