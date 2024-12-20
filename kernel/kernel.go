@@ -121,8 +121,8 @@ func badRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func syscallRecieve(w http.ResponseWriter, r *http.Request) {
-
 	var syscall syscalls.Syscall
+
 	// Parsear la syscall request
 	err := json.NewDecoder(r.Body).Decode(&syscall)
 	if err != nil {
@@ -170,9 +170,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 	}
 
 	// Ejecuta la syscall
-	kernelsync.MutexExecThread.Lock()
-	err := syscallFunc(syscall.Arguments)
-	kernelsync.MutexExecThread.Unlock()
+	err, _ := syscallFunc(syscall.Arguments)
 
 	if kernelglobals.ExecStateThread == nil {
 		logger.Trace("ExecStateThread post syscall: nil")
@@ -195,6 +193,20 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 			logger.Debug("Despues de mandar a SyscallChannel")
 		}
 	}()
+	//
+	//url := fmt.Sprintf("http://%v:%v/cpu/syscallfinished?bloqueante=%v",
+	//	kernelglobals.Config.CpuAddress,
+	//	kernelglobals.Config.CpuPort,
+	//	bloqueante)
+	//logger.Debug(url)
+	//logger.Debug("Enviando fin de syscall a CPU: Syscall Bloqueante = %v", bloqueante)
+	//_, err = http.Post(url, "application/json", nil)
+	//if err != nil {
+	//	return err
+	//}
+	//if bloqueante {
+	//	kernelsync.MutexCPU.Unlock()
+	//}
 
 	return nil
 }
@@ -281,10 +293,8 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Debug("Se recibio la interrupcion < %v > de CPU", interruption.Description)
-
 	kernelsync.MutexCPU.Unlock()
 	logger.Trace("Unlockear la CPU")
-
 	// Encontrá nuestro TCB
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
 		if tcb.TID == thread.TID && tcb.FatherPCB.PID == thread.PID {

@@ -61,9 +61,9 @@ func planificadorCortoPlazo() {
 			}
 
 			// Esperá a que la CPU esté libre / bloqueásela al resto
-			logger.Trace("Tratando de lockear la CPU para enviar nuevo proceso")
-			kernelsync.MutexCPU.Lock()
-			logger.Trace("CPU Lockeada, mandando a execute")
+			//logger.Trace("Tratando de lockear la CPU para enviar nuevo proceso")
+			//kernelsync.MutexCPU.Lock()
+			//logger.Trace("CPU Lockeada, mandando a execute")
 		}
 
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
