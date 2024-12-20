@@ -146,9 +146,11 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 	if !exists {
 		return errors.New("la syscall pedida no es una syscall que el kernel entienda")
 	}
+
 	logger.Debug("Espera en execute syscall a que termine la planificacion")
 	<-kernelsync.PlanificacionFinalizada
 	logger.Debug("Termino la planificacion, ejecutando syscall")
+
 	// Verificar si hay un thread en ejecución
 	if kernelglobals.ExecStateThread != nil {
 		logger.Info("## (<%v>:<%v>) - Solicitó syscall: <%v>",
@@ -160,40 +162,38 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 		logger.Error("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
 		return nil
 	}
+	// Si es CMN "pausamos" el quantum y decimos que hay restante
 	if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
 		logger.Debug("Seteando ExitInstant")
 		kernelglobals.ExecStateThread.ExitInstant = time.Now()
 		kernelglobals.ExecStateThread.HayQuantumRestante = true
-		//// Termino de ejecutar la Syscall => Reinicia el Quantum
-		//go func() {
-		//	logger.Debug("Reiniciamos timer por syscall")
-		//	kernelsync.SyscallChannel <- struct{}{}
-		//}()
 	}
 
+	// Ejecuta la syscall
 	kernelsync.MutexExecThread.Lock()
 	err := syscallFunc(syscall.Arguments)
 	kernelsync.MutexExecThread.Unlock()
+
 	if kernelglobals.ExecStateThread == nil {
 		logger.Trace("ExecStateThread post syscall: nil")
 	} else {
 		logger.Trace("ExecStateThread post syscall: (PID: %v - TID: %v)", kernelglobals.ExecStateThread.FatherPCB.PID, kernelglobals.ExecStateThread.TID)
 	}
+
 	if err != nil {
 		logger.Error("La syscall devolvió un error - %v", err)
 	}
-	logger.Debug("-- Termino de ejecutar syscall --")
 
+	logger.Debug("-- Termino de ejecutar syscall --")
 	go func() {
-		logger.Debug("Syscall Finalizada")
+		logger.Debug("Mandando al channel SyscallFinalizada")
 		kernelsync.SyscallFinalizada <- true
 
 		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
-			logger.Debug("Reiniciamos timer por syscall")
+			logger.Debug("Mandando a SyscallChannel")
 			kernelsync.SyscallChannel <- struct{}{}
-			logger.Debug("Des[ies de ,amdar syscall channel")
+			logger.Debug("Despues de mandar a SyscallChannel")
 		}
-
 	}()
 
 	return nil
@@ -303,28 +303,15 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 
 				kernelsync.SyscallFinalizada <- true
 
-			} else if interruption.Type != types.InterruptionSyscall {
+			} else if interruption.Type == types.InterruptionSyscall {
+
+			} else {
 				logger.Debug("Matando hilo: %v", tcb.TID)
 				// Sino, muere (ie: sysegv, div por 0, ...)
 				killTcb(&tcb)
 				kernelsync.SyscallChannel <- struct{}{}
 				kernelglobals.ExecStateThread = nil
 				kernelsync.SyscallFinalizada <- true
-
-			} else if interruption.Type == types.InterruptionSyscall {
-				//logger.Debug("Interrupcion por syscall")
-				//logger.Debug("Se pone ExecStateThread en nil por fin de quantum o desalojo => Hay que replanificar")
-				//kernelglobals.ExecStateThread = nil
-				//
-				//logger.Info("## (<%v>:<%v>) Se agrega a cola READY despues de EndOfQuantum o Desalojo", tcb.FatherPCB.PID, tcb.TID)
-				//err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
-				// Si volvio por fin de syscall antes de que termine el quantum, este se resetea
-				//if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
-				//	go func() {
-				//		logger.Warn("Reiniciamos timer por syscall")
-				//		kernelsync.SyscallChannel <- struct{}{}
-				//	}()
-				//}
 			}
 			w.WriteHeader(http.StatusOK)
 			return

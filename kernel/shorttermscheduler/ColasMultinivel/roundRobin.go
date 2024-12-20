@@ -9,6 +9,14 @@ import (
 	"time"
 )
 
+func Max(valor1 time.Duration, duration time.Duration) time.Duration {
+	if valor1 > duration {
+		return valor1
+	} else {
+		return duration
+	}
+}
+
 func EsperarYAvisarFinDeQuantum() error {
 	var timer *time.Timer
 	tiempoRestante := time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
@@ -27,11 +35,13 @@ func EsperarYAvisarFinDeQuantum() error {
 		select {
 		case <-kernelsync.SyscallChannel:
 			logger.Debug("Entra a select syscall finalizada")
+
 			if kernelglobals.ExecStateThread != nil {
 				logger.Warn("Termina por syscall quantum ignorado")
 				if !kernelglobals.ExecStateThread.ExitInstant.After(kernelglobals.ExecStateThread.ExecInstant) {
 					logger.Error("No se seteo bien el Exit instant")
 				}
+
 				quantumQueLeQuedaba := kernelglobals.ExecStateThread.QuantumRestante
 				tiempoEjecutado := kernelglobals.ExecStateThread.ExitInstant.Sub(kernelglobals.ExecStateThread.ExecInstant)
 
@@ -40,21 +50,11 @@ func EsperarYAvisarFinDeQuantum() error {
 
 				tiempoRestante = quantumQueLeQuedaba - tiempoEjecutado
 
-				kernelglobals.ExecStateThread.QuantumRestante = max(tiempoRestante, 0)
+				kernelglobals.ExecStateThread.QuantumRestante = Max(tiempoRestante, 0)
 
 				if kernelglobals.ExecStateThread.QuantumRestante == 0 {
 					tiempoRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
-					kernelglobals.ExecStateThread.QuantumRestante = tiempoRestante
-					logger.Debug("Nuevo quantum seteado: %v", tiempoRestante)
-					err := shorttermscheduler.CpuInterrupt(
-						types.Interruption{
-							Type:        types.InterruptionEndOfQuantum,
-							Description: "Interrupcion por fin de Quantum",
-						})
-					if err != nil {
-						logger.Error("Error al interrupir a la CPU (fin de quantum) - %v", err)
-						return err
-					}
+					enviarFinDeQuantumACPU(tiempoRestante)
 				}
 
 				logger.Debug("Tiempo restante de quantum: %v", tiempoRestante)
@@ -66,19 +66,23 @@ func EsperarYAvisarFinDeQuantum() error {
 			logger.Warn("Quantum completado, enviando Interrupcion a CPU por fin de quantum")
 			if kernelglobals.ExecStateThread != nil {
 				tiempoRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
-				kernelglobals.ExecStateThread.QuantumRestante = tiempoRestante
-				logger.Debug("Nuevo quantum seteado: %v", tiempoRestante)
-			}
-
-			err := shorttermscheduler.CpuInterrupt(
-				types.Interruption{
-					Type:        types.InterruptionEndOfQuantum,
-					Description: "Interrupcion por fin de Quantum",
-				})
-			if err != nil {
-				logger.Error("Error al interrupir a la CPU (fin de quantum) - %v", err)
-				return err
+				enviarFinDeQuantumACPU(tiempoRestante)
 			}
 		}
+	}
+}
+
+func enviarFinDeQuantumACPU(tiempoRestante time.Duration) {
+	tiempoRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
+	kernelglobals.ExecStateThread.QuantumRestante = tiempoRestante
+	logger.Debug("Nuevo quantum seteado: %v", tiempoRestante)
+
+	err := shorttermscheduler.CpuInterrupt(
+		types.Interruption{
+			Type:        types.InterruptionEndOfQuantum,
+			Description: "Interrupcion por fin de Quantum",
+		})
+	if err != nil {
+		logger.Error("Error al interrupir a la CPU (fin de quantum) - %v", err)
 	}
 }
