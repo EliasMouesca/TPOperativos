@@ -58,7 +58,7 @@ func writeMemInstruction(context *types.ExecutionContext, arguments []string) er
 			Description: "La dirección no forma parte del espacio del memoria del proceso"}
 
 		logger.Debug("Intentadno liberar mutexInterruption")
-		MutexInterruption.Unlock()
+		//MutexInterruption.Unlock()
 		logger.Debug("Liberado mutexInterruption")
 		return nil
 	}
@@ -97,7 +97,7 @@ func readMemInstruction(context *types.ExecutionContext, arguments []string) err
 			Description: "La dirección no forma parte del espacio del memoria del proceso"}
 
 		logger.Debug("Intentadno liberar mutexInterruption")
-		MutexInterruption.Unlock()
+		//MutexInterruption.Unlock()
 		logger.Debug("Liberado mutexInterruption")
 		return nil
 	}
@@ -240,10 +240,6 @@ func checkArguments(args []string, correctNumberOfArgs int) error {
 
 // A partir de acá las syscalls
 func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
-	interruptionChannel <- types.Interruption{
-		Type:        types.InterruptionSyscall,
-		Description: "Interrupción por syscall",
-	}
 
 	url := fmt.Sprintf("http://%v:%v/kernel/syscall", config.KernelAddress, config.KernelPort)
 	jsonData, err := json.Marshal(syscall)
@@ -251,16 +247,31 @@ func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
 		return fmt.Errorf("error al empaquetar syscall: %v", err)
 	}
 
-	logger.Debug("Liberando MutexInterruption")
-	MutexInterruption.Unlock()
-	logger.Debug("MutexInterruption liberado")
-
 	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonData)))
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error al enviar syscall al kernel: %v", err)
 	}
 
 	logger.Debug("Syscall enviada al kernel")
+
+	if len(interruptionChannel) == 0 {
+		if <-terminoSyscallEraBloqueante {
+			logger.Debug("Liberando MutexInterruption")
+			logger.Debug("MutexInterruption liberado")
+			interruptionChannel <- types.Interruption{
+				Type:        types.InterruptionSyscall,
+				Description: "Interrupción por syscall",
+			}
+
+		}
+	} else {
+		if <-terminoSyscallEraBloqueante {
+
+			MutexInterruption.Unlock()
+		} else {
+
+		}
+	}
 
 	return nil
 

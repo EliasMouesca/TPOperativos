@@ -14,9 +14,6 @@ import (
 	"sync"
 )
 
-// TODO: Testear _algo_ lel
-// TODO: Terminar los helpers
-
 // Configuración general de la CPU
 var config CpuConfig
 var MutexInterruption = sync.Mutex{}
@@ -29,6 +26,10 @@ var currentThread *types.Thread = nil
 
 // Si a este canal se le pasa una interrupción, la CPU se detiene y llama al kernel pasándole la interrupción que se haya cargado
 var interruptionChannel = make(chan types.Interruption, 1)
+
+// Espera que termine la syscall que pidió la instrucción ejecutada (lo sabe pq mandaron otro (o el mismo) proceso a ejecutar)
+// y si el valor es true, era una syscall bloqueante => habría que sacar el hilo de la CPU, sino, sigue el mismo
+var terminoSyscallEraBloqueante = make(chan bool)
 
 // Un mutex para la CPU porque se hay partes del código que asumen que la CPU es única por eso tenemos que excluir mutuamente
 // las distintas requests que llegen (aunque el kernel en realidad nunca debería mandar a ejecutar un segundo hilo si
@@ -160,27 +161,42 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	// Esperá a que la CPU esté libre, no pinta andar cambiándole el contexto y el currentThread al proceso que se está ejecutando
-	logger.Debug("Intentando tomar cpuMutex")
-	cpuMutex.Lock()
-	logger.Debug("cpuMutex tomado")
-	// Obtenemos el contexto de ejecución
-	logger.Debug("Proceso (<%d:%d>) admitido en la CPU", thread.PID, thread.TID)
-	logger.Debug("Obteniendo contexto de ejecución")
+	// Si no había nada ejecutando, ponelo a ejecutar, chau, fácil
+	if currentThread == nil {
+		// Si hasta acá las cosas salieron bien, poné a ejecutar el proceso
+		currentThread = &thread
+		go loopInstructionCycle()
+		logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", thread.TID, thread.PID)
+		logger.Debug("(%v : %v) MemoryBase: %v  MemorySize: %v", currentThread.PID, currentThread.TID, currentExecutionContext.MemoryBase, currentExecutionContext.MemorySize)
 
-	currentExecutionContext, err = memoryGiveMeExecutionContext(thread)
-	if err != nil {
-		logger.Error("No se pudo obtener el contexto de ejecución del T%v P%v - %v", thread.TID, thread.PID, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("No se pudo obtener el contexto de ejecución - " + err.Error()))
-		cpuMutex.Unlock()
-		return
+		// Pero si quedó esperando un hilo en CPU y nos mandan el mismo que se quedo esperando, la syscall era no bloqueante
+	} else {
+		if thread.Equals(currentThread) {
+			// Sigue el instruction cycle, del hilo. Quizás lo saque más tarde por quantum.
+			select {
+			case terminoSyscallEraBloqueante <- false:
+				break
+			default:
+				logger.Error("Hay un proceso atascado en CPU, pero nadie esta esperando el channel => ???")
+			}
+
+			// Si nos mandaron otro proceso, la syscall era bloqueante y el hilo que la ejecuto, debería salir de la CPU
+		} else {
+			// Si hasta acá las cosas salieron bien, poné a ejecutar el proceso
+			currentThread = &thread
+			go loopInstructionCycle()
+			logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", thread.TID, thread.PID)
+			logger.Debug("(%v : %v) MemoryBase: %v  MemorySize: %v", currentThread.PID, currentThread.TID, currentExecutionContext.MemoryBase, currentExecutionContext.MemorySize)
+
+			select {
+			case terminoSyscallEraBloqueante <- true:
+				break
+			default:
+				logger.Error("Hay un proceso atascado en CPU, pero nadie esta esperando el channel => ???")
+			}
+
+		}
 	}
-	// Si hasta acá las cosas salieron bien, poné a ejecutar el proceso
-	logger.Debug("Iniciando la ejecución del hilo %v del proceso %v", thread.TID, thread.PID)
-	currentThread = &thread
-	logger.Debug("(%v : %v) MemoryBase: %v  MemorySize: %v", currentThread.PID, currentThread.TID, currentExecutionContext.MemoryBase, currentExecutionContext.MemorySize)
-	go loopInstructionCycle()
 
 	// Repondemos al kernel: "Tu proceso se está ejecutando, sé feliz"
 	w.WriteHeader(http.StatusOK)
@@ -191,6 +207,20 @@ func executeThread(w http.ResponseWriter, r *http.Request) {
 }
 
 func loopInstructionCycle() {
+	// Esperá a que la CPU esté libre, no pinta andar cambiándole el contexto y el currentThread al proceso que se está ejecutando
+	logger.Debug("Intentando tomar cpuMutex")
+	cpuMutex.Lock()
+	logger.Debug("cpuMutex tomado")
+
+	// Obtenemos el contexto de ejecución
+	logger.Debug("Proceso (<%d:%d>) admitido en la CPU", currentThread.PID, currentThread.TID)
+	logger.Debug("Obteniendo contexto de ejecución")
+	var err error
+	currentExecutionContext, err = memoryGiveMeExecutionContext(*currentThread)
+	if err != nil {
+		logger.Fatal("No se pudo obtener el contexto de ejecución - %v", err.Error())
+	}
+
 	for {
 		logger.Debug("Intentando tomar el MutexInterruption")
 		MutexInterruption.Lock()
@@ -266,7 +296,7 @@ func loopInstructionCycle() {
 	currentThread = nil
 
 	// Kernel tu proceso terminó
-	err := kernelYourProcessFinished(finishedThread, receivedInterrupt)
+	err = kernelYourProcessFinished(finishedThread, receivedInterrupt)
 	if err != nil {
 		// Yo creo que esto es suficientemente grave como para terminar la ejecución
 		logger.Fatal("No se pudo avisar al kernel de la finalización del proceso - %v", err.Error())

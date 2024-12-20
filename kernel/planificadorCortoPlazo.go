@@ -59,12 +59,12 @@ func planificadorCortoPlazo() {
 				logger.Error("No fue posible planificar cierto hilo - %v", err.Error())
 				continue
 			}
-		}
 
-		// Esperá a que la CPU esté libre / bloqueásela al resto
-		logger.Trace("Tratando de lockear la CPU para enviar nuevo proceso")
-		kernelsync.MutexCPU.Lock()
-		logger.Trace("CPU Lockeada, mandando a execute")
+			// Esperá a que la CPU esté libre / bloqueásela al resto
+			logger.Trace("Tratando de lockear la CPU para enviar nuevo proceso")
+			kernelsync.MutexCPU.Lock()
+			logger.Trace("CPU Lockeada, mandando a execute")
+		}
 
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
 
