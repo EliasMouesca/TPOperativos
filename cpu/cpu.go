@@ -119,7 +119,9 @@ func interruptFromKernel(w http.ResponseWriter, r *http.Request) {
 	if len(interruptionChannel) == 0 {
 		logger.Debug("Enviando interrupción por el canal de interrupciones: %v", interruption.Description)
 		interruptionChannel <- interruption
-		kernelYourProcessFinished(*hiloEjecutando, interruption)
+		if interruption.Type != types.InterruptionEndOfQuantum && interruption.Type != types.InterruptionEviction {
+			kernelYourProcessFinished(*hiloEjecutando, interruption)
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("La CPU recibió la interrupción"))
 	} else {
