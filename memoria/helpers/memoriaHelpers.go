@@ -41,8 +41,9 @@ func ReadMemory(dir int) ([]byte, error) {
 
 	var cuatroMordidas = make([]byte, 4)
 
-	for i := 0; i <= 3; i++ {
-		cuatroMordidas[i] = memoriaGlobals.UserMem[dir+i]
+	// Esto se hace al revés, para poder comparar el funcionamiento del dump de fs con este issue 'https://github.com/sisoputnfrba/foro/issues/4463'
+	for i := 0; i < 4; i++ {
+		cuatroMordidas[3-i] = memoriaGlobals.UserMem[dir+i]
 	}
 
 	logger.Trace("cuatroMordidas: %v", cuatroMordidas)

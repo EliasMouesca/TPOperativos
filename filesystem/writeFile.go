@@ -64,7 +64,6 @@ func writeFile(filename string, data []byte) error {
 		//time.Sleep(5 * time.Second)
 		// -- Escribimos en el bloque índice --
 		buffer := make([]byte, 4)
-		// Por qué little endian? -> es más fácil de leer en la terminal. No importa igual pq nunca hacemos la operacion de lectura.
 		bloquesFile, err := os.OpenFile(config.MountDir+"/"+bloquesFilename, os.O_RDWR, 0644)
 		binary.LittleEndian.PutUint32(buffer, bloqueDato)
 		bytesWritten, err := bloquesFile.WriteAt(buffer, int64(int(bloqueIndice)*config.BlockSize+4*i))
