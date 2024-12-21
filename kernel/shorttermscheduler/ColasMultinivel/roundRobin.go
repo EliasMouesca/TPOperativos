@@ -58,12 +58,12 @@ func EsperarYAvisarFinDeQuantum() error {
 				}
 
 				logger.Debug("Tiempo restante de quantum: %v", tiempoRestante)
-				logger.Debug("Exit: %v", kernelglobals.ExecStateThread.ExitInstant)
-				logger.Debug("Exec: %v", kernelglobals.ExecStateThread.ExecInstant)
+				//	logger.Debug("Exit: %v", kernelglobals.ExecStateThread.ExitInstant)
+				// logger.Debug("Exec: %v", kernelglobals.ExecStateThread.ExecInstant)
 			}
 
 		case <-timer.C:
-			logger.Debug("Quantum completado, enviando Interrupcion a CPU por fin de quantum")
+			logger.Warn("Quantum completado, enviando Interrupcion a CPU por fin de quantum")
 			if kernelglobals.ExecStateThread != nil {
 				tiempoRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
 				enviarFinDeQuantumACPU(tiempoRestante)
