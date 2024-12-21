@@ -26,8 +26,8 @@ func WriteMemory(dir int, data []byte) error {
 		return err
 	}
 
-	for i := 0; i <= 3; i++ {
-		memoriaGlobals.UserMem[dir+i] = data[i]
+	for i := 0; i < 4; i++ {
+		memoriaGlobals.UserMem[dir+i] = data[3-i]
 	}
 	return nil
 }

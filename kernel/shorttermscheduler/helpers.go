@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sisoputnfrba/tp-golang/kernel/kernelglobals"
-	"github.com/sisoputnfrba/tp-golang/kernel/kernelsync"
 	"github.com/sisoputnfrba/tp-golang/types"
 	"github.com/sisoputnfrba/tp-golang/utils/logger"
 	"net/http"
@@ -37,9 +36,9 @@ func CpuInterrupt(interruption types.Interruption) error {
 
 func CpuExecute(thread types.Thread) error {
 	//mutex.Lock()
-	logger.Trace("Tratando de lockear la CPU para enviar nuevo proceso")
-	kernelsync.MutexCPU.Lock()
-	logger.Trace("CPU Lockeada, mandando a execute")
+	//logger.Trace("Tratando de lockear la CPU para enviar nuevo proceso")
+	//kernelsync.MutexCPU.Lock()
+	//logger.Trace("CPU Lockeada, mandando a execute")
 	url := fmt.Sprintf("http://%v:%v/cpu/execute",
 		kernelglobals.Config.CpuAddress,
 		kernelglobals.Config.CpuPort)

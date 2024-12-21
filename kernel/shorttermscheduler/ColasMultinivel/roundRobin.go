@@ -31,13 +31,13 @@ func EsperarYAvisarFinDeQuantum() error {
 		}
 
 		timer = time.NewTimer(tiempoRestante)
-
+		logger.Debug("Esperando a que termine quantum o syscall - Tiempo restante: %v", tiempoRestante)
 		select {
 		case <-kernelsync.SyscallChannel:
 			logger.Debug("Entra a select syscall finalizada")
 
 			if kernelglobals.ExecStateThread != nil {
-				logger.Warn("Termina por syscall quantum ignorado")
+				logger.Debug("Termina por syscall quantum ignorado")
 				if !kernelglobals.ExecStateThread.ExitInstant.After(kernelglobals.ExecStateThread.ExecInstant) {
 					logger.Error("No se seteo bien el Exit instant")
 				}
@@ -63,13 +63,14 @@ func EsperarYAvisarFinDeQuantum() error {
 			}
 
 		case <-timer.C:
-			logger.Warn("Quantum completado, enviando Interrupcion a CPU por fin de quantum")
+			logger.Debug("Quantum completado, enviando Interrupcion a CPU por fin de quantum")
 			if kernelglobals.ExecStateThread != nil {
 				tiempoRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
 				enviarFinDeQuantumACPU(tiempoRestante)
 			}
 		}
 	}
+
 }
 
 func enviarFinDeQuantumACPU(tiempoRestante time.Duration) {

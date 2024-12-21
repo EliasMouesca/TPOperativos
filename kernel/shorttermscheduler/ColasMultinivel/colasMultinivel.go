@@ -120,6 +120,7 @@ func (cmm *ColasMultiNivel) AddToReady(tcb *kerneltypes.TCB) error {
 					Type:        types.InterruptionEviction,
 					Description: "Interrupcion por desalojo",
 				})
+
 			if err != nil {
 				return err
 			}

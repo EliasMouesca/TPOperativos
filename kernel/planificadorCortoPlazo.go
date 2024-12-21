@@ -23,7 +23,7 @@ func planificadorCortoPlazo() {
 	kernelglobals.ShortTermScheduler.Init()
 	// Mientras vivas, corré lo siguiente
 	for {
-		logger.Trace("Empezando nueva planificación")
+		logger.Debug("-- Empezando nueva planificación --")
 		logCurrentState("DESPUÉS DE EMPEZAR A PLANIFICAR")
 		logger.Trace("Length PendingThreadsChannel %v", len(kernelsync.PendingThreadsChannel))
 
@@ -34,9 +34,19 @@ func planificadorCortoPlazo() {
 
 		var tcbToExecute *kerneltypes.TCB
 		var err error
+		puedeEmpezarQuantum := true
+		//Esperá a que la CPU esté libre / bloqueásela al resto
+		logger.Trace("Tratando de lockear la CPU para enviar nuevo proceso")
+		kernelsync.MutexCPU.Lock()
+		logger.Trace("CPU Lockeada, mandando a execute")
 
 		kernelsync.MutexExecThread.Lock()
 		if kernelglobals.ExecStateThread != nil {
+			if kernelglobals.ExecStateThread.QuantumRestante == time.Duration(kernelglobals.Config.Quantum)*time.Millisecond {
+				logger.Debug("Seteamos que no puede empezar nuevo quantum")
+				puedeEmpezarQuantum = false
+			}
+
 			logger.Trace("ExecStateThread: (PID: %v - TID: %v)", kernelglobals.ExecStateThread.FatherPCB.PID, kernelglobals.ExecStateThread.TID)
 			tcbToExecute = kernelglobals.ExecStateThread
 			kernelsync.MutexExecThread.Unlock()
@@ -45,6 +55,7 @@ func planificadorCortoPlazo() {
 
 			logger.Debug("Devuelvo hilo sin planificar")
 		} else {
+
 			kernelsync.MutexExecThread.Unlock()
 			logger.Debug("Esperando que haya hilos en ready")
 			<-kernelsync.PendingThreadsChannel
@@ -60,10 +71,6 @@ func planificadorCortoPlazo() {
 				continue
 			}
 
-			// Esperá a que la CPU esté libre / bloqueásela al resto
-			//logger.Trace("Tratando de lockear la CPU para enviar nuevo proceso")
-			//kernelsync.MutexCPU.Lock()
-			//logger.Trace("CPU Lockeada, mandando a execute")
 		}
 
 		// -- A partir de acá tenemos un nuevo proceso en ejecución !! --
@@ -79,14 +86,14 @@ func planificadorCortoPlazo() {
 		tcbToExecute.ExecInstant = time.Now()
 
 		logger.Debug("Asinando nuevo hilo a ExecStateThread: (TID: %v PID: %v)", tcbToExecute.TID, tcbToExecute.FatherPCB.PID)
-		if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
-			go func() {
-				logger.Debug("Mandamos que debe empezar nuevo quantum")
-				kernelsync.DebeEmpezarNuevoQuantum <- true
-			}()
+		if kernelglobals.Config.SchedulerAlgorithm == "CMN" && puedeEmpezarQuantum {
+			//go func() {
+			logger.Debug("Mandamos que debe empezar nuevo quantum")
+			kernelsync.DebeEmpezarNuevoQuantum <- true
+			//}()
 		}
 
-		logger.Debug("## (<%v>:<%v>) Ejecutando hilo", tcbToExecute.FatherPCB.PID, tcbToExecute.TID)
+		logger.Info("## (<%v>:<%v>) Ejecutando hilo", tcbToExecute.FatherPCB.PID, tcbToExecute.TID)
 		go func() {
 			logger.Debug("Antes de mandar true a channel de planifterminada")
 			kernelsync.PlanificacionFinalizada <- true

@@ -245,6 +245,7 @@ func doSyscall(ctx types.ExecutionContext, syscall syscalls.Syscall) error {
 		Description: "Interrupción por syscall",
 	}
 	if len(interruptionChannel) > 0 {
+		logger.Debug("Llego Interruption y Syscall => Hacemos primero syscall")
 		// Si queremos hacer una syscall y el kernel ya mando desalojo o fin de quantum, atende primero la syscall
 		// y agregamos a deuda la de desalojo
 		desalojoInterruption := <-interruptionChannel

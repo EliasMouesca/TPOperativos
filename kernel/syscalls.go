@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type syscallFunction func(args []string) (error, bool)
+type syscallFunction func(args []string) error
 
 // TODO: Dónde ponemos esto? en qué carpeta?
 
@@ -33,10 +33,10 @@ var syscallSet = map[int]syscallFunction{
 
 var PIDcount int = 0
 
-func ProcessCreate(args []string) (error, bool) {
+func ProcessCreate(args []string) error {
 	// Esta syscall recibirá 3 parámetros de la CPU: nombre del archivo, tamaño del proceso y prioridad del hilo main (TID 0).
 	// El Kernel creará un nuevo PCB y lo dejará en estado NEW.
-	go func() (error, bool) {
+	go func() error {
 		// Si hay un proceso en espera para ser creado, tiene que esperar a que ese se cree
 		kernelsync.MutexPuedoCrearProceso.Lock()
 		// Se crea el PCB (sin crear el hilo principal aún)
@@ -55,7 +55,7 @@ func ProcessCreate(args []string) (error, bool) {
 		pcbPtr := buscarPCBPorPID(processCreate.PID)
 		if pcbPtr == nil {
 			logger.Error("No se encontró el PCB con PID <%d> en la lista global", processCreate.PID)
-			return errors.New("PCB no encontrado"), false
+			return errors.New("PCB no encontrado")
 		}
 
 		// Mandar el proceso a la cola de NewStateQueue (solo PCB, sin TCB)
@@ -71,13 +71,13 @@ func ProcessCreate(args []string) (error, bool) {
 			<-kernelsync.SemProcessCreateOK
 		}()
 
-		return nil, false
+		return nil
 	}()
 
-	return nil, false
+	return nil
 }
 
-func ProcessExit(args []string) (error, bool) {
+func ProcessExit(args []string) error {
 	// Esta syscall finalizará el PCB correspondiente al TCB que ejecutó la instrucción,
 	// enviando todos sus TCBs asociados a la cola de EXIT. Esta instrucción sólo será llamada por el TID 0
 	// del proceso y le deberá indicar a la memoria la finalización de dicho proceso.
@@ -86,7 +86,7 @@ func ProcessExit(args []string) (error, bool) {
 
 	if tcb.TID != 0 {
 		// Verificar que el hilo que llama sea el main (TID 0)
-		return errors.New("el hilo que quiso eliminar el proceso no es el hilo main"), true
+		return errors.New("el hilo que quiso eliminar el proceso no es el hilo main")
 	}
 
 	// Enviar la señal a la memoria sobre la finalización del proceso
@@ -126,10 +126,10 @@ func ProcessExit(args []string) (error, bool) {
 
 	logger.Info("## (<%v>) Finaliza el proceso", pcb.PID)
 
-	return nil, true
+	return nil
 }
 
-func ThreadCreate(args []string) (error, bool) {
+func ThreadCreate(args []string) error {
 
 	// Esta syscall recibirá como parámetro de la CPU el nombre del archivo de
 	// pseudocódigo que deberá ejecutar el hilo a crear y su prioridad. Al momento de crear el nuevo hilo,
@@ -137,7 +137,7 @@ func ThreadCreate(args []string) (error, bool) {
 
 	prioridad, err := strconv.Atoi(args[1])
 	if err != nil {
-		return fmt.Errorf("error al convertir la prioridad a entero: %v", err), false
+		return fmt.Errorf("error al convertir la prioridad a entero: %v", err)
 	}
 
 	execTCB := kernelglobals.ExecStateThread
@@ -167,10 +167,10 @@ func ThreadCreate(args []string) (error, bool) {
 	kernelsync.ChannelThreadCreate <- args
 	<-kernelsync.ThreadCreateComplete
 
-	return nil, false
+	return nil
 }
 
-func ThreadJoin(args []string) (error, bool) {
+func ThreadJoin(args []string) error {
 	// Esta syscall recibe como parámetro un TID, mueve el hilo que la invocó al estado
 	// BLOCK hasta que el TID pasado por parámetro finalice. En caso de que el TID pasado por parámetro
 	// no exista o ya haya finalizado, esta syscall no hace nada y el hilo que la invocó continuará su
@@ -180,7 +180,7 @@ func ThreadJoin(args []string) (error, bool) {
 	tidToJoin := types.Tid(tidString)
 
 	if err != nil {
-		return errors.New("error al convertir el TID a entero"), true
+		return errors.New("error al convertir el TID a entero")
 	}
 	execTCB := kernelglobals.ExecStateThread
 	currentPCB := execTCB.FatherPCB
@@ -190,7 +190,7 @@ func ThreadJoin(args []string) (error, bool) {
 	for i := 0; i < queueSize; i++ {
 		tcb, err := kernelglobals.ExitStateQueue.GetAndRemoveNext()
 		if err != nil {
-			return errors.New("error al obtener el siguiente TCB de ExitStateQueue"), true
+			return errors.New("error al obtener el siguiente TCB de ExitStateQueue")
 		}
 		if tcb.TID == tidToJoin && tcb.FatherPCB == currentPCB {
 			finalizado = true
@@ -201,7 +201,7 @@ func ThreadJoin(args []string) (error, bool) {
 
 	if finalizado {
 		logger.Info("## TID <%d> ya ha finalizado. Continúa la ejecución de (<%v>:<%v>).", currentPCB.PID, execTCB.TID, tidToJoin)
-		return nil, true
+		return nil
 	}
 
 	tidExiste := false
@@ -218,13 +218,13 @@ func ThreadJoin(args []string) (error, bool) {
 			execTCB.TID,
 			tidToJoin,
 			currentPCB.PID)
-		return nil, true
+		return nil
 	}
 
 	// Buscar el TCB del TID a joinear
 	tcbToJoin := buscarTCBPorTID(tidToJoin, currentPCB.PID)
 	if tcbToJoin == nil {
-		return errors.New("no se encontró el TCB del hilo a joinear en EveryTCBInTheKernel"), true
+		return errors.New("no se encontró el TCB del hilo a joinear en EveryTCBInTheKernel")
 	}
 
 	// Modificar execTCB para que tenga el puntero a tcbToJoin
@@ -244,10 +244,10 @@ func ThreadJoin(args []string) (error, bool) {
 	kernelglobals.ExecStateThread = nil
 	logger.Info("## (<%v>:<%v>) Se saco de Exec", currentPCB.PID, execTCB.TID)
 
-	return nil, true
+	return nil
 }
 
-func ThreadCancel(args []string) (error, bool) {
+func ThreadCancel(args []string) error {
 	// Esta syscall recibe como parámetro un TID con el objetivo de finalizarlo
 	// pasando al mismo al estado EXIT. Se deberá indicar a la Memoria la
 	// finalización de dicho hilo. En caso de que el TID pasado por parámetro no
@@ -256,7 +256,7 @@ func ThreadCancel(args []string) (error, bool) {
 
 	tidCancelar, err := strconv.Atoi(args[0])
 	if err != nil {
-		return errors.New("error al convertir el TID a entero"), false
+		return errors.New("error al convertir el TID a entero")
 	}
 
 	currentPCB := kernelglobals.ExecStateThread.FatherPCB
@@ -267,7 +267,7 @@ func ThreadCancel(args []string) (error, bool) {
 	agregarAExitStateQueue(buscarTCBPorTID(types.Tid(tidCancelar), currentPCB.PID))
 	if err == nil {
 		logger.Info("## (<%d:%d>) Finaliza el hilo", currentPCB.PID, tidCancelar)
-		return nil, false
+		return nil
 	}
 
 	// Si no estaba en Ready, verificar y eliminar hilos en la cola de Blocked
@@ -282,17 +282,17 @@ func ThreadCancel(args []string) (error, bool) {
 			//kernelglobals.ExitStateQueue.Add(tcb)
 			agregarAExitStateQueue(tcb)
 			logger.Info("Se movió el TID <%d> del PCB con PID <%d> de BlockedStateQueue a ExitStateQueue", tidCancelar, currentPCB.PID)
-			return nil, false
+			return nil
 		} else {
 			kernelglobals.BlockedStateQueue.Add(tcb)
 		}
 	}
 
 	logger.Info("## No se encontró el TID <%d> en ninguna cola para el PCB con PID <%d>. Continúa la ejecución normal.", tidCancelar, currentPCB.PID)
-	return nil, false
+	return nil
 }
 
-func ThreadExit(args []string) (error, bool) {
+func ThreadExit(args []string) error {
 	// Esta syscall finaliza al hilo que la invocó, pasando el mismo al estado EXIT.
 	// Se deberá indicar a la Memoria la finalización de dicho hilo.
 
@@ -307,10 +307,10 @@ func ThreadExit(args []string) (error, bool) {
 	kernelglobals.ExecStateThread = nil
 	logger.Info("## (<%v>:<%v>) Finaliza el hilo", execTCB.FatherPCB.PID, execTCB.TID)
 
-	return nil, true
+	return nil
 }
 
-func MutexCreate(args []string) (error, bool) {
+func MutexCreate(args []string) error {
 	// Crea un nuevo mutex para el proceso sin asignar a ningún hilo.
 
 	execTCB := kernelglobals.ExecStateThread
@@ -318,7 +318,7 @@ func MutexCreate(args []string) (error, bool) {
 
 	for _, existingMutex := range currentPCB.CreatedMutexes {
 		if existingMutex.Name == args[0] {
-			return fmt.Errorf("ya existe un mutex con el nombre <%v> en el proceso con PID <%d>", args[0], currentPCB.PID), false
+			return fmt.Errorf("ya existe un mutex con el nombre <%v> en el proceso con PID <%d>", args[0], currentPCB.PID)
 		}
 	}
 
@@ -340,15 +340,16 @@ func MutexCreate(args []string) (error, bool) {
 
 	logger.Info("## Se creó el mutex <%v> para el proceso con PID <%d>", newMutex.Name, currentPCB.PID)
 
-	return nil, false
+	return nil
 }
 
-func MutexLock(args []string) (err error, bloqueado bool) {
+func MutexLock(args []string) error {
 
 	mutexName := args[0]
 
 	execTCB := kernelglobals.ExecStateThread
 	execPCB := execTCB.FatherPCB
+
 	encontrado := false
 	for i := range execPCB.CreatedMutexes {
 		mutex := &execPCB.CreatedMutexes[i]
@@ -358,7 +359,7 @@ func MutexLock(args []string) (err error, bloqueado bool) {
 				mutex.AssignedTCB = execTCB
 				execTCB.LockedMutexes = append(execTCB.LockedMutexes, mutex)
 				logger.Info("## El mutex <%v> ha sido asignado a (<%d:%d>)", mutexName, execTCB.FatherPCB.PID, execTCB.TID)
-				bloqueado = false
+
 			} else {
 				logger.Info("“## (<%v>:<%v>)- Bloqueado por: <MUTEX> (nombre: %v)", execTCB.FatherPCB.PID, execTCB.TID, mutexName)
 				mutex.BlockedTCBs = append(mutex.BlockedTCBs, execTCB)
@@ -367,19 +368,18 @@ func MutexLock(args []string) (err error, bloqueado bool) {
 
 				kernelglobals.ExecStateThread.QuantumRestante = time.Duration(kernelglobals.Config.Quantum) * time.Millisecond
 				kernelglobals.ExecStateThread = nil
-				bloqueado = true
 			}
 		}
 	}
 	if !encontrado {
 		logger.Debug("Se pidió un mutex no existía")
-		return errors.New(fmt.Sprintf("No se encontró el mutex <%v>", mutexName)), bloqueado
+		return errors.New(fmt.Sprintf("No se encontró el mutex <%v>", mutexName))
 	}
 
-	return nil, bloqueado
+	return nil
 }
 
-func MutexUnlock(args []string) (error, bool) {
+func MutexUnlock(args []string) error {
 	mutexName := args[0]
 	execTCB := kernelglobals.ExecStateThread
 	execPCB := execTCB.FatherPCB
@@ -394,12 +394,12 @@ func MutexUnlock(args []string) (error, bool) {
 
 			if mutex.AssignedTCB == nil {
 				logger.Info("## El hilo actual (TID <%d>) no tiene asignado el mutex <%s>. No se realizará ningún desbloqueo.", execTCB.TID, mutexName)
-				return errors.New("el mutex no está asignado a ningún hilo"), false
+				return errors.New("el mutex no está asignado a ningún hilo")
 			}
 
 			if mutex.AssignedTCB.TID != execTCB.TID {
 				logger.Debug("Un hilo trató de liberar un mutex que no le fue asignado")
-				return nil, false
+				return nil
 			}
 
 			logger.Info("Liberando mutex <%v> del hilo <%v> del proceso <%v>", mutexName, execTCB.TID, execPCB.PID)
@@ -430,26 +430,26 @@ func MutexUnlock(args []string) (error, bool) {
 
 				err := kernelglobals.ShortTermScheduler.AddToReady(nextTcb)
 				if err != nil {
-					return err, false
+					return err
 				}
 			}
 
-			return nil, false
+			return nil
 		}
 	}
 
 	if !encontrado {
-		return errors.New(fmt.Sprintf("No se encontró el mutex <%v>", mutexName)), false
+		return errors.New(fmt.Sprintf("No se encontró el mutex <%v>", mutexName))
 	}
 
-	return nil, false
+	return nil
 }
 
-func DumpMemory(args []string) (error, bool) {
+func DumpMemory(args []string) error {
 	// Obtener el thread ejecutándose
 	execTCB := kernelglobals.ExecStateThread
 	if execTCB == nil {
-		return fmt.Errorf("no hay un hilo en ejecución"), false
+		return fmt.Errorf("no hay un hilo en ejecución")
 	}
 	pcb := execTCB.FatherPCB
 
@@ -535,7 +535,7 @@ func DumpMemory(args []string) (error, bool) {
 		kernelglobals.ExecStateThread = nil
 		logger.Info("El proceso con PID <%v> y TID <%v> fue movido a EXIT por error en DumpMemory", pid, tid)
 
-		return err, false
+		return err
 	}
 
 	// Si la operación fue exitosa, mover el hilo de bloqueados a la cola de READY
@@ -543,10 +543,10 @@ func DumpMemory(args []string) (error, bool) {
 	kernelglobals.ShortTermScheduler.AddToReady(execTCB) // Mover a READY
 	logger.Info("DumpMemory completado exitosamente! Moviendo (<%v:%v>) a READY", pid, tid)
 
-	return nil, false
+	return nil
 }
 
-func IO(args []string) (error, bool) {
+func IO(args []string) error {
 	threadBlockedTime, _ := strconv.Atoi(args[0])
 	execTCB := kernelglobals.ExecStateThread
 
@@ -563,7 +563,7 @@ func IO(args []string) (error, bool) {
 		logger.Debug("Despues de pasar argumentos al ChannelIO")
 	}()
 
-	return nil, true
+	return nil
 }
 
 func buscarPCBPorPID(pid types.Pid) *kerneltypes.PCB {

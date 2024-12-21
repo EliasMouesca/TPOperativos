@@ -192,7 +192,10 @@ func loopInstructionCycle() {
 
 		for i, d := range deudaInterrupciones {
 			if d.Thread.Equals(currentThread) {
-				logger.Warn("Tenia deuda pendiente y se va a atender: %v", d.Interruption.Description)
+				logger.Debug("Tenia deuda pendiente y se va a atender: %v", d.Interruption.Description)
+				if len(interruptionChannel) > 0 {
+					break
+				}
 				interruptionChannel <- d.Interruption
 				deudaInterrupciones = append(deudaInterrupciones[:i], deudaInterrupciones[i+1:]...)
 				goto CheckInterrupt
@@ -211,7 +214,6 @@ func loopInstructionCycle() {
 		instruction, arguments, err = decode(instructionToParse)
 		if err != nil {
 			logger.Error("No se pudo decodificar la instrucción - %v", err.Error())
-
 		}
 
 		// Execute
@@ -231,7 +233,7 @@ func loopInstructionCycle() {
 		}
 
 	CheckInterrupt:
-
+		logger.Debug("Haciendo chechinterrupt")
 		// Checkinterrupt
 		if len(interruptionChannel) > 0 {
 			interruption := <-interruptionChannel
@@ -249,10 +251,12 @@ func loopInstructionCycle() {
 
 	MutexInterruption.Lock()
 	logger.Debug("MutexInterruption tomado")
+
 	finishedThread := *currentThread
 	finishedExecutionContext := currentExecutionContext
 	receivedInterrupt := <-interruptionChannel
 	//currentThread = nil
+
 	logger.Debug("La interrupcion recibida es: %v", receivedInterrupt.Description)
 	// Kernel tu proceso terminó
 	err = kernelYourProcessFinished(finishedThread, receivedInterrupt)

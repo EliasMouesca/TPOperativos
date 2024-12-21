@@ -162,6 +162,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 		logger.Error("Syscall solicitada <%v>, pero no hay un thread en ejecución actualmente", syscalls.SyscallNames[syscall.Type])
 		return nil
 	}
+
 	// Si es CMN "pausamos" el quantum y decimos que hay restante
 	if kernelglobals.Config.SchedulerAlgorithm == "CMN" {
 		logger.Debug("Seteando ExitInstant")
@@ -170,7 +171,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 	}
 
 	// Ejecuta la syscall
-	err, _ := syscallFunc(syscall.Arguments)
+	err := syscallFunc(syscall.Arguments)
 
 	if kernelglobals.ExecStateThread == nil {
 		logger.Trace("ExecStateThread post syscall: nil")
@@ -193,6 +194,7 @@ func ExecuteSyscall(syscall syscalls.Syscall) error {
 			logger.Debug("Despues de mandar a SyscallChannel")
 		}
 	}()
+
 	//
 	//url := fmt.Sprintf("http://%v:%v/cpu/syscallfinished?bloqueante=%v",
 	//	kernelglobals.Config.CpuAddress,
@@ -298,13 +300,17 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 	// Encontrá nuestro TCB
 	for _, tcb := range kernelglobals.EveryTCBInTheKernel {
 		if tcb.TID == thread.TID && tcb.FatherPCB.PID == thread.PID {
-			//logger.Debug("Seteando ExitInstant")
-			//tcb.ExitInstant = time.Now()
 
 			// Si la INT fue eviction o EOQ -> vuelve a ready
-			if interruption.Type == types.InterruptionEviction ||
-				interruption.Type == types.InterruptionEndOfQuantum {
+			if interruption.Type == types.InterruptionEndOfQuantum {
 
+				logger.Debug("Se pone ExecStateThread en nil por fin de quantum o desalojo => Hay que replanificar")
+				kernelglobals.ExecStateThread = nil
+
+				logger.Info("## (<%v>:<%v>) Se agrega a cola READY despues de EndOfQuantum o Desalojo", tcb.FatherPCB.PID, tcb.TID)
+				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
+				kernelsync.SyscallFinalizada <- true
+			} else if interruption.Type == types.InterruptionEviction {
 				logger.Debug("Se pone ExecStateThread en nil por fin de quantum o desalojo => Hay que replanificar")
 				kernelglobals.ExecStateThread = nil
 
@@ -312,7 +318,8 @@ func CpuReturnThread(w http.ResponseWriter, r *http.Request) {
 				err = kernelglobals.ShortTermScheduler.AddToReady(&tcb)
 
 				kernelsync.SyscallFinalizada <- true
-
+				kernelsync.SyscallChannel <- struct{}{}
+				
 			} else if interruption.Type == types.InterruptionSyscall {
 
 			} else {
